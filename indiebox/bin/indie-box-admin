@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+#
+# Central administration script for Indie Box Project administration
+#
+# Copyright (C) 2013 Johannes Ernst
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+
+my $help = 0;
+my $cmd;
+
+my $parseOk = GetOptions(
+        'help'              => \$help );
+
+if( $help ) {
+    synopsisHelpQuit( 1 );
+}
+if( !$parseOk || $#ARGV != 0 ) {
+    synopsisHelpQuit();
+}
+$cmd = shift @ARGV;
+
+if( $cmd eq 'deploy' ) {
+    print "Placeholder: deploy\n";
+
+} elsif( $cmd eq 'undeploy' ) {
+    print "Placeholder: undeploy\n";
+
+} elsif( $cmd eq 'update' ) {
+    print "Placeholder: update -- update all code on this device\n";
+
+} else {
+    synopsisHelpQuit();
+}
+
+#####
+sub synopsisHelpQuit {
+    my $long = shift;
+
+    if( $long ) {
+        print <<END;
+The central administration script for the Indie Box project. It enables
+(well, it will, once it is completed!) the deployment and undeployment
+of web apps with a single command. For more information about the
+Indie Box Project, see http://indieboxproject.org/
+
+It may be invoked in the following ways:
+
+END
+    } else {
+        print "Synopsis:\n";
+    }
+    print "    $0 deploy\n";
+    if( $long ) {
+        print <<END;
+        Deploy or update a website. This includes setting up the virtual
+        host, installing and configuring all web applications for the
+        website. The website configuration will be provided as a JSON
+        file.
+
+END
+    }
+    print "    $0 undeploy\n";
+    if( $long ) {
+        print <<END;
+        Undeploy a previously deployed website.
+
+END
+    }
+    print "    $0 update\n";
+    if( $long ) {
+        print <<END;
+        Update all installed code on this device. This will perform
+        package updates, configuration updates, database migrations
+        et al as needed.
+
+END
+    }
+    print "    $0 --help\n";
+    if( $long ) {
+        print <<END;
+        Display help text.
+
+END
+    }
+
+    exit 0;
+}
+
+1;
