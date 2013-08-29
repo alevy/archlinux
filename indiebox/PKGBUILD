@@ -13,6 +13,6 @@ source=(README)
 md5sums=('48b4847cf44d760d3916a64e9de1f8a9')
 
 build() {
-    mkdir -p $pkgdir/usr/share/docs/indiebox
-    install -m644 $srcdir/README $pkgdir/usr/share/docs/indiebox
+    mkdir -p $pkgdir/usr/share/doc/indiebox
+    install -m644 $srcdir/README $pkgdir/usr/share/doc/indiebox
 }
