@@ -12,3 +12,10 @@ How to use:
 ```
 Note this only works on ArchLinux http://archlinux.org/ or http://archlinuxarm.org/
  
+For more info:
+ * Project website: http://indieboxproject.org/
+ * Project documentation: http://indieboxproject.org/wiki/ (including more detailed
+   instructions for devices such as the Raspberry Pi)
+ * Twitter: @indieboxproject
+
+Want to help? We appreciate it. See http://indieboxproject.org/blog/contributing/
