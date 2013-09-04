@@ -22,12 +22,19 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use IndieBox::Site;
+use IndieBox::Utils qw( fatal );
+use JSON;
+use Perl6::Slurp;
 
 my $help = 0;
 my $cmd;
+my $file;
+my $jsonParser = JSON->new->relaxed->pretty();
 
 my $parseOk = GetOptions(
-        'help'              => \$help );
+        'help'              => \$help,
+        'file=s'            => \$file );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
@@ -39,6 +46,13 @@ $cmd = shift @ARGV;
 
 if( $cmd eq 'deploy' ) {
     print "Placeholder: deploy\n";
+    my $fileContent = $file ? slurp( $file ) : slurp();
+    my $json;
+    eval {
+        $json = $jsonParser->decode( $fileContent );
+    } or fatal( "JSON parsing error: $@" );
+
+    my $site = new IndieBox::Site( $json );
 
 } elsif( $cmd eq 'undeploy' ) {
     print "Placeholder: undeploy\n";
