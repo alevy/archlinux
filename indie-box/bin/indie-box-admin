@@ -58,8 +58,18 @@ if( $cmd eq 'deploy' ) {
         $json = $jsonParser->decode( $fileContent );
     } or fatal( "JSON parsing error: $@" );
 
-    my $site = new IndieBox::Site( $json );
-    $site->deploy();
+    my @sites = ();
+    if( ref( $json ) eq 'HASH' ) {
+        push @sites, new IndieBox::Site( $json );
+    } elsif( ref( $json ) eq 'ARRAY' ) {
+        foreach my $siteJson ( @$json ) {
+            push @sites, new IndieBox::Site( $siteJson );
+        }
+    }
+
+    foreach my $site ( @sites ) {
+        $site->deploy();
+    }
 
 } elsif( $cmd eq 'undeploy' ) {
     print "Placeholder: undeploy\n";
