@@ -26,6 +26,7 @@ package IndieBox::Site;
 use IndieBox::AppConfiguration;
 use IndieBox::Utils qw( fatal );
 use JSON;
+use MIME::Base64;
 
 use fields qw{json appConfigs};
 
@@ -48,6 +49,101 @@ sub new {
 }
 
 ##
+# Obtain the site's id.
+# return: string
+sub siteId {
+    my $self = shift;
+
+    return $self->{json}->{siteid};
+}
+
+##
+# Obtain the site's host name.
+# return: string
+sub hostName {
+    my $self = shift;
+
+    return $self->{json}->{hostname};
+}
+
+##
+# Determine whether SSL data has been given.
+# return: 0 or 1
+sub hasSsl {
+    my $self = shift;
+
+    return ( $self->{json}->{ssl}->{key} ? 1 : 0 );
+}
+
+##
+# Obtain the SSL key, if any has been provided.
+# return: the SSL key
+sub sslKey {
+    my $self = shift;
+
+    return $self->{json}->{ssl}->{key};
+}
+
+##
+# Obtain the SSL certificate, if any has been provided.
+# return: the SSL certificate
+sub sslCert {
+    my $self = shift;
+
+    return $self->{json}->{ssl}->{crt};
+}
+
+##
+# Obtain the SSL certificate chain, if any has been provided.
+# return: the SSL certificate chain
+sub sslCertChain {
+    my $self = shift;
+
+    return $self->{json}->{ssl}->{crtchain};
+}
+
+##
+# Obtain the site's robots.txt file content, if any has been provided.
+# return: robots.txt content
+sub robotsTxt {
+    my $self = shift;
+
+    return $self->{json}->{wellknown}->{robotstxt};
+}
+
+##
+# Obtain the beginning of the site's robots.txt file content, if no robots.txt
+# has been provided.
+# return: prefix of robots.txt content
+sub robotsTxtPrefix {
+    my $self = shift;
+
+    return $self->{json}->{wellknown}->{robotstxtprefix};
+}
+
+##
+# Obtain the site's sitemap.xml file content, if any has been provided.
+# return: robots.txt content
+sub sitemapXml {
+    my $self = shift;
+
+    return $self->{json}->{wellknown}->{sitemapxml};
+}
+
+##
+# Obtain the site's favicon.ico file content, if any has been provided.
+# return: binary content of favicon.ico
+sub faviconIco {
+    my $self = shift;
+
+    if( $self->{json}->{wellknown}->{faviconicobase64} ) {
+        return decode_base64( $self->{json}->{wellknown}->{faviconicobase64} );
+    } else {
+        return undef;
+    }
+}
+
+##
 # Obtain the AppConfigurations at this Site.
 # return: array of AppConfiguration objects
 sub appConfigs {
@@ -61,6 +157,33 @@ sub appConfigs {
         }
     }
     return $self->{appConfigs};
+}
+
+##
+# Obtain an AppConfiguation with a particular appconfigid on this Site.
+# return: the AppConfiguration, or undef
+sub appConfig {
+    my $self        = shift;
+    my $appconfigid = shift;
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        if( $appconfigid eq $appConfig->appConfigId ) {
+            return $appConfig;
+        }
+    }
+    return undef;
+}
+
+##
+# Deploy this site
+sub deploy {
+    my $self = shift;
+
+    print "Placeholder: about to deploy\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
+
+    1;
 }
 
 ##

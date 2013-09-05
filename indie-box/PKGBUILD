@@ -1,6 +1,6 @@
 # Maintainer: Johannes Ernst <jernst@cldstr.com>
 
-pkgname=indiei-box
+pkgname=indie-box
 pkgver=0.1
 pkgrel=1
 pkgdesc="application management framework"
@@ -8,7 +8,7 @@ arch=('any')
 url="http://indieboxproject.org/"
 license=('GPL')
 groups=()
-depends=('perl')
+depends=('perl' 'perl-json' )
 backup=()
 source=()
 md5sums=('48b4847cf44d760d3916a64e9de1f8a9')

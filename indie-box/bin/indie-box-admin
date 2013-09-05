@@ -25,12 +25,11 @@ use Getopt::Long;
 use IndieBox::Site;
 use IndieBox::Utils qw( fatal );
 use JSON;
-use Perl6::Slurp;
 
 my $help = 0;
 my $cmd;
 my $file;
-my $jsonParser = JSON->new->relaxed->pretty();
+my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
 my $parseOk = GetOptions(
         'help'              => \$help,
@@ -45,14 +44,22 @@ if( !$parseOk || $#ARGV != 0 ) {
 $cmd = shift @ARGV;
 
 if( $cmd eq 'deploy' ) {
-    print "Placeholder: deploy\n";
-    my $fileContent = $file ? slurp( $file ) : slurp();
     my $json;
+    my $fileContent;
+    if( $file ) {
+        local $/;
+        open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
+        $fileContent = <$fh>;
+    } else {
+        local $/;
+        $fileContent = <STDIN>;
+    }
     eval {
         $json = $jsonParser->decode( $fileContent );
     } or fatal( "JSON parsing error: $@" );
 
     my $site = new IndieBox::Site( $json );
+    $site->deploy();
 
 } elsif( $cmd eq 'undeploy' ) {
     print "Placeholder: undeploy\n";
