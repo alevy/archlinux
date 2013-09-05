@@ -183,6 +183,9 @@ sub deploy {
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
 
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        print "        appconfigid: " . $appConfig->appConfigId . "\n";
+    }
     1;
 }
 
