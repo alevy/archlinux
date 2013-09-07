@@ -23,8 +23,8 @@ use warnings;
 
 package IndieBox::AppConfiguration;
 
+use IndieBox::Logging;
 use JSON;
-
 use fields qw{json site};
 
 ##

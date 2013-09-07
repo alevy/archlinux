@@ -23,14 +23,94 @@ use warnings;
 
 package IndieBox::Utils;
 
+use IndieBox::Logging;
 use Exporter qw( import );
-our @EXPORT = qw( fatal );
+use File::Temp;
+use JSON;
 
-sub fatal {
-    my $msg = shift;
+our @EXPORT = qw( readJsonFromFile readJsonFromStdin );
+my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
-    print STDERR "FATAL: $msg\n";
-    exit 1;
+##
+# Read and parse JSON from a file
+# $from: file to read from
+# return: JSON object
+sub readJsonFromFile {
+    my $file = shift;
+
+    local $/;
+    open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
+    my $fileContent = <$fh>;
+
+    my $json;
+    eval {
+        $json = $jsonParser->decode( $fileContent );
+    } or fatal( "JSON parsing error: $@" );
+
+    return $json;
+}
+
+##
+# Read and parse JSON from STDIN
+# return: JSON object
+sub readJsonFromStdin {
+    local $/;
+    my $fileContent = <STDIN>;
+
+    my $json;
+    eval {
+        $json = $jsonParser->decode( $fileContent );
+    } or fatal( "JSON parsing error: $@" );
+
+    return $json;
+}
+
+##
+# Execute a command, and optionally read/write standard stream to/from strings
+# $cmd: the commaand
+# $inContent: optional string containing what will be sent to stdin
+# $outContentP: optional reference to variable into which stdout output will be written
+# $errContentP: optional reference to variable into which stderr output will be written
+sub _myexec {
+    my $cmd         = shift;
+    my $inContent   = shift;
+    my $outContentP = shift;
+    my $errContentP = shift;
+
+    my $inFile;
+    my $outFile;
+    my $errFile;
+
+    if( $inContent ) {
+        $inFile = File::Temp->new();
+        print $inFile $inContent;
+        close $inFile;
+
+        $cmd .= " <" . $inFile->filename;
+    }
+    if( defined( $outContentP )) {
+        $outFile = File::Temp->new();
+        $cmd .= " >" . $outFile->filename;
+    }
+    if( defined( $errContentP )) {
+        $errFile = File::Temp->new();
+        $cmd .= " 2>" . $errFile->filename;
+    }
+
+    `$cmd`;
+    my $ret = $?;
+
+    if( defined( $outContentP )) {
+        ${$outContentP} = slurp( $outFile->filename );
+    }
+    if( defined( $errContentP )) {
+        ${$errContentP} = slurp( $errFile->filename );
+    }
+
+    if( $ret == -1 || $ret & 127) {
+        error( "Failed to execute $cmd (error code $ret): $!" );
+    }
+    return $ret;
 }
 
 1;

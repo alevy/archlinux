@@ -24,7 +24,8 @@ use warnings;
 package IndieBox::Site;
 
 use IndieBox::AppConfiguration;
-use IndieBox::Utils qw( fatal );
+use IndieBox::Logging;
+use IndieBox::Utils;
 use JSON;
 use MIME::Base64;
 
@@ -180,6 +181,21 @@ sub deploy {
     my $self = shift;
 
     print "Placeholder: about to deploy\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        print "        appconfigid: " . $appConfig->appConfigId . "\n";
+    }
+    1;
+}
+
+##
+# Undeploy this site
+sub undeploy {
+    my $self = shift;
+
+    print "Placeholder: about to undeploy\n";
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
 

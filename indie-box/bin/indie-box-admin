@@ -22,60 +22,85 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use IndieBox::Host;
+use IndieBox::Logging;
 use IndieBox::Site;
-use IndieBox::Utils qw( fatal );
-use JSON;
+use IndieBox::Utils qw( readJsonFromFile readJsonFromStdin );
 
-my $help = 0;
+my $quiet = 0;
+my $help  = 0;
 my $cmd;
 my $file;
-my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
 my $parseOk = GetOptions(
+        'quiet'             => \$quiet,
         'help'              => \$help,
         'file=s'            => \$file );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-if( !$parseOk || $#ARGV != 0 ) {
+unless( $parseOk ) {
     synopsisHelpQuit();
 }
+
+if( $quiet ) {
+    IndieBox::Logging::setQuiet();
+}
+
 $cmd = shift @ARGV;
 
 if( $cmd eq 'deploy' ) {
-    my $json;
-    my $fileContent;
-    if( $file ) {
-        local $/;
-        open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
-        $fileContent = <$fh>;
-    } else {
-        local $/;
-        $fileContent = <STDIN>;
+    if( @ARGV ) {
+        synopsisHelpQuit();
     }
-    eval {
-        $json = $jsonParser->decode( $fileContent );
-    } or fatal( "JSON parsing error: $@" );
+    my $json = $file ? readJsonFromFile( $file ) : readJsonFromStdin();
 
-    my @sites = ();
+    my @newSites = ();
     if( ref( $json ) eq 'HASH' ) {
-        push @sites, new IndieBox::Site( $json );
+        push @newSites, new IndieBox::Site( $json );
     } elsif( ref( $json ) eq 'ARRAY' ) {
         foreach my $siteJson ( @$json ) {
-            push @sites, new IndieBox::Site( $siteJson );
+            push @newSites, new IndieBox::Site( $siteJson );
         }
     }
-
-    foreach my $site ( @sites ) {
+    my $oldSites = IndieBox::Host::sites();
+    foreach my $site ( @newSites ) {
+        my $oldSite = $oldSites->{$site->siteId};
+        if( $oldSite ) {
+            $oldSite->undeploy();
+        }
         $site->deploy();
     }
 
 } elsif( $cmd eq 'undeploy' ) {
-    print "Placeholder: undeploy\n";
+    unless( @ARGV ) {
+        fatal( "No sites given to undeploy." );
+    }
+    my $oldSites = IndieBox::Host::sites();
+    foreach my $siteId ( @ARGV ) {
+        unless( $oldSites->{$siteId} ) {
+            fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
+        }
+    }
+    foreach my $siteId ( @ARGV ) {
+        my $site = $oldSites->{$siteId};
+        $site->undeploy();
+    }
 
 } elsif( $cmd eq 'update' ) {
-    print "Placeholder: update -- update all code on this device\n";
+    if( @ARGV ) {
+        synopsisHelpQuit();
+    }
+
+    my $oldSites = IndieBox::Host::sites();
+    foreach my $site ( values %$oldSites ) {
+        $site->undeploy();
+    }
+    IndieBox::Host::updateCode();
+    foreach my $site ( values %$oldSites ) {
+        $site->deploy();
+    }
 
 } else {
     synopsisHelpQuit();
@@ -98,24 +123,34 @@ END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 deploy\n";
+    print "    $0 deploy [--quiet]\n";
     if( $long ) {
         print <<END;
-        Deploy or update a website. This includes setting up the virtual
-        host, installing and configuring all web applications for the
-        website. The website configuration will be provided as a JSON
-        file.
+        Deploy or update one or more websites. This includes setting up the
+        virtual host(s), installing and configuring all web applications for
+        the website(s). The website configuration(s) will be provided as a JSON
+        file from stdin.
 
 END
     }
-    print "    $0 undeploy\n";
+    print "    $0 deploy [--quiet] -f <site.json>\n";
     if( $long ) {
         print <<END;
-        Undeploy a previously deployed website.
+        Deploy or update one or more websites. This includes setting up the
+        virtual host(s), installing and configuring all web applications for
+        the website(s). The website configuration(s) will be provided as JSON
+        file <site.json>.
 
 END
     }
-    print "    $0 update\n";
+    print "    $0 undeploy [--quiet] <siteid>...\n";
+    if( $long ) {
+        print <<END;
+        Undeploy one or more previously deployed website(s).
+
+END
+    }
+    print "    $0 update [--quiet]\n";
     if( $long ) {
         print <<END;
         Update all installed code on this device. This will perform

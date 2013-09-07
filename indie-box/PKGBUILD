@@ -8,7 +8,7 @@ arch=('any')
 url="http://indieboxproject.org/"
 license=('GPL')
 groups=()
-depends=('perl' 'perl-json' )
+depends=('perl' 'perl-json' 'perl-log-log4perl')
 backup=()
 source=()
 md5sums=('48b4847cf44d760d3916a64e9de1f8a9')
@@ -22,6 +22,10 @@ package() {
     for f in $startdir/vendor_perl/IndieBox/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/
     done
+
+# Config files
+    mkdir -p $pkgdir/etc/indie-box/sites
+    install -m644 $startdir/etc/indie-box/log4perl.conf $pkgdir/etc/indie-box/
 
 # Documentation
     mkdir -p $pkgdir/usr/share/doc/indiebox
