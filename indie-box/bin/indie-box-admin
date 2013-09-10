@@ -40,7 +40,7 @@ my $parseOk = GetOptions(
 if( $help ) {
     synopsisHelpQuit( 1 );
 }
-unless( $parseOk ) {
+if( !$parseOk || !@ARGV ) {
     synopsisHelpQuit();
 }
 

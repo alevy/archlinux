@@ -186,6 +186,7 @@ sub deploy {
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
         print "        appconfigid: " . $appConfig->appConfigId . "\n";
+        print "        context:     " . $appConfig->context     . "\n";
     }
     1;
 }

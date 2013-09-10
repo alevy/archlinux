@@ -23,9 +23,10 @@ use warnings;
 
 package IndieBox::AppConfiguration;
 
+use IndieBox::App;
 use IndieBox::Logging;
 use JSON;
-use fields qw{json site};
+use fields qw{json site app};
 
 ##
 # Constructor.
@@ -79,4 +80,47 @@ sub isDefault {
     }
 }
 
+##
+# Obtain the relative URL
+# return: relative URL
+sub context {
+    my $self = shift;
+
+    $self->_initialize();
+
+    my $ret = $self->{app}->fixedContext();
+    unless( defined( $ret )) {
+        $ret = $self->{json}->{context};
+    }
+    unless( defined( $ret )) {
+        $ret = $self->{app}->defaultContext();
+    }
+    return $ret;
+}
+
+##
+# Obtain the app at this AppConfiguration.
+# return: the App
+sub app {
+    my $self = shift;
+
+    $self->_initialize();
+
+    return $self->{app};
+}
+
+##
+# Internal helper to initialize the on-demand app field
+# return: the App
+sub _initialize {
+    my $self = shift;
+
+    if( defined( $self->{app} )) {
+        return 1;
+    }
+
+    $self->{app} = new IndieBox::App( $self->{json}->{appid} );
+
+    return 1;
+}
 1;
