@@ -18,5 +18,9 @@
 
     "package" : {
         "manifestdir" : "/var/lib/indie-box/manifests"
+    },
+
+    "indiebox" : {
+        "checkmanifest" : true
     }
 }

@@ -42,6 +42,11 @@ sub new {
     }
 
     $self->{json}= readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageIdentifier ));
+    if( IndieBox::Configuration::get( 'indiebox.checkmanifest', 1 )) {
+        use IndieBox::AppManifest;
+
+        IndieBox::AppManifest::checkManifest( $self->{json} );
+    }
     return $self;
 }
 
