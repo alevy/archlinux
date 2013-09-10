@@ -45,7 +45,7 @@ sub readJsonFromFile {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( "JSON parsing error: $@" );
+    } or fatal( "JSON parsing error in file $file: $@" );
 
     return $json;
 }
@@ -60,7 +60,7 @@ sub readJsonFromStdin {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( "JSON parsing error: $@" );
+    } or fatal( "JSON parsing error from <stdin>: $@" );
 
     return $json;
 }
