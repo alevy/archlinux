@@ -50,11 +50,14 @@ sub get {
 # $name: name of the configuration value
 # $default: value returned if the configuration value has not been set
 # $map: location of additional name-value pairs
+# $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
+# $remainingDepth: remaining recursion levels before abortion
 # return: the value, or default value
 sub getResolve {
     my $name           = shift;
     my $default        = shift;
     my $map            = shift || {};
+    my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
     my $ret = $map->{$name};
@@ -63,37 +66,46 @@ sub getResolve {
     }
     if( $ret ) {
         if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $map, $remainingDepth-1 )/ge;
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $map, $unresolvedOk, $remainingDepth-1 )/ge;
         }
-    } else {
+    } elsif( !$unresolvedOk ) {
         die( "Cannot find variable $name" );
+    } else {
+        $ret = '${' . $name . '}';
     }
-
     return $ret;
 }
 
 ##
 # Replace all variables in the string values in this hash with configuration values.
-# $map: the hash
-# $
-# return: the same hash
+# $value: the hash, array or string
+# $varMap: the map of variables to replace
+# $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
+# return: the same $value
 sub replaceVariables {
-    my $value       = shift;
-    my $toplevelMap = shift || ( ref( $value ) eq 'HASH' ? $value : {} );
+    my $value        = shift;
+    my $varMap       = shift;
+    my $unresolvedOk = shift || 0;
 
+    my $ret;
     if( ref( $value ) eq 'HASH' ) {
+        $ret = {};
         while( my( $key2, $value2 ) = each %$value ) {
-            replaceVariables( $value2, $toplevelMap );
+            my $newValue2 = replaceVariables( $value2, $varMap, $unresolvedOk );
+            $ret->{$key2} = $newValue2;
         }
 
     } elsif( ref( $value ) eq 'ARRAY' ) {
+        $ret = [];
         foreach my $value2 ( @$value ) {
-            replaceVariables( $value2, $toplevelMap );
+            my $newValue2 = replaceVariables( $value2, $varMap, $unresolvedOk );
+            push @$ret, $newValue2
         }
     } else {
-        $value =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $toplevelMap, 16 )/ge;
+        $ret = $value;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $varMap, $unresolvedOk, 16 )/ge;
     }
-    return $value;
+    return $ret;
 }
 
 ##

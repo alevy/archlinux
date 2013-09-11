@@ -42,12 +42,14 @@ sub new {
     }
 
     my $json      = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
-    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName } );
+    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
 
     if( IndieBox::Configuration::get( 'indiebox.checkmanifest', 1 )) {
         use IndieBox::AppManifest;
 
-        IndieBox::AppManifest::checkManifest( $self->{json} );
+        my $codeDir = IndieBox::Configuration::getResolve( 'package.codedir', undef, { "package.name" => $packageName } );
+
+        IndieBox::AppManifest::checkManifest( $self->{json}, $codeDir );
     }
     return $self;
 }

@@ -32,9 +32,12 @@ our @EXPORT_OK = qw( validFilename );
 
 ##
 # Check validity of the manifest JSON.
+# $json: the JSON object
+# $codeDir: path to the package's code directory
 # return: 1 or exits with fatal error
 sub checkManifest {
-    my $json = shift;
+    my $json    = shift;
+    my $codeDir = shift;
 
     unless( $json ) {
         fatal( "No manifest JSON present" );
@@ -56,11 +59,35 @@ sub checkManifest {
 }
 
 ##
-# Check validity of an absolute and relative filename
+# Check whether a filename (which may be absolute or relative) refers to a valid file
+# $filenameContext: if the filename is relative, this specifies the absolute path it is relative to
+# $filename: the absolute or relative filename
+# $name: the name
 # return: 1 if valid
 sub validFilename {
-    my $relativeFilename = shift;
-    my $allowRegexSubst  = shift || 0;
+    my $filenameContext = shift;
+    my $filename        = shift;
+    my $name            = shift;
+
+    my $testFile;
+    if( $filename =~ m!^/! ) {
+        # is absolute filename
+        $testFile = $filename;
+    } else {
+        $testFile = "$filenameContext/$filename";
+    }
+
+    if( $name ) {
+        my $localName  = $name;
+        $localName =~ s!^.+/!!;
+
+        $testFile =~ s!\$1!$name!g;      # $1: name
+        $testFile =~ s!\$2!$localName!g; # $2: just the name without directories
+    }
+
+    unless( -e $testFile ) {
+        die( "Manifest refers to file, but file cannot be found: $testFile" );
+    }
 
     return 1; # FIXME
 }
