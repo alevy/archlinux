@@ -23,9 +23,50 @@ use warnings;
 
 package IndieBox::Installable;
 
-use IndieBox::Logging;
-use JSON;
 use fields qw{json};
 
+use IndieBox::Logging;
+use JSON;
+use IndieBox::Utils qw( readJsonFromFile );
+
+##
+# Constructor.
+# $packageName: unique identifier of the package
+sub new {
+    my $self        = shift;
+    my $packageName = shift;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+
+    my $json      = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
+    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
+
+    return $self;
+}
+
+##
+# Add names of packages that are required to run the specified roles for this Installable.
+# $roleNames: array of role names
+# $packages: hash of packages
+sub addToPrerequisites {
+    my $self      = shift;
+    my $roleNames = shift;
+    my $packages  = shift;
+
+    foreach my $roleName ( @$roleNames ) {
+        my $roleJson = $self->{json}->{roles}->{$roleName};
+        if( $roleJson ) {
+            my $depends = $roleJson->{depends};
+            if( $depends ) {
+                foreach my $depend ( @$depends ) {
+                    $packages->{$depend} = $depend;
+                }
+            }
+        }
+    }
+    1;
+}
 
 1;

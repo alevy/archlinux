@@ -25,7 +25,7 @@ package IndieBox::Host;
 
 use IndieBox::Logging;
 use IndieBox::Site;
-use IndieBox::Utils qw( readJsonFromFile );
+use IndieBox::Utils qw( readJsonFromFile myexec );
 
 my $SITES_DIR = '/etc/indie-box/sites';
 
@@ -43,9 +43,55 @@ sub sites {
 }
 
 ##
+# Determine the applicable role names for this host. For now, this is
+# fixed.
+# return: the applicable role names
+sub applicableRoleNames {
+    return [ 'apache2', 'mysql' ];
+}
+
+##
+# Execute the named triggers
+# $triggers: array of trigger names
+sub executeTriggers {
+    my $triggers = shift;
+
+    my @triggerList;
+    if( ref( $triggers ) eq 'HASH' ) {
+        @triggerList = keys %$triggers;
+    } elsif( ref( $triggers ) eq 'ARRAY' ) {
+        @triggerList = @$triggers;
+    } else {
+        die( "Unexpected type $triggers" );
+    }
+    if( @triggerList ) {
+        print "Need to execute triggers: " . join( ', ', @triggerList ) . "\n";
+    }
+}
+
+##
 # Update all the code currently installed on this host.
 sub updateCode {
-    print "Placeholder: update all code in this device.\n";
+    myexec( 'echo SHOULD: pacman -Syu' );
+}
+
+##
+# Install the named packages.
+# $packages: List of packages
+sub installPackages {
+    my $packages = shift;
+
+    my @packageList;
+    if( ref( $packages ) eq 'HASH' ) {
+        @packageList = keys %$packages;
+    } elsif( ref( $packages ) eq 'ARRAY' ) {
+        @packageList = @$packages;
+    } else {
+        die( "Unexpected type $packages" );
+    }
+    if( @packageList ) {
+        myexec( 'echo SHOULD: pacman -S --noconfirm ' . join( ' ', @packageList ));
+    }
 }
 
 1;

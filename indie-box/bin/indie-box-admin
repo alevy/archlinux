@@ -56,22 +56,48 @@ if( $cmd eq 'deploy' ) {
     }
     my $json = $file ? readJsonFromFile( $file ) : readJsonFromStdin();
 
-    my @newSites = ();
+    my $newSites = [];
     if( ref( $json ) eq 'HASH' ) {
-        push @newSites, new IndieBox::Site( $json );
+        push @$newSites, new IndieBox::Site( $json );
     } elsif( ref( $json ) eq 'ARRAY' ) {
         foreach my $siteJson ( @$json ) {
-            push @newSites, new IndieBox::Site( $siteJson );
+            push @$newSites, new IndieBox::Site( $siteJson );
         }
     }
+
+    my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+
     my $oldSites = IndieBox::Host::sites();
-    foreach my $site ( @newSites ) {
+    my $prerequisites = {};
+    foreach my $site ( @$newSites ) {
+        $site->addToPrerequisites( $applicableRoleNames, $prerequisites );
+    }
+    IndieBox::Host::installPackages( $prerequisites );
+
+    my $suspendTriggers = {};
+    foreach my $site ( @$newSites ) {
+        my $oldSite = $oldSites->{$site->siteId};
+        if( $oldSite ) {
+            $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+        } else {
+            $site->setupPlaceholder( $suspendTriggers ); # show "coming soon"
+        }
+    }
+    IndieBox::Host::executeTriggers( $suspendTriggers );
+
+    foreach my $site ( @$newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             $oldSite->undeploy();
         }
         $site->deploy();
     }
+
+    my $resumeTriggers = {};
+    foreach my $site ( @$newSites ) {
+        $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+    }
+    IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } elsif( $cmd eq 'undeploy' ) {
     unless( @ARGV ) {
@@ -82,6 +108,10 @@ if( $cmd eq 'deploy' ) {
         unless( $oldSites->{$siteId} ) {
             fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
         }
+    }
+    my $disableTriggers = {};
+    foreach my $site ( %$oldSites ) {
+        $site->disable( $disableTriggers ); # replace with "404 page"
     }
     foreach my $siteId ( @ARGV ) {
         my $site = $oldSites->{$siteId};
@@ -94,6 +124,13 @@ if( $cmd eq 'deploy' ) {
     }
 
     my $oldSites = IndieBox::Host::sites();
+
+    my $suspendTriggers = {};
+    foreach my $site ( values %$oldSites ) {
+        $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+    }
+    IndieBox::Host::executeTriggers( $suspendTriggers );
+
     foreach my $site ( values %$oldSites ) {
         $site->undeploy();
     }
@@ -101,6 +138,11 @@ if( $cmd eq 'deploy' ) {
     foreach my $site ( values %$oldSites ) {
         $site->deploy();
     }
+    my $resumeTriggers = {};
+    foreach my $site ( %$oldSites ) {
+        $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+    }
+    IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } else {
     synopsisHelpQuit();

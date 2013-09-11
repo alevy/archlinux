@@ -176,6 +176,22 @@ sub appConfig {
 }
 
 ##
+# Add names of packages that are required to run the specified roles for this site.
+# $roleNames: array of role names
+# $packages: hash of packages
+sub addToPrerequisites {
+    my $self      = shift;
+    my $roleNames = shift;
+    my $packages  = shift;
+
+    foreach my $appConfig ( @{ $self->appConfigs} ) {
+        my $app = $appConfig->app;
+        $app->addToPrerequisites( $roleNames, $packages );
+    }
+    1;
+}
+
+##
 # Deploy this site
 sub deploy {
     my $self = shift;
@@ -204,6 +220,46 @@ sub undeploy {
         print "        appconfigid: " . $appConfig->appConfigId . "\n";
     }
     1;
+}
+
+##
+# Set up a placeholder for this new site: "coming soon"
+sub setupPlaceholder {
+    my $self = shift;
+
+    print "Placeholder: createPlaceholder\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
+}
+
+##
+# Suspend this site: replace site with an "updating" placeholder or such
+sub suspend {
+    my $self = shift;
+
+    print "Placeholder: suspend\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
+}
+
+##
+# Resume this site from suspension
+sub resume {
+    my $self = shift;
+
+    print "Placeholder: resume\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
+}
+
+##
+# Permanently disable this site
+sub disable {
+    my $self = shift;
+
+    print "Placeholder: disable\n";
+    print "    siteid:        " . $self->siteId . "\n";
+    print "    hostname:      " . $self->hostName . "\n";
 }
 
 ##

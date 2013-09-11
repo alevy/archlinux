@@ -24,11 +24,12 @@ use warnings;
 package IndieBox::App;
 
 use base qw( IndieBox::Installable );
+use fields;
+
 use IndieBox::Configuration;
 use IndieBox::Logging;
 use IndieBox::Utils qw( readJsonFromFile );
 use JSON;
-use fields;
 
 ##
 # Constructor.
@@ -40,9 +41,7 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-
-    my $json      = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
-    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
+    $self->SUPER::new( $packageName );
 
     if( IndieBox::Configuration::get( 'indiebox.checkmanifest', 1 )) {
         use IndieBox::AppManifest;
