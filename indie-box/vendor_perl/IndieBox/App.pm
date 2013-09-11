@@ -32,16 +32,18 @@ use fields;
 
 ##
 # Constructor.
-# $packageIdentifier: unique identifier of the package
+# $packageName: unique identifier of the package
 sub new {
-    my $self              = shift;
-    my $packageIdentifier = shift;
+    my $self        = shift;
+    my $packageName = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
 
-    $self->{json}= readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageIdentifier ));
+    my $json      = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
+    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName } );
+
     if( IndieBox::Configuration::get( 'indiebox.checkmanifest', 1 )) {
         use IndieBox::AppManifest;
 

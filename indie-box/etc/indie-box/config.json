@@ -1,26 +1,32 @@
 {
-    "apache2" : {
-        "sitefragmentdir" : "/etc/httpd/indie-box-site-fragments",
-        "appconfigfragmentdir" : "/etc/httpd/indie-box-appconfig-fragments",
-
-        "sitefragmentfile" : "${apache2.sitefragmentdir}/${site.siteid}.conf",
-        "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${appconfig.appconfigid}.conf",
-
-        "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
-        "authgroupfile" : "${apache2.sitefragmentdir}/${site.siteid}.groups",
-
-        "sitedocumentdir" : "/srv/http/${site.siteid}"
-    },
-
-    "appconfig" : {
-        "datadir" : "/usr/lib/${package.name}"
+    "indiebox" : {
+        "checkmanifest" : true
     },
 
     "package" : {
+        "codedir" : "/usr/share/${package.name}",
+        "datadir" : "/usr/lib/${package.name}",
         "manifestdir" : "/var/lib/indie-box/manifests"
     },
 
-    "indiebox" : {
-        "checkmanifest" : true
+    "apache2" : {
+        "uname" : "http",
+        "gname" : "http",
+
+        "sitefragmentdir" : "/etc/httpd/indie-box-site-fragments",
+        "appconfigfragmentdir" : "/etc/httpd/indie-box-appconfig-fragments",
+
+        "site" : {
+            "sitedocumentdir" : "/srv/http/${site.siteid}",
+            "sitefragmentfile" : "${apache2.sitefragmentdir}/${site.siteid}.conf",
+
+            "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
+            "authgroupfile" : "${apache2.sitefragmentdir}/${site.siteid}.groups",
+        },
+
+        "appconfig" : {
+            "datadir" : "${package.datadir}/${appconfig.appconfigid}",
+            "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${appconfig.appconfigid}.conf",
+        }
     }
 }

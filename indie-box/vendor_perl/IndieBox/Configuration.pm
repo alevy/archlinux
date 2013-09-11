@@ -63,13 +63,37 @@ sub getResolve {
     }
     if( $ret ) {
         if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/_lookupVar( $1, $map, $remainingDepth-1 )/ge;
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $map, $remainingDepth-1 )/ge;
         }
     } else {
         die( "Cannot find variable $name" );
     }
 
     return $ret;
+}
+
+##
+# Replace all variables in the string values in this hash with configuration values.
+# $map: the hash
+# $
+# return: the same hash
+sub replaceVariables {
+    my $value       = shift;
+    my $toplevelMap = shift || ( ref( $value ) eq 'HASH' ? $value : {} );
+
+    if( ref( $value ) eq 'HASH' ) {
+        while( my( $key2, $value2 ) = each %$value ) {
+            replaceVariables( $value2, $toplevelMap );
+        }
+
+    } elsif( ref( $value ) eq 'ARRAY' ) {
+        foreach my $value2 ( @$value ) {
+            replaceVariables( $value2, $toplevelMap );
+        }
+    } else {
+        $value =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $toplevelMap, 16 )/ge;
+    }
+    return $value;
 }
 
 ##
