@@ -24,11 +24,11 @@ use warnings;
 package IndieBox::Utils;
 
 use IndieBox::Logging;
-use Exporter qw( import );
+use Exporter qw( import myexec );
 use File::Temp;
 use JSON;
 
-our @EXPORT = qw( readJsonFromFile readJsonFromStdin );
+our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec );
 my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
 ##
@@ -71,7 +71,7 @@ sub readJsonFromStdin {
 # $inContent: optional string containing what will be sent to stdin
 # $outContentP: optional reference to variable into which stdout output will be written
 # $errContentP: optional reference to variable into which stderr output will be written
-sub _myexec {
+sub myexec {
     my $cmd         = shift;
     my $inContent   = shift;
     my $outContentP = shift;
@@ -97,7 +97,7 @@ sub _myexec {
         $cmd .= " 2>" . $errFile->filename;
     }
 
-    `$cmd`;
+    system( $cmd );
     my $ret = $?;
 
     if( defined( $outContentP )) {
