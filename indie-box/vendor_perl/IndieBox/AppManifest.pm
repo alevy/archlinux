@@ -336,7 +336,7 @@ sub checkManifest {
                         }
                         if( $appConfigItem->{privileges} ) {
                             if( ref( $appConfigItem->{privileges} )) {
-                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown privileges value" );
+                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
                             }
                         }
 
