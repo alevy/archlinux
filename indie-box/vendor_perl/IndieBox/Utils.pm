@@ -27,6 +27,7 @@ use IndieBox::Logging;
 use Exporter qw( import myexec );
 use File::Temp;
 use JSON;
+use POSIX;
 
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec );
 my $jsonParser = JSON->new->relaxed->pretty->utf8();
@@ -109,6 +110,106 @@ sub myexec {
 
     if( $ret == -1 || $ret & 127) {
         error( "Failed to execute $cmd (error code $ret): $!" );
+    }
+    return $ret;
+}
+
+##
+# Save content to a file.
+# $filename: the name of the file to create/write
+# $content: the content of the file
+# $mask: permissions on the file
+# $uname: owner of the file
+# $gname: group of the file
+# return: 1 if successful
+sub saveFile {
+    my $filename = shift;
+    my $content  = shift;
+    my $mask     = shift || -1;
+    my $uname    = shift;
+    my $gname    = shift;
+
+    my $uid = getUid( shift );
+    my $gid = getGid( shift );
+
+    debug( "About to save to file $filename (" . length( $content ) . " bytes, mask " . sprintf( "%o", $mask ) . ", uid $uid, gid $gid)" );
+
+    if( $mask == -1 ) {
+        $mask = 0644;
+    }
+    unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
+        error( "Could not write to file $filename: $!" );
+        return 0;
+    }
+
+    print F $content;
+    close F;
+
+    chmod $mask, $filename;
+
+    if( $uid >= 0 || $gid >= 0 ) {
+        chown $uid, $gid, $filename;
+    }
+
+    return 1;
+}
+
+##
+# Get numerical user id, given user name. If already numerical, pass through.
+# $uname: the user name
+# return: numerical user id
+sub getUid {
+    my $uname = shift;
+
+    my $uid;
+    if( !$uname ) {
+        $uid = 0; # default is root
+    } elsif( $uname =~ /^[0-9]+$/ ) {
+        $uid = $uname;
+    } else {
+        my @uinfo = getpwnam( $uname );
+        unless( @uinfo ) {
+            error( "Cannot find user '$uname'. Using 'nobody' instead." );
+            @uinfo = getpwnam( 'nobody' );
+        }
+        $uid = $uinfo[2];
+    }
+    return $uid;
+}
+
+##
+# Get numerical group id, given group name. If already numerical, pass through.
+# $uname: the group name
+# return: numerical group id
+sub getGid {
+    my $gname = shift;
+
+    my $gid;
+    if( !$gname ) {
+        $gid = 0; # default is root
+    } elsif( $gname =~ /^[0-9]+$/ ) {
+        $gid = $gname;
+    } else {
+        my @ginfo = getgrnam( $gname );
+        unless( @ginfo ) {
+            error( "Cannot find group '$gname'. Using 'nogroup' instead." );
+            @ginfo = getgrnam( 'nogroup' );
+        }
+        $gid = $ginfo[2];
+    }
+    return $gid;
+}
+
+##
+# Generate a random password
+# $length: length of password
+# return: password
+sub generateRandomPassword {
+    my $length = shift || 8;
+
+    my $ret = '';
+    for( my $i=0 ; $i<$length ; ++$i ) {
+        $ret .= ("a".."z", "A".."Z", 0..9)[rand 62];
     }
     return $ret;
 }

@@ -23,12 +23,18 @@ use warnings;
 
 package IndieBox::Installer;
 
+use IndieBox::Mysql;
+use IndieBox::ResourceManager;
+
 ##
 # Invoked by pacman after this package has been installed for the first time
 # $newVersion: identifier of the installed package version
 sub post_install {
     my $version = shift;
 
+    IndieBox::Mysql::ensureRunning();
+    IndieBox::Mysql::ensureRootPassword();
+    IndieBox::ResourceManager::initializeIfNeeded();
 }
 
 ##
@@ -39,7 +45,9 @@ sub post_upgrade {
     my $newVersion = shift;
     my $oldVersion = shift;
 
-    # Nothing for now
+    IndieBox::Mysql::ensureRunning();
+    IndieBox::Mysql::ensureRootPassword();
+    IndieBox::ResourceManager::initializeIfNeeded();
 }
 
 ##
