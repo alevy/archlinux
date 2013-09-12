@@ -12,6 +12,7 @@ depends=('perl' 'perl-json' 'perl-log-log4perl')
 backup=( 'etc/indie-box/config.json' )
 source=()
 options=('!strip')
+install=install
 md5sums=('48b4847cf44d760d3916a64e9de1f8a9')
 
 package() {
