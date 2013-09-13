@@ -101,6 +101,17 @@ sub info {
 }
 
 ##
+# Emit awarning message.
+# $msg: the message
+sub warn {
+    my $msg = shift;
+
+    $log->warn( $msg );
+
+    1;
+}
+
+##
 # Emit an error message.
 # $msg: the message
 sub error {

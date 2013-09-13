@@ -82,6 +82,8 @@ sub myexec {
     my $outFile;
     my $errFile;
 
+    debug( "Exec: $cmd" );
+
     if( $inContent ) {
         $inFile = File::Temp->new();
         print $inFile $inContent;

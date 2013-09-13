@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Manages resources for the Indie Box Project
+# MySQL/MariaDB database abstraction for the Indie Box Project
 #
 # Copyright (C) 2013 Johannes Ernst
 #
@@ -31,7 +31,7 @@ my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
 
 ##
 # Ensure that mysqld is running
-sub ensureRunning() {
+sub ensureRunning {
     IndieBox::Utils::myexec( 'systemctl enable mysqld' );
     IndieBox::Utils::myexec( 'systemctl start mysqld' );
 
@@ -43,7 +43,7 @@ sub ensureRunning() {
 sub ensureRootPassword {
     unless( -r $rootConfiguration ) {
         my $dbh = DBI->connect( "DBI:mysql:host=localhost", 'root', '' );
-print "Dbh is $dbh\n";
+
         if( defined( $dbh )) {
             # can connect to database without a password
             my $password = IndieBox::Utils::generateRandomPassword( 16 );

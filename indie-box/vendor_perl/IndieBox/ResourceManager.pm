@@ -58,11 +58,11 @@ sub initializeIfNeeded {
 
     # We proceed even in case of errors
     IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-CREATE DATABASE `$indieBoxDbName` CHARACTER SET = 'utf8'
+CREATE DATABASE IF NOT EXISTS `$indieBoxDbName` CHARACTER SET = 'utf8'
 SQL
 
     IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-CREATE TABLE `$indieBoxDbName`.`$dbNamesTableName` (
+CREATE TABLE IF NOT EXISTS `$indieBoxDbName`.`$dbNamesTableName` (
     appConfigurationId       VARCHAR(64),
     installableId            VARCHAR(64),
     itemName                 VARCHAR(32),

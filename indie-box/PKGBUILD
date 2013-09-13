@@ -8,7 +8,7 @@ arch=('any')
 url="http://indieboxproject.org/"
 license=('GPL')
 groups=()
-depends=('perl' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql')
+depends=('perl' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'apache')
 backup=( 'etc/indie-box/config.json' )
 source=()
 options=('!strip')
@@ -32,6 +32,33 @@ package() {
 
 # Manifest files
     mkdir -p $pkgdir/var/lib/indie-box/manifests
+
+# Web server config files
+    mkdir -p $pkgdir/etc/httpd/conf
+    mkdir -p $pkgdir/etc/httpd/indie-box/appconfigs
+    mkdir -p $pkgdir/etc/httpd/indie-box/mods-available
+    mkdir -p $pkgdir/etc/httpd/indie-box/mods-enabled
+    mkdir -p $pkgdir/etc/httpd/indie-box/sites
+    install -m644 $startdir/etc/httpd/conf/httpd-indie-box.conf $pkgdir/etc/httpd/conf/
+    for f in $startdir/etc/httpd/indie-box/*.conf; do
+        install -m644 $f $pkgdir/etc/httpd/indie-box/
+    done
+    for f in $startdir/etc/httpd/indie-box/mods-available/*.load; do
+        install -m644 $f $pkgdir/etc/httpd/indie-box/mods-available/
+    done
+
+# Web server content files
+    mkdir -p $pkgdir/srv/http/maintenance
+    for f in $startdir/www/maintenance/*.{css,html,png}; do
+        install -m644 $f $pkgdir/srv/http/maintenance/
+    done
+
+    mkdir -p $pkgdir/srv/http/nosuchsite
+    for f in $startdir/www/nosuchsite/*.{css,html,png}; do
+        install -m644 $f $pkgdir/srv/http/nosuchsite/
+    done
+
+    mkdir -p $pkgdir/srv/http/sites
 
 # Documentation
     mkdir -p $pkgdir/usr/share/doc/indie-box

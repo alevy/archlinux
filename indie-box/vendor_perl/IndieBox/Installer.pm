@@ -23,6 +23,7 @@ use warnings;
 
 package IndieBox::Installer;
 
+use IndieBox::Apache2;
 use IndieBox::MySql;
 use IndieBox::ResourceManager;
 
@@ -35,6 +36,9 @@ sub post_install {
     IndieBox::MySql::ensureRunning();
     IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
+
+    IndieBox::Apache2::ensureRunning();
+    IndieBox::Apache2::fixConfigFiles();
 }
 
 ##
@@ -48,6 +52,9 @@ sub post_upgrade {
     IndieBox::MySql::ensureRunning();
     IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
+
+    IndieBox::Apache2::ensureRunning();
+    IndieBox::Apache2::fixConfigFiles();
 }
 
 ##
