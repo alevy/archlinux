@@ -23,7 +23,7 @@ use warnings;
 
 package IndieBox::Installer;
 
-use IndieBox::Mysql;
+use IndieBox::MySql;
 use IndieBox::ResourceManager;
 
 ##
@@ -32,8 +32,8 @@ use IndieBox::ResourceManager;
 sub post_install {
     my $version = shift;
 
-    IndieBox::Mysql::ensureRunning();
-    IndieBox::Mysql::ensureRootPassword();
+    IndieBox::MySql::ensureRunning();
+    IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
 }
 
@@ -45,8 +45,8 @@ sub post_upgrade {
     my $newVersion = shift;
     my $oldVersion = shift;
 
-    IndieBox::Mysql::ensureRunning();
-    IndieBox::Mysql::ensureRootPassword();
+    IndieBox::MySql::ensureRunning();
+    IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
 }
 

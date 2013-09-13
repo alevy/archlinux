@@ -21,9 +21,10 @@
 use strict;
 use warnings;
 
-package IndieBox::Mysql;
+package IndieBox::MySql;
 
 use DBI;
+use IndieBox::Logging;
 use IndieBox::Utils;
 
 my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
@@ -68,6 +69,134 @@ SQL
 
             $dbh->disconnect();
         }
+    }
+}
+
+##
+# Wrapper around database connect, for debugging purposes
+# $database: name of the database
+# $user: database user to use
+# $pass: database password to use
+# $host: database host to connect to
+# $port: database port to connect to
+# return: database handle
+sub dbConnect {
+    my $database = shift;
+    my $user     = shift;
+    my $pass     = shift;
+    my $host     = shift || 'localhost';
+    my $port     = shift || 3306;
+
+    my $connectString = "database=$database;" if( $database );
+    $connectString .= "host=$host;";
+    $connectString .= "port=$port;";
+
+    debug( "Connecting to database as user $user with $connectString" );
+
+    my $dbh = DBI->connect( "DBI:mysql:${connectString}",
+                            $user,
+                            $pass,
+                            { AutoCommit => 1, PrintError => 0 } );
+
+    if( defined( $dbh )) {
+        $dbh->{HandleError} = sub { error( "Database error: " . shift ); };
+    } else {
+        debug( "Connecting to database failed, using connection string $connectString, user $user" );
+    }
+    return $dbh;
+}
+
+##
+# Convenience method to connect to a database as root
+# $database: name of the database
+# return: database handle
+sub dbConnectAsRoot {
+    my $database = shift;
+
+    my( $rootUser, $rootPass ) = findRootUserPass();
+   return dbConnect( $database, $rootUser, $rootPass );
+}
+
+##
+# Wrapper around SQL prepare, for debugging purposes
+# $dbh: database handle
+# $sql: the SQL to prepare
+# return: the prepared statement
+sub sqlPrepare {
+    my $dbh  = shift;
+    my $sql  = shift;
+
+    debug( "Preparing SQL: " . ( length( $sql ) > 80 ? ( substr( $sql, 0, 80 ) . '...(truncated)' ) : $sql ));
+
+    my $sth = $dbh->prepare( $sql );
+    return $sth;
+}
+
+##
+# Wrapper around SQL execute, for debugging purposes
+# $sth: prepared statement
+# @args: arguments for the prepared statement
+# return: prepared statement
+sub sqlExecute {
+    my $sth  = shift;
+    my @args = @_;
+
+    if( @args ) {
+        debug( "Executing SQL with arguments " . join( ', ', @args ));
+    } else {
+        debug( "Executing SQL without arguments" );
+    }
+    $sth->execute( @args );
+    return $sth;
+}
+
+##
+# Execute SQL with parameters in one statement
+# $dbh: database handle
+# $sql: the SQL to prepare
+# @args: arguments for the prepared statement
+# return: prepared statement
+sub sqlPrepareExecute {
+    my $dbh  = shift;
+    my $sql  = shift;
+    my @args = @_;
+
+    my $sth = sqlPrepare( $dbh, $sql );
+    sqlExecute( $sth, @args );
+    return $sth;
+}
+
+##
+# Find the root password for the database.
+sub findRootUserPass {
+    my $user;
+    my $pass;
+    my $host;
+
+    open CNF, '<', $rootConfiguration || return undef;
+    foreach my $line ( <CNF> ) {
+        if( $line =~ m/^\s*\[.*\]/ ) {
+            if( $user && $pass && $host eq 'localhost' ) {
+                last;
+            }
+            $user = undef;
+            $pass = undef;
+            $host = undef;
+
+        } elsif( $line =~ m/\s*host\s*=\s*(\S+)/ ) {
+            $host = $1;
+        } elsif( $line =~ m/\s*user\s*=\s*(\S+)/ ) {
+            $user = $1;
+        } elsif( $line =~ m/\s*password\s*=\s*(\S+)/ ) {
+            $pass = $1;
+        }
+    }
+    close CNF;
+    if( $user && $pass ) {
+        return( $user, $pass );
+    } else {
+        error( "_findRootUserPass did not find root user/pass" );
+        return undef;
     }
 }
 
