@@ -113,6 +113,8 @@ if( $cmd eq 'deploy' ) {
     foreach my $site ( %$oldSites ) {
         $site->disable( $disableTriggers ); # replace with "404 page"
     }
+    IndieBox::Host::executeTriggers( $disableTriggers );
+
     foreach my $siteId ( @ARGV ) {
         my $site = $oldSites->{$siteId};
         $site->undeploy();
