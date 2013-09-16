@@ -52,7 +52,7 @@ sub siteDeployed {
     my $siteId   = $site->siteId;
     my $siteJson = $site->siteJson;
 
-    IndieBox::Utils::saveJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
+    IndieBox::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
 }
 
 ##

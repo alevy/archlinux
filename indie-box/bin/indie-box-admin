@@ -28,14 +28,18 @@ use IndieBox::Site;
 use IndieBox::Utils qw( readJsonFromFile readJsonFromStdin );
 
 my $quiet = 0;
+my $json  = 0;
+my $brief = 0;
 my $help  = 0;
 my $cmd;
 my $file;
 
 my $parseOk = GetOptions(
-        'quiet'             => \$quiet,
-        'help'              => \$help,
-        'file=s'            => \$file );
+        'quiet'  => \$quiet,
+        'json'   => \$json,
+        'brief'  => \$brief,
+        'help'   => \$help,
+        'file=s' => \$file );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
@@ -51,7 +55,7 @@ if( $quiet ) {
 $cmd = shift @ARGV;
 
 if( $cmd eq 'deploy' ) {
-    if( @ARGV ) {
+    if( @ARGV || $json || $brief ) {
         synopsisHelpQuit();
     }
     my $json = $file ? readJsonFromFile( $file ) : readJsonFromStdin();
@@ -103,6 +107,9 @@ if( $cmd eq 'deploy' ) {
     unless( @ARGV ) {
         fatal( "No sites given to undeploy." );
     }
+    if( $json || $brief ) {
+        synopsisHelpQuit();
+    }
     my $oldSites = IndieBox::Host::sites();
     foreach my $siteId ( @ARGV ) {
         unless( $oldSites->{$siteId} ) {
@@ -110,7 +117,7 @@ if( $cmd eq 'deploy' ) {
         }
     }
     my $disableTriggers = {};
-    foreach my $site ( %$oldSites ) {
+    foreach my $site ( values %$oldSites ) {
         $site->disable( $disableTriggers ); # replace with "404 page"
     }
     IndieBox::Host::executeTriggers( $disableTriggers );
@@ -120,8 +127,42 @@ if( $cmd eq 'deploy' ) {
         $site->undeploy();
     }
 
+} elsif( $cmd eq 'listsites' ) {
+    if( @ARGV || $quiet ) {
+        synopsisHelpQuit();
+    }
+    my $sites = IndieBox::Host::sites();
+    if( $json ) {
+        my $sitesJson = {};
+        foreach my $site ( values %$sites ) {
+            $sitesJson->{$site->siteId} = $site->siteJson;
+        }
+        IndieBox::Utils::writeJsonToStdout( $sitesJson );
+    } elsif( $brief ) {
+        foreach my $site ( values %$sites ) {
+            print $site->siteId . "\n";
+        }
+    } else { # human-readable
+        foreach my $site ( values %$sites ) {
+            print "Site: " . $site->siteId . "\n";
+            print "    Hostname: " . $site->hostName . "\n";
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                if( $appConfig->isDefault ) {
+                    my $context = $appConfig->context;
+                    print "    (default) Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                }
+            }
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                unless( $appConfig->isDefault ) {
+                    my $context = $appConfig->context;
+                    print "              Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                }
+            }
+        }
+    }
+
 } elsif( $cmd eq 'update' ) {
-    if( @ARGV ) {
+    if( @ARGV || $json || $brief ) {
         synopsisHelpQuit();
     }
 
@@ -191,6 +232,16 @@ END
     if( $long ) {
         print <<END;
         Undeploy one or more previously deployed website(s).
+
+END
+    }
+    print "    $0 listsites [--json | --brief]\n";
+    if( $long ) {
+        print <<END;
+        Show all sites currently deployed to this device.
+        --json: show them in JSON format
+        --brief: only show the site ids.
+        no arguments: show them in human-readable format
 
 END
     }

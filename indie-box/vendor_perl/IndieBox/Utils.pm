@@ -74,7 +74,7 @@ sub readJsonFromStdin {
 # $uname: owner of the file
 # $gname: group of the file
 # return: 1 if successful
-sub saveJsonToFile {
+sub writeJsonToFile {
     my $fileName = shift;
     my $json     = shift;
     my $mask     = shift;
@@ -82,6 +82,16 @@ sub saveJsonToFile {
     my $gname    = shift;
 
     saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
+}
+
+##
+# Write JSON to STDOUT
+# $content: the content of the file, as JSON object
+sub writeJsonToStdout {
+    my $json = shift;
+
+print "About to write JSON to stdout " . ref( $json ) . "\n";
+    print $jsonParser->encode( $json );
 }
 
 ##
@@ -238,6 +248,32 @@ sub mkdir {
         chown $uid, $gid, $filename;
     }
 
+    return $ret;
+}
+
+##
+# Delete one or more directories. They must be empty first
+# @dirs: the directories to delete
+sub deleteDirectory {
+    my @dirs = @_;
+
+    debug( "About to delete directories: " . join( ', ', @dirs ));
+
+    my $ret = 1;
+    foreach my $d ( @dirs ) {
+        if( -d $d ) {
+            unless( rmdir( $d )) {
+                error( "Failed to delete directory $d: $!" );
+                $ret = 0;
+            }
+        } elsif( -e $d ) {
+            error( "Cannot delete directory $d, file exists but isn't a directory" );
+            $ret = 0;
+        } else {
+            warn( "Cannot delete directory $d, does not exist" );
+            next;
+        }
+    }
     return $ret;
 }
 

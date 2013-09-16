@@ -23,7 +23,7 @@ use warnings;
 
 package IndieBox::Installable;
 
-use fields qw{json};
+use fields qw{json packageName};
 
 use IndieBox::Logging;
 use JSON;
@@ -40,10 +40,20 @@ sub new {
         $self = fields::new( $self );
     }
 
-    my $json      = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
-    $self->{json} = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
+    my $json             = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
+    $self->{json}        = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
+    $self->{packageName} = $packageName;
 
     return $self;
+}
+
+##
+# Determine the package name
+# return: the package name
+sub packageName {
+    my $self = shift;
+
+    return $self->{packageName};
 }
 
 ##

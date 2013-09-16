@@ -187,13 +187,13 @@ sub removeSite {
     IndieBox::Utils::deleteFile( $siteFile );
 
     if( -d $appConfigFilesDir ) {
-        IndieBox::Utils::deleteFile( $appConfigFilesDir );
+        IndieBox::Utils::deleteDirectory( $appConfigFilesDir );
     }
     if( -d $siteWellKnownDir ) {
-        IndieBox::Utils::deleteFile( $siteWellKnownDir );
+        IndieBox::Utils::deleteDirectory( $siteWellKnownDir );
     }
     if( -d $siteDocumentRoot ) {
-        IndieBox::Utils::deleteFile( $siteDocumentRoot );
+        IndieBox::Utils::deleteDirectory( $siteDocumentRoot );
     }
 
     1;
