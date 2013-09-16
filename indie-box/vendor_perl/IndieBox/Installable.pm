@@ -2,7 +2,7 @@
 #
 # Superclass of all installable items e.g. Apps for Indie Box Project
 #
-# Copyright (C) 2013 Johannes Ernst
+# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
