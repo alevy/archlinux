@@ -44,6 +44,29 @@ sub sites {
 }
 
 ##
+# A site has been deployed.
+# $site: the newly deployed or updated site
+sub siteDeployed {
+    my $site = shift;
+
+    my $siteId   = $site->siteId;
+    my $siteJson = $site->siteJson;
+
+    IndieBox::Utils::saveJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
+}
+
+##
+# A site has been undeployed.
+# $site: the undeployed site
+sub siteUndeployed {
+    my $site = shift;
+
+    my $siteId   = $site->siteId;
+
+    IndieBox::Utils::deleteFile( "$SITES_DIR/$siteId.json" );
+}
+
+##
 # Determine the applicable role names for this host. For now, this is
 # fixed.
 # return: the applicable role names

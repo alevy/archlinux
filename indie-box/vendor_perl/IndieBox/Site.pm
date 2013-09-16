@@ -60,6 +60,15 @@ sub siteId {
 }
 
 ##
+# Obtain the site JSON
+# return: site JSON as string
+sub siteJson {
+    my $self = shift;
+
+    return $self->{json};
+}
+
+##
 # Obtain the site's host name.
 # return: string
 sub hostName {
@@ -202,6 +211,8 @@ sub deploy {
     }
 
     IndieBox::Apache2::setupSite( $self );
+    IndieBox::Host::siteDeployed( $self );
+
     1;
 }
 
@@ -215,6 +226,7 @@ sub undeploy {
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $appConfig->uninstall();
     }
+    IndieBox::Host::siteUndeployed( $self );
 
     1;
 }

@@ -67,6 +67,24 @@ sub readJsonFromStdin {
 }
 
 ##
+# Write a JSON file.
+# $filename: the name of the file to create/write
+# $content: the content of the file, as JSON object
+# $mask: permissions on the file
+# $uname: owner of the file
+# $gname: group of the file
+# return: 1 if successful
+sub saveJsonToFile {
+    my $fileName = shift;
+    my $json     = shift;
+    my $mask     = shift;
+    my $uname    = shift;
+    my $gname    = shift;
+
+    saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
+}
+
+##
 # Execute a command, and optionally read/write standard stream to/from strings
 # $cmd: the commaand
 # $inContent: optional string containing what will be sent to stdin
