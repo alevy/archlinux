@@ -242,7 +242,7 @@ sub setupPlaceholder {
 
     IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
 
-    $triggers->{'httpd-restart'} = 1;
+    $triggers->{'httpd-reload'} = 1;
 }
 
 ##
@@ -258,7 +258,7 @@ sub suspend {
 
     IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
 
-    $triggers->{'httpd-restart'} = 1;
+    $triggers->{'httpd-reload'} = 1;
 }
 
 ##
@@ -272,7 +272,7 @@ sub resume {
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
 
-    $triggers->{'httpd-restart'} = 1;
+    $triggers->{'httpd-reload'} = 1;
 }
 
 ##
@@ -286,7 +286,7 @@ sub disable {
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
 
-    $triggers->{'httpd-restart'} = 1;
+    $triggers->{'httpd-reload'} = 1;
 }
 
 ##

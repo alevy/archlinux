@@ -33,16 +33,14 @@ my $modsAvailableDir = '/etc/httpd/indie-box/mods-available';
 my $modsEnabledDir   = '/etc/httpd/indie-box/mods-enabled';
 my $sitesDir         = '/etc/httpd/indie-box/sites';
 my $appConfigsDir    = '/etc/httpd/indie-box/appconfigs';
-my $sitesDocumentRootDir = '/srv/http/sites';
-my $sitesWellknownDir    = '/srv/http/wellknown';
+my $sitesDocumentRootDir            = '/srv/http/sites';
+my $sitesWellknownDir               = '/srv/http/wellknown';
+my $placeholderSitesDocumentRootDir = '/src/http/placeholders';
 
 ##
-# Ensure that Apache is running and config file is correct
+# Ensure that Apache is running.
 sub ensureRunning {
     debug( "Apache2::ensureRunning" );
-
-    fixConfigFiles();
-    activateModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
 
     IndieBox::Utils::myexec( 'systemctl enable httpd' );
     IndieBox::Utils::myexec( 'systemctl restart httpd' );
@@ -56,6 +54,52 @@ sub reload {
     debug( "Apache2::reload" );
 
     IndieBox::Utils::myexec( 'systemctl reload httpd' );
+
+    1;
+}
+
+##
+# Restart configuration
+sub restart {
+    debug( "Apache2::restart" );
+
+    IndieBox::Utils::myexec( 'systemctl restart httpd' );
+
+    1;
+}
+
+##
+# Do what is necessary to set up a named placeholder site.
+sub setupPlaceholderSite {
+    my $site            = shift;
+    my $placeholderName = shift;
+
+    my $siteId            = $site->siteId;
+    my $hostName          = $site->hostName;
+    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
+
+    unless( -d $siteDocumentRoot ) {
+        error( "Placeholder site $placeholderName does not exist" );
+    }
+
+    my $content .= <<CONTENT;
+#
+# Apache config fragment for placeholder site $siteId (placeholder $placeholderName) at host $hostName
+#
+# (C) 2013 Indie Box Project
+# Generated automatically, do not modify.
+#
+
+<VirtualHost *:80>
+    ServerName $hostName
+
+    DocumentRoot "$siteDocumentRoot"
+    Options -Indexes
+</VirtualHost>
+CONTENT
+
+    IndieBox::Utils::saveFile( $siteFile, $content );
 
     1;
 }
@@ -121,7 +165,7 @@ CONTENT
 </VirtualHost>
 CONTENT
 
-    IndieBox::Utils::saveFile( $siteFile, $content, 0755, 'http', 'http' );
+    IndieBox::Utils::saveFile( $siteFile, $content, 0644 );
 
     1;
 }
@@ -156,15 +200,16 @@ sub removeSite {
 }
 
 ##
-# Make the changes to Apache configuration files that are needed by Indie Box.
-sub fixConfigFiles {
-    debug( "Apache2::fixConfigFiles" );
+# Make the changes to Apache configuration files are in place that are needed by Indie Box.
+sub ensureConfigFiles {
+    debug( "Apache2::ensureConfigFiles" );
 
     if( -e $ourConfigFile ) {
         IndieBox::Utils::myexec( "cp -f '$ourConfigFile' '$mainConfigFile'" );
     } else {
         warn( "Config file $ourConfigFile is missing" );
     }
+    activateModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
 }
 
 ##

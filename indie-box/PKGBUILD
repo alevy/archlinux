@@ -48,14 +48,13 @@ package() {
     done
 
 # Web server content files
-    mkdir -p $pkgdir/srv/http/maintenance
-    for f in $startdir/www/maintenance/*.{css,html,png}; do
-        install -m644 $f $pkgdir/srv/http/maintenance/
-    done
+    mkdir -p $pkgdir/srv/http/placeholders/maintenance
+    mkdir -p $pkgdir/srv/http/placeholders/nosuchsite
 
-    mkdir -p $pkgdir/srv/http/nosuchsite
-    for f in $startdir/www/nosuchsite/*.{css,html,png}; do
-        install -m644 $f $pkgdir/srv/http/nosuchsite/
+    for d in maintenance nosuchsite; do
+        for f in $startdir/www/placeholders/$d/*.{css,html,png}; do
+            install -m644 $f $pkgdir/srv/http/placeholders/$d/
+        done
     done
 
     mkdir -p $pkgdir/srv/http/sites

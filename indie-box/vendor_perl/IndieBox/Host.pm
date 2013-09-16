@@ -68,6 +68,8 @@ sub executeTriggers {
     foreach my $trigger ( @triggerList ) {
         if( 'httpd-reload' eq $trigger ) {
             IndieBox::Apache2::reload();
+        } elsif( 'httpd-restart' eq $trigger ) {
+            IndieBox::Apache2::restart();
         } else {
             warn( "Unknown trigger: $trigger" );
         }
