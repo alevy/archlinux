@@ -110,6 +110,22 @@ sub app {
 }
 
 ##
+# Install this AppConfiguration.
+sub install {
+    my $self = shift;
+
+    print "About to install $self\n";
+}
+
+##
+# Uninstall this AppConfiguration.
+sub uninstall {
+    my $self = shift;
+
+    print "About to uninstall $self\n";
+}
+
+##
 # Internal helper to initialize the on-demand app field
 # return: the App
 sub _initialize {

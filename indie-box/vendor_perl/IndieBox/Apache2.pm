@@ -35,7 +35,7 @@ my $sitesDir         = '/etc/httpd/indie-box/sites';
 my $appConfigsDir    = '/etc/httpd/indie-box/appconfigs';
 my $sitesDocumentRootDir            = '/srv/http/sites';
 my $sitesWellknownDir               = '/srv/http/wellknown';
-my $placeholderSitesDocumentRootDir = '/src/http/placeholders';
+my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
 
 ##
 # Ensure that Apache is running.
@@ -80,7 +80,7 @@ sub setupPlaceholderSite {
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
 
     unless( -d $siteDocumentRoot ) {
-        error( "Placeholder site $placeholderName does not exist" );
+        error( "Placeholder site $placeholderName does not exist at $siteDocumentRoot" );
     }
 
     my $content .= <<CONTENT;

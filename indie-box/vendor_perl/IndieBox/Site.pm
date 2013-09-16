@@ -197,17 +197,11 @@ sub addToPrerequisites {
 sub deploy {
     my $self = shift;
 
-    print "Placeholder: about to deploy\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
-
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        print "        appconfigid: " . $appConfig->appConfigId . "\n";
-        print "        context:     " . $appConfig->context     . "\n";
+        $appConfig->install();
     }
 
     IndieBox::Apache2::setupSite( $self );
-
     1;
 }
 
@@ -216,15 +210,11 @@ sub deploy {
 sub undeploy {
     my $self = shift;
 
-    print "Placeholder: about to undeploy\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
+    IndieBox::Apache2::removeSite( $self );
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        print "        appconfigid: " . $appConfig->appConfigId . "\n";
+        $appConfig->uninstall();
     }
-
-    IndieBox::Apache2::removeSite( $self );
 
     1;
 }
