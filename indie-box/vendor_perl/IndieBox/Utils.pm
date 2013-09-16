@@ -127,18 +127,18 @@ sub myexec {
 sub saveFile {
     my $filename = shift;
     my $content  = shift;
-    my $mask     = shift || -1;
+    my $mask     = shift;
     my $uname    = shift;
     my $gname    = shift;
 
     my $uid = getUid( shift );
     my $gid = getGid( shift );
 
-    debug( "About to save to file $filename (" . length( $content ) . " bytes, mask " . sprintf( "%o", $mask ) . ", uid $uid, gid $gid)" );
-
-    if( $mask == -1 ) {
+    unless( defined( $mask )) {
         $mask = 0644;
     }
+    debug( "About to save to file $filename (" . length( $content ) . " bytes, mask " . sprintf( "%o", $mask ) . ", uid $uid, gid $gid)" );
+
     unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
         error( "Could not write to file $filename: $!" );
         return 0;
@@ -154,6 +154,73 @@ sub saveFile {
     }
 
     return 1;
+}
+
+##
+# Delete one or more files
+# @files: the files to delete
+# return: 1 if successful
+sub deleteFile {
+    my @files = @_;
+
+    my $ret = 1;
+    foreach my $f ( @files ) {
+        if( -f $f || -l $f ) {
+            unless( unlink( $f )) {
+                error( "Failed to delete file $f: $!" );
+                $ret = 0;
+            }
+        } elsif( -e $f ) {
+            error( "Cannot delete file $f, it isn't a file or symlink" );
+            $ret = 0;
+        } else {
+            error( "Cannot delete file $f, it doesn't exist" );
+            $ret = 0;
+        }
+    }
+    return $ret;
+}
+
+##
+# Make a directory
+# $filename: path to the directory
+# $mask: permissions on the directory
+# $uname: owner of the directory
+# $gname: group of the directory
+# return: 1 if successful
+sub mkdir {
+    my $filename = shift;
+    my $mask     = shift;
+    my $uid      = getUid( shift );
+    my $gid      = getGid( shift );
+
+    unless( defined( $mask )) {
+        $mask = 0755;
+    }
+
+    if( -d $filename ) {
+        warn( "Directory $filename exists already" );
+        return 1;
+    }
+    if( -e $filename ) {
+        error( "Failed to create directory $filename: something is there already" );
+        return 0;
+    }
+
+    debug( "Creating directory $filename" );
+
+    my $ret = mkdir $filename;
+    unless( $ret ) {
+        error( "Failed to create directory $filename: $!" );
+    }
+
+    chmod $mask, $filename;
+
+    if( $uid >= 0 || $gid >= 0 ) {
+        chown $uid, $gid, $filename;
+    }
+
+    return $ret;
 }
 
 ##

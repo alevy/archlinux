@@ -23,6 +23,7 @@ use warnings;
 
 package IndieBox::Host;
 
+use IndieBox::Apache2;
 use IndieBox::Logging;
 use IndieBox::Site;
 use IndieBox::Utils qw( readJsonFromFile myexec );
@@ -64,15 +65,19 @@ sub executeTriggers {
     } else {
         die( "Unexpected type $triggers" );
     }
-    if( @triggerList ) {
-        print "Need to execute triggers: " . join( ', ', @triggerList ) . "\n";
+    foreach my $trigger ( @triggerList ) {
+        if( 'httpd-reload' eq $trigger ) {
+            IndieBox::Apache2::reload();
+        } else {
+            warn( "Unknown trigger: $trigger" );
+        }
     }
 }
 
 ##
 # Update all the code currently installed on this host.
 sub updateCode {
-    myexec( 'echo SHOULD: pacman -Syu' );
+    myexec( 'pacman -Syu' );
 }
 
 ##
@@ -90,7 +95,7 @@ sub installPackages {
         die( "Unexpected type $packages" );
     }
     if( @packageList ) {
-        myexec( 'echo SHOULD: pacman -S --noconfirm ' . join( ' ', @packageList ));
+        myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ));
     }
 }
 

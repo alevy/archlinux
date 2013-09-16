@@ -23,6 +23,7 @@ use warnings;
 
 package IndieBox::Site;
 
+use IndieBox::Apache2;
 use IndieBox::AppConfiguration;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -204,6 +205,9 @@ sub deploy {
         print "        appconfigid: " . $appConfig->appConfigId . "\n";
         print "        context:     " . $appConfig->context     . "\n";
     }
+
+    IndieBox::Apache2::setupSite( $self );
+
     1;
 }
 
@@ -219,47 +223,70 @@ sub undeploy {
     foreach my $appConfig ( @{$self->appConfigs} ) {
         print "        appconfigid: " . $appConfig->appConfigId . "\n";
     }
+
+    IndieBox::Apache2::removeSite( $self );
+
     1;
 }
 
 ##
 # Set up a placeholder for this new site: "coming soon"
+# $triggers: triggers to be executed may be added to this hash
 sub setupPlaceholder {
-    my $self = shift;
+    my $self     = shift;
+    my $triggers = shift;
 
     print "Placeholder: createPlaceholder\n";
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
+
+    IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
+
+    $triggers->{'httpd-restart'} = 1;
 }
 
 ##
 # Suspend this site: replace site with an "updating" placeholder or such
+# $triggers: triggers to be executed may be added to this hash
 sub suspend {
-    my $self = shift;
+    my $self     = shift;
+    my $triggers = shift;
 
     print "Placeholder: suspend\n";
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
+
+    IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
+
+    $triggers->{'httpd-restart'} = 1;
 }
 
 ##
 # Resume this site from suspension
+# $triggers: triggers to be executed may be added to this hash
 sub resume {
-    my $self = shift;
+    my $self     = shift;
+    my $triggers = shift;
 
     print "Placeholder: resume\n";
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
+
+    $triggers->{'httpd-restart'} = 1;
 }
 
 ##
 # Permanently disable this site
+# $triggers: triggers to be executed may be added to this hash
 sub disable {
-    my $self = shift;
+    my $self     = shift;
+    my $triggers = shift;
 
     print "Placeholder: disable\n";
     print "    siteid:        " . $self->siteId . "\n";
     print "    hostname:      " . $self->hostName . "\n";
+
+    $triggers->{'httpd-restart'} = 1;
 }
 
 ##

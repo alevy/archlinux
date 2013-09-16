@@ -59,6 +59,7 @@ package() {
     done
 
     mkdir -p $pkgdir/srv/http/sites
+    mkdir -p $pkgdir/srv/http/wellknown
 
 # Documentation
     mkdir -p $pkgdir/usr/share/doc/indie-box

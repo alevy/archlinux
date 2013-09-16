@@ -31,6 +31,10 @@ my $mainConfigFile   = '/etc/httpd/conf/httpd.conf';
 my $ourConfigFile    = '/etc/httpd/conf/httpd-indie-box.conf';
 my $modsAvailableDir = '/etc/httpd/indie-box/mods-available';
 my $modsEnabledDir   = '/etc/httpd/indie-box/mods-enabled';
+my $sitesDir         = '/etc/httpd/indie-box/sites';
+my $appConfigsDir    = '/etc/httpd/indie-box/appconfigs';
+my $sitesDocumentRootDir = '/srv/http/sites';
+my $sitesWellknownDir    = '/srv/http/wellknown';
 
 ##
 # Ensure that Apache is running and config file is correct
@@ -52,6 +56,101 @@ sub reload {
     debug( "Apache2::reload" );
 
     IndieBox::Utils::myexec( 'systemctl reload httpd' );
+
+    1;
+}
+
+##
+# Do what is necessary to set up a site. This includes:
+# * generate an Apache2 configuration fragment for a site and save it in the right place
+# * create directories etc
+# $site: the Site
+sub setupSite {
+    my $site = shift;
+
+    my $siteId            = $site->siteId;
+    my $hostName          = $site->hostName;
+    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $appConfigFilesDir = "$appConfigsDir/$siteId";
+    my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
+    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+
+    unless( -d $siteDocumentRoot ) {
+        IndieBox::Utils::mkdir( $siteDocumentRoot );
+    }
+    unless( -d $siteWellKnownDir ) {
+        IndieBox::Utils::mkdir( $siteWellKnownDir );
+    }
+    unless( -d $appConfigFilesDir ) {
+        IndieBox::Utils::mkdir( $appConfigFilesDir );
+    }
+
+    my $content .= <<CONTENT;
+#
+# Apache config fragment for site $siteId at host $hostName
+#
+# (C) 2013 Indie Box Project
+# Generated automatically, do not modify.
+#
+
+<VirtualHost *:80>
+    ServerName $hostName
+
+    DocumentRoot "$siteDocumentRoot"
+    Options -Indexes
+CONTENT
+
+    foreach my $appConfig ( @{$site->appConfigs} ) {
+        if( $appConfig->isDefault ) {
+            my $context = $appConfig->context();
+            if( $context ) {
+                $$content .= <<CONTENT;
+        RedirectMatch seeother ^/\$ $context/
+CONTENT
+                last;
+            }
+        }
+    }
+
+    $content .= <<CONTENT;
+    AliasMatch ^/favicon\.ico $siteWellKnownDir/favicon.ico
+    AliasMatch ^/robots\.txt  $siteWellKnownDir/robots.txt
+    AliasMatch ^/sitemap\.xml $siteWellKnownDir/sitemap.xml
+
+    Include $appConfigFilesDir/
+</VirtualHost>
+CONTENT
+
+    IndieBox::Utils::saveFile( $siteFile, $content, 0755, 'http', 'http' );
+
+    1;
+}
+
+##
+# Do what is necessary to remove a site. This includes:
+# * remove an Apache2 configuration fragment for the site
+# * delete directories etc.
+# $site: the Site
+sub removeSite {
+    my $site = shift;
+
+    my $siteId            = $site->siteId;
+    my $siteFile          = "$sitesDir/$siteId.conf";
+    my $appConfigFilesDir = "$appConfigsDir/$siteId";
+    my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
+    my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
+
+    IndieBox::Utils::deleteFile( $siteFile );
+
+    if( -d $appConfigFilesDir ) {
+        IndieBox::Utils::deleteFile( $appConfigFilesDir );
+    }
+    if( -d $siteWellKnownDir ) {
+        IndieBox::Utils::deleteFile( $siteWellKnownDir );
+    }
+    if( -d $siteDocumentRoot ) {
+        IndieBox::Utils::deleteFile( $siteDocumentRoot );
+    }
 
     1;
 }
