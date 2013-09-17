@@ -68,10 +68,11 @@ sub siteUndeployed {
 
 ##
 # Determine the applicable role names for this host. For now, this is
-# fixed.
+# fixed. This is returned in the sequence in which installation typically
+# takes place: provision database before setting up the web server.
 # return: the applicable role names
 sub applicableRoleNames {
-    return [ 'apache2', 'mysql' ];
+    return [ 'mysql', 'apache2' ];
 }
 
 ##
