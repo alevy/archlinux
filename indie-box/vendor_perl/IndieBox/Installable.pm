@@ -57,6 +57,24 @@ sub packageName {
 }
 
 ##
+# Obtain this Installable's JSON
+# return: JSON
+sub installableJson {
+    my $self = shift;
+
+    return $self->{json};
+}
+
+##
+# Determine the customization points defined for this installable
+# return: map from name to has as in application JSON, or undef
+sub customizationPoints {
+    my $self = shift;
+
+    return $self->{json}->{customizationpoints};
+}
+
+##
 # Add names of packages that are required to run the specified roles for this Installable.
 # $roleNames: array of role names
 # $packages: hash of packages

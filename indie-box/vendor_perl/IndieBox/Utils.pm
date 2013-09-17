@@ -29,7 +29,7 @@ use File::Temp;
 use JSON;
 use POSIX;
 
-our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec );
+our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec saveFile slurpFile );
 my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
 ##
@@ -39,9 +39,7 @@ my $jsonParser = JSON->new->relaxed->pretty->utf8();
 sub readJsonFromFile {
     my $file = shift;
 
-    local $/;
-    open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
-    my $fileContent = <$fh>;
+    my $fileContent = slurpFile( $file );
 
     my $json;
     eval {
@@ -90,7 +88,6 @@ sub writeJsonToFile {
 sub writeJsonToStdout {
     my $json = shift;
 
-print "About to write JSON to stdout " . ref( $json ) . "\n";
     print $jsonParser->encode( $json );
 }
 
@@ -142,6 +139,21 @@ sub myexec {
         error( "Failed to execute $cmd (error code $ret): $!" );
     }
     return $ret;
+}
+
+##
+# Slurp the content of a file
+# $filename: the name of the file to read
+# return: the content of the file
+sub slurpFile {
+    my $filename = shift;
+
+    local $/;
+    open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
+    my $fileContent = <$fh>;
+    close $fh;
+
+    return $fileContent;
 }
 
 ##
@@ -272,6 +284,41 @@ sub deleteDirectory {
         } else {
             warn( "Cannot delete directory $d, does not exist" );
             next;
+        }
+    }
+    return $ret;
+}
+
+##
+# Delete one ore mor files or directories recursively.
+# @files: the files or directories to delete recursively
+sub deleteRecursively {
+    my @files = @_;
+
+    my $ret = 1;
+    if( @files ) {
+        debug( "About to recursively delete files: " . join( ', ', @files ));
+
+        foreach my $f ( @files ) {
+            if( -d $f ) {
+                opendir( DIR, $f );
+                my @files = readdir( DIR );
+                closedir( DIR );
+
+                deleteRecursively( map { "$f/$_"; } grep { !/^\.{1,2}$/ } @files );
+                unless( rmdir( $f )) {
+                    error( "Failed to delete directory $f: $!" );
+                    $ret = 0;
+                }
+            } elsif( -f $f || -l $f ) {
+                unless( unlink( $f )) {
+                    error( "Failed to delete file $f: $!" );
+                    $ret = 0;
+                }
+            } else {
+                error( "Failed to delete file $f: does not exist" );
+                $ret = 0;
+            }
         }
     }
     return $ret;
