@@ -61,7 +61,7 @@ sub siteId {
 
 ##
 # Obtain the site JSON
-# return: site JSON as string
+# return: site JSON
 sub siteJson {
     my $self = shift;
 
