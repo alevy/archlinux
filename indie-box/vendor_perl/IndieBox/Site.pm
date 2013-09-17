@@ -238,10 +238,6 @@ sub setupPlaceholder {
     my $self     = shift;
     my $triggers = shift;
 
-    print "Placeholder: createPlaceholder\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
-
     IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
 
     $triggers->{'httpd-reload'} = 1;
