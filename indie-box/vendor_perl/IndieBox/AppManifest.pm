@@ -193,7 +193,7 @@ sub checkManifest {
 
                             } elsif( $appConfigItem->{type} eq 'directory' ) {
 
-                            } elsif( $appConfigItem->{type} eq 'copyrecursive' ) {
+                            } elsif( $appConfigItem->{type} eq 'directorytree' ) {
                                 unless( $appConfigItem->{source} ) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify source" );
                                 }
