@@ -110,6 +110,15 @@ sub app {
 }
 
 ##
+# Obtain the instantiated customization points for this AppConfiguration
+# return: customization points hierarchy as given in the site JSON
+sub customizationPoints {
+    my $self = shift;
+
+    return $self->{json}->{customizationpoints};
+}
+
+##
 # Install this AppConfiguration.
 sub install {
     my $self = shift;
