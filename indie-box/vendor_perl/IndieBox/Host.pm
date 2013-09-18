@@ -24,11 +24,27 @@ use warnings;
 package IndieBox::Host;
 
 use IndieBox::Apache2;
+use IndieBox::Configuration;
 use IndieBox::Logging;
 use IndieBox::Site;
 use IndieBox::Utils qw( readJsonFromFile myexec );
+use Sys::Hostname;
 
-my $SITES_DIR = '/etc/indie-box/sites';
+my $SITES_DIR      = '/etc/indie-box/sites';
+my $HOST_CONF_FILE = '/etc/indie-box/config.json';
+my $hostConf       = undef;
+
+##
+# Obtain the host Configuration object.
+# return: Configuration object
+sub config {
+    unless( $hostConf ) {
+        my $raw = readJsonFromFile( $HOST_CONF_FILE );
+        $raw->{hostname} = hostname;
+
+        $hostConf = new IndieBox::Configuration( $raw );
+    }
+}
 
 ##
 # Determine all Sites currently installed on this host.

@@ -24,9 +24,14 @@ use warnings;
 package IndieBox::AppConfiguration;
 
 use IndieBox::App;
+use IndieBox::Host;
 use IndieBox::Logging;
 use JSON;
+use MIME::Base64;
+
 use fields qw{json site app};
+
+my $APPCONFIGPARSDIR = '/etc/indie-box/appconfigpars';
 
 ##
 # Constructor.
@@ -81,7 +86,7 @@ sub isDefault {
 }
 
 ##
-# Obtain the relative URL
+# Obtain the relative URL without trailing slash.
 # return: relative URL
 sub context {
     my $self = shift;
@@ -94,6 +99,19 @@ sub context {
     }
     unless( defined( $ret )) {
         $ret = $self->{app}->defaultContext();
+    }
+    return $ret;
+}
+
+##
+# Obtain the relative URL without trailing slash, except return / if root of site
+# return: relative URL
+sub contextOrSlash {
+    my $self = shift;
+
+    my $ret = $self->context;
+    unless( $ret ) {
+        $ret = '/';
     }
     return $ret;
 }
@@ -123,7 +141,96 @@ sub customizationPoints {
 sub install {
     my $self = shift;
 
-    print "About to install $self\n";
+    my $appConfigId = $self->appConfigId;
+    IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
+
+    my @installables        = ( $self->{app} );
+    my $appConfigCustPoints = $self->customizationPoints();
+
+    foreach my $installable ( @installables ) {
+        my $installableJson = $installable->installableJson;
+        my $packageName     = $installable->packageName;
+
+        my $config = new IndieBox::Configuration(
+                {
+                    "package.name" => $packageName,
+                    "appconfig.appconfigid" => $self->appConfigId(),
+                    "appconfig.context" => $self->context(),
+                    "appconfig.contextorslash" => $self->contextOrSlash(),
+                    "site.hostname" => $self->{site}->hostName(),
+                    "site.siteid" => $self->{site}->siteId()
+                },
+                $installable->config );
+
+        # Customization points for this Installable at this AppConfiguration
+
+        IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
+
+        my $installableCustPoints = $installable->customizationPoints;
+        if( $installableCustPoints ) {
+            while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+                my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
+
+                unless( $value ) {
+                    # use default instead
+                    $value = $custPointDef->{default};
+                }
+                if( defined( $value )) {
+                    my $data = $value->{value};
+                    if( $value->{encoding} eq 'base64' ) {
+                        $data = decode_base64( $data );
+                    }
+                    IndieBox::Utils::saveFile( "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName", $data );
+                }
+            }
+        }
+
+        # Now for all the roles
+        my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+        foreach my $roleName ( @$applicableRoleNames ) {
+            my $installableRoleJson = $installableJson->{roles}->{$roleName};
+            unless( $installableRoleJson ) {
+                next;
+            }
+
+            # skip dependencies: done already
+
+            if( 'apache2' eq $roleName ) {
+                my $apache2modules = $installableRoleJson->{apache2modules};
+                if( $apache2modules ) {
+                    IndieBox::Apache2::activateModules( @$apache2modules );
+                }
+            }
+
+            my $appConfigItems = $installableRoleJson->{appconfigitems};
+            unless( $appConfigItems ) {
+                next;
+            }
+            foreach my $appConfigItem ( @$appConfigItems ) {
+                my $type    = $appConfigItem->{type};
+                my $pmClass = ucfirst( $type );
+                $pmClass =~ s/-(.)/uc($1)/ge; # So mysql-database becomes MysqlDatabase
+                $pmClass = 'IndieBox::AppConfigurationItems::' . $pmClass;
+
+                my $pmFile = $pmClass;
+                $pmFile =~ s/::/\//g;
+                $pmFile .= '.pm';
+
+                my $item;
+
+                eval {
+                    require( $pmFile );
+                    $item = &{\&{"${pmClass}::new"}}( $appConfigItem, $self );
+                };
+                if( $@ ) {
+                    error( $@ );
+                }
+                if( $item ) {
+                    $item->install( $config );
+                }
+            }
+        }
+    }
 }
 
 ##
@@ -131,7 +238,10 @@ sub install {
 sub uninstall {
     my $self = shift;
 
-    print "About to uninstall $self\n";
+    my $appConfigId = $self->appConfigId;
+
+    # faster to do a simple recursive delete, instead of going point by point
+    IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
 }
 
 ##

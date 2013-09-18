@@ -149,7 +149,7 @@ sub slurpFile {
     my $filename = shift;
 
     local $/;
-    open( my $fh, '<', $file ) || fatal( "Cannot read file $file" );
+    open( my $fh, '<', $filename ) || fatal( "Cannot read file $filename" );
     my $fileContent = <$fh>;
     close $fh;
 

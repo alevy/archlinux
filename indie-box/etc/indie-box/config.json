@@ -15,17 +15,23 @@
 
         "sitefragmentdir" : "/etc/httpd/indie-box-site-fragments",
         "appconfigfragmentdir" : "/etc/httpd/indie-box-appconfig-fragments",
+        "sitesdir" : "/srv/http/sites"
+    },
 
-        "site" : {
+    "site" : {
+        "apache2" : {
             "sitedocumentdir" : "/srv/http/${site.siteid}",
             "sitefragmentfile" : "${apache2.sitefragmentdir}/${site.siteid}.conf",
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
             "authgroupfile" : "${apache2.sitefragmentdir}/${site.siteid}.groups",
-        },
+        }
+    },
 
-        "appconfig" : {
+    "appconfig" : {
+        "apache2" : {
             "datadir" : "${package.datadir}/${appconfig.appconfigid}",
+            "docroot" : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${appconfig.appconfigid}.conf",
         }
     }

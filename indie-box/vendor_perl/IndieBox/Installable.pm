@@ -23,8 +23,9 @@ use warnings;
 
 package IndieBox::Installable;
 
-use fields qw{json packageName};
+use fields qw{json config packageName};
 
+use IndieBox::Host;
 use IndieBox::Logging;
 use JSON;
 use IndieBox::Utils qw( readJsonFromFile );
@@ -40,11 +41,21 @@ sub new {
         $self = fields::new( $self );
     }
 
-    my $json             = readJsonFromFile( IndieBox::Configuration::manifestFileFor( $packageName ));
-    $self->{json}        = IndieBox::Configuration::replaceVariables( $json, { "package.name" => $packageName }, 1 );
+    my $json             = readJsonFromFile( manifestFileFor( $packageName ));
+    $self->{config}      = new IndieBox::Configuration( { "package.name" => $packageName }, IndieBox::Host::config() );
+    $self->{json}        = $self->{config}->replaceVariables( $json, 1 );
     $self->{packageName} = $packageName;
 
     return $self;
+}
+
+##
+# Obtain the Configuration object
+# return: the Configuration object
+sub config {
+    my $self = shift;
+
+    return $self->{config};
 }
 
 ##
@@ -95,6 +106,16 @@ sub addToPrerequisites {
         }
     }
     1;
+}
+
+##
+# Obtain the filename of the manifest file for a package with a given identifier
+# $identifier: the package identifier
+# return: the filename
+sub manifestFileFor {
+    my $identifier = shift;
+
+    return IndieBox::Host::config()->get( 'package.manifestdir' ) . "/$identifier.json";
 }
 
 1;

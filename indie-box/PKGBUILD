@@ -27,6 +27,7 @@ package() {
 
 # Config files
     mkdir -p $pkgdir/etc/indie-box/sites
+    mkdir -p $pkgdir/etc/indie-box/appconfigpars
     install -m644 $startdir/etc/indie-box/config.json $pkgdir/etc/indie-box/
     install -m644 $startdir/etc/indie-box/log4perl.conf $pkgdir/etc/indie-box/
 

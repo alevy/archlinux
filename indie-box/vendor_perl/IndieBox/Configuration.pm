@@ -26,10 +26,26 @@ package IndieBox::Configuration;
 use IndieBox::Logging;
 use IndieBox::Utils qw( readJsonFromFile );
 use JSON;
-use fields;
+use fields qw( hierarchicalMap flatMap delegate );
 
-my $confFile = '/etc/indie-box/config.json';
-my $values   = undef;
+##
+# Constructor.
+# $hierarchicalMap: map of name to value (which may be another map)
+# $delegate: another Configuration object which may be used to resolve unknown variables
+sub new {
+    my $self            = shift;
+    my $hierarchicalMap = shift;
+    my $delegate        = shift;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+    $self->{hierarchicalMap} = $hierarchicalMap;
+    $self->{flatMap}         = _flatten( $hierarchicalMap );
+    $self->{delegate}        = $delegate;
+
+    return $self;
+}
 
 ##
 # Obtain a configuration value. This will not resolve symbolic references in the value.
@@ -37,12 +53,19 @@ my $values   = undef;
 # $default: value returned if the configuration value has not been set
 # return: the value, or default value
 sub get {
+    my $self    = shift;
     my $name    = shift;
     my $default = shift;
 
-    _initialize();
-
-    return $values->{$name} || $default;
+    my $found = $self->{flatMap}->{$name};
+    if( defined( $found )) {
+        return $found;
+    }
+    if( $self->{delegate} ) {
+        return $self->{delegate}->get( $name, $default );
+    } else {
+        return $default;
+    }
 }
 
 ##
@@ -54,19 +77,16 @@ sub get {
 # $remainingDepth: remaining recursion levels before abortion
 # return: the value, or default value
 sub getResolve {
+    my $self           = shift;
     my $name           = shift;
     my $default        = shift;
-    my $map            = shift || {};
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
-    my $ret = $map->{$name};
-    unless( $ret ) {
-        $ret = $values->{$name};
-    }
-    if( $ret ) {
+    my $ret = $self->get( $name, $default );
+    if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $map, $unresolvedOk, $remainingDepth-1 )/ge;
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
         }
     } elsif( !$unresolvedOk ) {
         die( "Cannot find variable $name" );
@@ -77,56 +97,65 @@ sub getResolve {
 }
 
 ##
-# Replace all variables in the string values in this hash with configuration values.
+# Obtain the keys in this Configuration object.
+# return: the keys
+sub keys {
+    my $self = shift;
+
+    my @ret = keys %{$self->{flatMap}};
+    if( $self->{delegate} ) {
+        push @ret, $self->{delegate}->keys();
+    }
+    return @ret;
+}
+
+##
+# Replace all variables in the string values in this hash with the values from this Configuration object.
 # $value: the hash, array or string
-# $varMap: the map of variables to replace
 # $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
 # return: the same $value
 sub replaceVariables {
+    my $self         = shift;
     my $value        = shift;
-    my $varMap       = shift;
     my $unresolvedOk = shift || 0;
 
     my $ret;
     if( ref( $value ) eq 'HASH' ) {
         $ret = {};
         while( my( $key2, $value2 ) = each %$value ) {
-            my $newValue2 = replaceVariables( $value2, $varMap, $unresolvedOk );
+            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk );
             $ret->{$key2} = $newValue2;
         }
 
     } elsif( ref( $value ) eq 'ARRAY' ) {
         $ret = [];
         foreach my $value2 ( @$value ) {
-            my $newValue2 = replaceVariables( $value2, $varMap, $unresolvedOk );
+            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk );
             push @$ret, $newValue2
         }
     } else {
         $ret = $value;
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/getResolve( $1, undef, $varMap, $unresolvedOk, 16 )/ge;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/$self->getResolve( $1, undef, $unresolvedOk )/ge;
     }
     return $ret;
 }
 
 ##
-# Obtain the filename of the manifest file for a package with a given identifier
-# $identifier: the package identifier
-# return: the filename
-sub manifestFileFor {
-    my $identifier = shift;
+# Dump this Configuration to string
+sub dump {
+    my $self = shift;
 
-    return get( 'package.manifestdir' ) . "/$identifier.json";
-}
-
-##
-# Read configuration values if needed.
-sub _initialize {
-    unless( $values ) {
-        my $raw = readJsonFromFile( $confFile );
-
-        # turn hierarchical JSON into flat hierarchical strings
-        $values = _flatten( $raw );
-    }
+    my $ret = join( '', map
+        {
+            my $key   = $_;
+            my $value = $self->getResolve( $_, undef, 1 );
+            if( defined( $value )) {
+                "$_ => $value\n";
+            } else {
+                "$_ => <undef>\n";
+            }
+        } sort $self->keys() );
+    return $ret;
 }
 
 ##

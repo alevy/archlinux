@@ -43,10 +43,10 @@ sub new {
     }
     $self->SUPER::new( $packageName );
 
-    if( IndieBox::Configuration::get( 'indiebox.checkmanifest', 1 )) {
+    if( $self->{config}->get( 'indiebox.checkmanifest', 1 )) {
         use IndieBox::AppManifest;
 
-        my $codeDir = IndieBox::Configuration::getResolve( 'package.codedir', undef, { "package.name" => $packageName } );
+        my $codeDir = $self->{config}->getResolve( 'package.codedir' );
 
         IndieBox::AppManifest::checkManifest( $self->{json}, $codeDir );
     }
