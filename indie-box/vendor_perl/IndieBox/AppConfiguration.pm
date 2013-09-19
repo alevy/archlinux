@@ -146,6 +146,8 @@ sub customizationPoints {
 sub install {
     my $self = shift;
 
+    $self->_initialize();
+
     my $appConfigId = $self->appConfigId;
     IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
 
@@ -236,10 +238,61 @@ sub install {
 sub uninstall {
     my $self = shift;
 
+    $self->_initialize();
+
     my $appConfigId = $self->appConfigId;
 
     # faster to do a simple recursive delete, instead of going point by point
     IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
+
+    my @installables        = ( $self->{app} );
+    my $appConfigCustPoints = $self->customizationPoints();
+
+    foreach my $installable ( reverse @installables ) {
+        my $installableJson = $installable->installableJson;
+        my $packageName     = $installable->packageName;
+
+        my $config = new IndieBox::Configuration(
+                {
+                    "package.name" => $packageName,
+                    "appconfig.appconfigid" => $self->appConfigId(),
+                    "appconfig.context" => $self->context(),
+                    "appconfig.contextorslash" => $self->contextOrSlash(),
+                    "site.hostname" => $self->{site}->hostName(),
+                    "site.siteid" => $self->{site}->siteId()
+                },
+                $installable->config );
+
+        # Now for all the roles
+        my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+        foreach my $roleName ( reverse @$applicableRoleNames ) {
+            my $installableRoleJson = $installableJson->{roles}->{$roleName};
+            unless( $installableRoleJson ) {
+                next;
+            }
+
+            my $appConfigItems = $installableRoleJson->{appconfigitems};
+            unless( $appConfigItems ) {
+                next;
+            }
+            foreach my $appConfigItem ( reverse @$appConfigItems ) {
+                my $type = $appConfigItem->{type};
+                my $item;
+
+                if( 'file' eq $type ) {
+                    $item = IndieBox::AppConfigurationItems::File->new( $appConfigItem, $self );
+                } elsif( 'directory' eq $type ) {
+                    $item = IndieBox::AppConfigurationItems::Directory->new( $appConfigItem, $self );
+                }
+                if( $item ) {
+                    $item->uninstall(
+                            $config->getResolve( 'package.codedir' ),
+                            $config->getResolve( "appconfig.$roleName.dir" ),
+                            $config );
+                }
+            }
+        }
+    }
 }
 
 ##

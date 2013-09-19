@@ -189,9 +189,6 @@ sub removeSite {
     if( -d $siteWellKnownDir ) {
         IndieBox::Utils::deleteDirectory( $siteWellKnownDir );
     }
-    if( -d $siteDocumentRoot ) {
-        IndieBox::Utils::deleteDirectory( $siteDocumentRoot );
-    }
 
     1;
 }

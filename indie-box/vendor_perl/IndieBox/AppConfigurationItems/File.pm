@@ -117,4 +117,29 @@ sub install {
     }
 }
 
+##
+# Uninstall this item
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+sub uninstall {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    my $names = $self->{json}->{names};
+    unless( $names ) {
+        $names = [ $self->{json}->{name} ];
+    }
+
+    foreach my $name ( reverse @$names ) {
+        my $fullName = $name;
+        unless( $fullName =~ m#^/# ) {
+            $fullName = "$defaultToDir/$fullName";
+        }
+        IndieBox::Utils::deleteFile( $fullName );
+    }
+}
+
 1;
