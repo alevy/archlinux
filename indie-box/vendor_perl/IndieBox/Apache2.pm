@@ -119,9 +119,6 @@ sub setupSite {
     my $siteDocumentRoot  = "$sitesDocumentRootDir/$siteId";
     my $siteWellKnownDir  = "$sitesWellknownDir/$siteId";
 
-    unless( -d $siteDocumentRoot ) {
-        IndieBox::Utils::mkdir( $siteDocumentRoot );
-    }
     unless( -d $siteWellKnownDir ) {
         IndieBox::Utils::mkdir( $siteWellKnownDir );
     }

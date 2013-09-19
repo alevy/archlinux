@@ -20,9 +20,12 @@ package() {
     mkdir -p $pkgdir/usr/bin
     install -m755 $startdir/bin/indie-box-admin $pkgdir/usr/bin/
 
-    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems
     for f in $startdir/vendor_perl/IndieBox/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/
+    done
+    for f in $startdir/vendor_perl/IndieBox/AppConfigurationItems/*.pm; do
+        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems/
     done
 
 # Config files

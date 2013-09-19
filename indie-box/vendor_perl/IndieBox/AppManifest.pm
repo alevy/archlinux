@@ -128,7 +128,7 @@ sub checkManifest {
                             }
                         } else {
                             my @names = ();
-                            if( $appConfigItem->{name} ) {
+                            if( defined( $appConfigItem->{name} )) {
                                 if( $appConfigItem->{names} ) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: specify name or names, not both" );
                                 }
@@ -153,6 +153,9 @@ sub checkManifest {
                                     # file does not exist yet
                                     push @names, $name;
                                     ++$namesIndex;
+                                }
+                                unless( $namesIndex > 0 ) {
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify name or names" );
                                 }
                             }
 

@@ -25,6 +25,11 @@ package IndieBox::AppConfiguration;
 
 use IndieBox::App;
 use IndieBox::Host;
+use IndieBox::AppConfigurationItems::Directory;
+# use IndieBox::AppConfigurationItems::DirectoryTree;
+use IndieBox::AppConfigurationItems::File;
+# use IndieBox::AppConfigurationItems::Perlscript;
+# use IndieBox::AppConfigurationItems::Symlink;
 use IndieBox::Logging;
 use JSON;
 use MIME::Base64;
@@ -207,26 +212,19 @@ sub install {
                 next;
             }
             foreach my $appConfigItem ( @$appConfigItems ) {
-                my $type    = $appConfigItem->{type};
-                my $pmClass = ucfirst( $type );
-                $pmClass =~ s/-(.)/uc($1)/ge; # So mysql-database becomes MysqlDatabase
-                $pmClass = 'IndieBox::AppConfigurationItems::' . $pmClass;
-
-                my $pmFile = $pmClass;
-                $pmFile =~ s/::/\//g;
-                $pmFile .= '.pm';
-
+                my $type = $appConfigItem->{type};
                 my $item;
 
-                eval {
-                    require( $pmFile );
-                    $item = &{\&{"${pmClass}::new"}}( $appConfigItem, $self );
-                };
-                if( $@ ) {
-                    error( $@ );
+                if( 'file' eq $type ) {
+                    $item = IndieBox::AppConfigurationItems::File->new( $appConfigItem, $self );
+                } elsif( 'directory' eq $type ) {
+                    $item = IndieBox::AppConfigurationItems::Directory->new( $appConfigItem, $self );
                 }
                 if( $item ) {
-                    $item->install( $config );
+                    $item->install(
+                            $config->getResolve( 'package.codedir' ),
+                            $config->getResolve( "appconfig.$roleName.dir" ),
+                            $config );
                 }
             }
         }
