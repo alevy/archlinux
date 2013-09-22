@@ -20,7 +20,7 @@
 
     "site" : {
         "apache2" : {
-            "sitedocumentdir" : "/srv/http/${site.siteid}",
+            "sitedocumentdir" : "${apache2.sitesdir}/${site.siteid}",
             "sitefragmentfile" : "${apache2.sitefragmentdir}/${site.siteid}.conf",
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",

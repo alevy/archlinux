@@ -49,23 +49,6 @@ log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
 
     $log = Log::Log4perl->get_logger( __FILE__ );
     $log->trace( "Initialized log4perl" );
-
-# log warnings and die messages to log4perl per:
-#   http://log4perl.sourceforge.net/releases/Log-Log4perl/docs/html/Log/Log4perl/FAQ.html
-#   http://stackoverflow.com/questions/2081822/how-can-i-catch-perl-warnings-into-log4perl-logs
-
-    $SIG{__WARN__} = sub {
-        local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + 1;
-        $log->logcluck( @_ ); # stack trace
-    };
-    $SIG{__DIE__} = sub {
-        return unless defined $^S and $^S == 0;
-        # Ignore errors in eval.
-        # From http://stackoverflow.com/questions/8078220/custom-error-handling-is-catching-errors-that-normally-are-not-displayed
-
-        local $Log::Log4perl::caller_depth = $Log::Log4perl::caller_depth + 1;
-        $log->logconfess( @_ ); # stack trace
-    };
 }
 
 ##

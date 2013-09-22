@@ -26,15 +26,16 @@ package IndieBox::AppConfiguration;
 use IndieBox::App;
 use IndieBox::Host;
 use IndieBox::AppConfigurationItems::Directory;
-# use IndieBox::AppConfigurationItems::DirectoryTree;
+use IndieBox::AppConfigurationItems::DirectoryTree;
 use IndieBox::AppConfigurationItems::File;
-# use IndieBox::AppConfigurationItems::Perlscript;
-# use IndieBox::AppConfigurationItems::Symlink;
+use IndieBox::AppConfigurationItems::MysqlDatabase;
+use IndieBox::AppConfigurationItems::Perlscript;
+use IndieBox::AppConfigurationItems::Symlink;
 use IndieBox::Logging;
 use JSON;
 use MIME::Base64;
 
-use fields qw{json site app};
+use fields qw{json site app config};
 
 my $APPCONFIGPARSDIR = '/etc/indie-box/appconfigpars';
 
@@ -51,8 +52,15 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{json} = $json;
-    $self->{site} = $site;
+    $self->{json}   = $json;
+    $self->{site}   = $site;
+    $self->{config} = new IndieBox::Configuration(
+                {
+                    "appconfig.appconfigid" => $self->appConfigId(),
+                    "appconfig.context" => $self->context(),
+                    "appconfig.contextorslash" => $self->contextOrSlash(),
+                },
+                $self->{site}->config );
 
     # No checking required, IndieBox::Site::new has done that already
     return $self;
@@ -142,11 +150,28 @@ sub customizationPoints {
 }
 
 ##
+# Obtain the Configuration object
+# return: the Configuration object
+sub config {
+    my $self = shift;
+
+    return $self->{config};
+}
+
+##
 # Install this AppConfiguration.
 sub install {
     my $self = shift;
 
     $self->_initialize();
+
+    my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+    foreach my $roleName ( @$applicableRoleNames ) {
+        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        if( $dir ) {
+            IndieBox::Utils::mkdir( $dir, 0755 );
+        }
+    }
 
     my $appConfigId = $self->appConfigId;
     IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
@@ -158,16 +183,7 @@ sub install {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
-        my $config = new IndieBox::Configuration(
-                {
-                    "package.name" => $packageName,
-                    "appconfig.appconfigid" => $self->appConfigId(),
-                    "appconfig.context" => $self->context(),
-                    "appconfig.contextorslash" => $self->contextOrSlash(),
-                    "site.hostname" => $self->{site}->hostName(),
-                    "site.siteid" => $self->{site}->siteId()
-                },
-                $installable->config );
+        my $config = new IndieBox::Configuration( {}, $installable->config, $self->{config} );
 
         # Customization points for this Installable at this AppConfiguration
 
@@ -193,7 +209,6 @@ sub install {
         }
 
         # Now for all the roles
-        my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
         foreach my $roleName ( @$applicableRoleNames ) {
             my $installableRoleJson = $installableJson->{roles}->{$roleName};
             unless( $installableRoleJson ) {
@@ -205,8 +220,17 @@ sub install {
             if( 'apache2' eq $roleName ) {
                 my $apache2modules = $installableRoleJson->{apache2modules};
                 if( $apache2modules ) {
-                    IndieBox::Apache2::activateModules( @$apache2modules );
+                    IndieBox::Apache2::activateApacheModules( @$apache2modules );
                 }
+                my $phpModules = $installableRoleJson->{phpmodules};
+                if( $phpModules ) {
+                    IndieBox::Apache2::activatePhpModules( @$phpModules );
+                }
+            }
+
+            my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 ); # some roles don't have a directory
+            if( $dir ) {
+                IndieBox::Utils::mkdir( $dir, 0755 );
             }
 
             my $appConfigItems = $installableRoleJson->{appconfigitems};
@@ -215,17 +239,11 @@ sub install {
             }
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $type = $appConfigItem->{type};
-                my $item;
-
-                if( 'file' eq $type ) {
-                    $item = IndieBox::AppConfigurationItems::File->new( $appConfigItem, $self );
-                } elsif( 'directory' eq $type ) {
-                    $item = IndieBox::AppConfigurationItems::Directory->new( $appConfigItem, $self );
-                }
+                my $item = $self->_instantiateAppConfigurationItem( $type, $appConfigItem, $installable );
                 if( $item ) {
                     $item->install(
                             $config->getResolve( 'package.codedir' ),
-                            $config->getResolve( "appconfig.$roleName.dir" ),
+                            $dir,
                             $config );
                 }
             }
@@ -240,6 +258,8 @@ sub uninstall {
 
     $self->_initialize();
 
+    my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+
     my $appConfigId = $self->appConfigId;
 
     # faster to do a simple recursive delete, instead of going point by point
@@ -252,20 +272,12 @@ sub uninstall {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
-        my $config = new IndieBox::Configuration(
-                {
-                    "package.name" => $packageName,
-                    "appconfig.appconfigid" => $self->appConfigId(),
-                    "appconfig.context" => $self->context(),
-                    "appconfig.contextorslash" => $self->contextOrSlash(),
-                    "site.hostname" => $self->{site}->hostName(),
-                    "site.siteid" => $self->{site}->siteId()
-                },
-                $installable->config );
+        my $config = new IndieBox::Configuration( {}, $installable->config, $self->{config} );
 
         # Now for all the roles
-        my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
         foreach my $roleName ( reverse @$applicableRoleNames ) {
+            my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 ); # some roles don't have a directory
+
             my $installableRoleJson = $installableJson->{roles}->{$roleName};
             unless( $installableRoleJson ) {
                 next;
@@ -277,22 +289,59 @@ sub uninstall {
             }
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 my $type = $appConfigItem->{type};
-                my $item;
+                my $item = $self->_instantiateAppConfigurationItem( $type, $appConfigItem, $installable );
 
-                if( 'file' eq $type ) {
-                    $item = IndieBox::AppConfigurationItems::File->new( $appConfigItem, $self );
-                } elsif( 'directory' eq $type ) {
-                    $item = IndieBox::AppConfigurationItems::Directory->new( $appConfigItem, $self );
-                }
                 if( $item ) {
                     $item->uninstall(
                             $config->getResolve( 'package.codedir' ),
-                            $config->getResolve( "appconfig.$roleName.dir" ),
+                            $dir,
                             $config );
                 }
             }
+            if( $dir ) {
+                IndieBox::Utils::rmdir( $dir );
+            }
         }
     }
+
+    foreach my $roleName ( @$applicableRoleNames ) {
+        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        if( $dir ) {
+            IndieBox::Utils::rmdir( $dir );
+        }
+    }
+}
+
+##
+# Internal helper to instantiate the right subclass of AppConfigurationItem.
+# $type: name of the type to instantiate
+# $json: the JSON fragment for the AppConfigurationItem
+# $installable: the Installable that the AppConfigurationItem belongs to
+# return: instance of subclass of AppConfigurationItem, or undef
+sub _instantiateAppConfigurationItem {
+    my $self        = shift;
+    my $type        = shift;
+    my $json        = shift;
+    my $installable = shift;
+
+    my $ret;
+    if( 'file' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::File->new( $json, $self, $installable );
+    } elsif( 'directory' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::Directory->new( $json, $self, $installable );
+    } elsif( 'directorytree' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::DirectoryTree->new( $json, $self, $installable );
+    } elsif( 'symlink' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::Symlink->new( $json, $self, $installable );
+    } elsif( 'perlscript' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::Perlscript->new( $json, $self, $installable );
+    } elsif( 'mysql-database' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::MysqlDatabase->new( $json, $self, $installable );
+    } else {
+        error( "Unknown AppConfigurationItem type: $type" );
+        $ret = undef;
+    }
+    return $ret;
 }
 
 ##

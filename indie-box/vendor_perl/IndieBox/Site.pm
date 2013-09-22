@@ -30,7 +30,7 @@ use IndieBox::Utils;
 use JSON;
 use MIME::Base64;
 
-use fields qw{json appConfigs};
+use fields qw{json appConfigs config};
 
 ##
 # Constructor.
@@ -44,8 +44,14 @@ sub new {
         $self = fields::new( $self );
     }
     $self->{json} = $json;
-
     $self->_checkJson();
+
+    $self->{config} = new IndieBox::Configuration(
+                {
+                    "site.hostname" => $self->hostName(),
+                    "site.siteid" => $self->siteId()
+                },
+            IndieBox::Host::config() );
 
     return $self;
 }
@@ -75,6 +81,15 @@ sub hostName {
     my $self = shift;
 
     return $self->{json}->{hostname};
+}
+
+##
+# Obtain the Configuration object
+# return: the Configuration object
+sub config {
+    my $self = shift;
+
+    return $self->{config};
 }
 
 ##
@@ -206,6 +221,9 @@ sub addToPrerequisites {
 sub deploy {
     my $self = shift;
 
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+    IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $appConfig->install();
     }
@@ -227,6 +245,9 @@ sub undeploy {
         $appConfig->uninstall();
     }
     IndieBox::Host::siteUndeployed( $self );
+
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+    IndieBox::Utils::rmdir( $siteDocumentDir );
 
     1;
 }

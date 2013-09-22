@@ -27,6 +27,7 @@ use IndieBox::Logging;
 use Exporter qw( import myexec );
 use File::Temp;
 use JSON;
+use Lchown;
 use POSIX;
 
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec saveFile slurpFile );
@@ -249,7 +250,7 @@ sub mkdir {
 
     debug( "Creating directory $filename" );
 
-    my $ret = mkdir $filename;
+    my $ret = CORE::mkdir $filename;
     unless( $ret ) {
         error( "Failed to create directory $filename: $!" );
     }
@@ -264,9 +265,35 @@ sub mkdir {
 }
 
 ##
+# Make a symlink
+# $oldfile: the destination of the symlink
+# $newfile: the symlink to be created
+# $uid: owner username
+# $gid: group username
+
+sub symlink {
+    my $oldfile = shift;
+    my $newfile = shift;
+    my $uid     = getUid( shift );
+    my $gid     = getGid( shift );
+
+    debug( "About to symlink $oldfile $newfile" );
+
+    my $ret = symlink $oldfile, $newfile;
+    unless( $ret ) {
+        error( "Failed to symlink $oldfile $newfile" );
+    }
+    if( $uid >= 0 || $gid >= 0 ) {
+        lchown $uid, $gid, $newfile;
+    }
+
+    return $ret;
+}
+
+##
 # Delete one or more directories. They must be empty first
 # @dirs: the directories to delete
-sub deleteDirectory {
+sub rmdir {
     my @dirs = @_;
 
     debug( "About to delete directories: " . join( ', ', @dirs ));
@@ -274,7 +301,7 @@ sub deleteDirectory {
     my $ret = 1;
     foreach my $d ( @dirs ) {
         if( -d $d ) {
-            unless( rmdir( $d )) {
+            unless( CORE::rmdir( $d )) {
                 error( "Failed to delete directory $d: $!" );
                 $ret = 0;
             }
@@ -306,7 +333,7 @@ sub deleteRecursively {
                 closedir( DIR );
 
                 deleteRecursively( map { "$f/$_"; } grep { !/^\.{1,2}$/ } @files );
-                unless( rmdir( $f )) {
+                unless( CORE::rmdir( $f )) {
                     error( "Failed to delete directory $f: $!" );
                     $ret = 0;
                 }
@@ -322,6 +349,21 @@ sub deleteRecursively {
         }
     }
     return $ret;
+}
+
+##
+# Copy a directory tree recursively to some other place
+# $from: source directory
+# $to: destination directory
+sub copyRecursively {
+    my $from = shift;
+    my $to   = shift;
+
+    debug( "copyRecursively: $from -> $to" );
+
+    myexec( "cp -d -r -p '$from' $'to'" );
+
+    return 1;
 }
 
 ##
@@ -369,6 +411,19 @@ sub getGid {
     }
     return $gid;
 }
+
+##
+# Generate a random identifier
+# $length: length of identifier
+# return: identifier
+sub generateRandomIdentifier {
+    my $length = shift || 8;
+
+    my $ret = ("a".."z", "A".."Z")[rand 52];
+    $ret .= generateRandomPassword( $length-1 );
+    return $ret;
+}
+
 
 ##
 # Generate a random password

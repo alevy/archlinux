@@ -100,7 +100,21 @@ sub checkManifest {
                         ++$modulesIndex;
                     }
                 }
-
+                if( $roleJson->{phpmodules} ) {
+                    unless( ref( $roleJson->{phpmodules} ) eq 'ARRAY' ) {
+                        fatal( "Manifest JSON: roles section: role $roleName: phpmodules is not an array" );
+                    }
+                    my $modulesIndex = 0;
+                    foreach my $module ( @{$roleJson->{phpmodules}} ) {
+                        if( ref( $module )) {
+                            fatal( "Manifest JSON: roles section: role $roleName: phpmodules[$modulesIndex] must be string" );
+                        }
+                        if( $module !~ m!^[-a-z0-9]+$! ) {
+                            fatal( "Manifest JSON: roles section: role $roleName: phpmodules[$modulesIndex] invalid: $module" );
+                        }
+                        ++$modulesIndex;
+                    }
+                }
                 if( $roleJson->{appconfigitems} ) {
                     unless( ref( $roleJson->{appconfigitems} ) eq 'ARRAY' ) {
                         fatal( "Manifest JSON: roles section: role $roleName: not an array" );
@@ -162,53 +176,67 @@ sub checkManifest {
                             if( $appConfigItem->{type} eq 'file' ) {
                                 if( $appConfigItem->{source} ) {
                                     if( $appConfigItem->{template} ) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: specify source or template, not both" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': specify source or template, not both" );
                                     }
                                     if( ref( $appConfigItem->{source} )) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'source' must be string" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'source' must be string" );
                                     }
                                     foreach my $name ( @names ) {
                                         unless( validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                                            fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid source: " . $appConfigItem->{source} . " for name $name" );
+                                            fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                         }
                                     }
                                 } elsif( $appConfigItem->{template} ) {
                                     unless( $appConfigItem->{templatelang} ) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying template, must specify templatelang as well" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': if specifying template, must specify templatelang as well" );
                                     }
                                     if( ref( $appConfigItem->{template} )) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'template' must be string" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'template' must be string" );
                                     }
                                     foreach my $name ( @names ) {
                                         unless( validFilename( $codeDir, $appConfigItem->{template}, $name )) {
-                                            fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid template: " . $appConfigItem->{template} . " for name $name" );
+                                            fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid template: " . $appConfigItem->{template} . " for name $name" );
                                         }
                                     }
                                     if( ref( $appConfigItem->{templatelang} )) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'templatelang' must be string" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': field 'templatelang' must be string" );
                                     }
                                     unless( $appConfigItem->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid templatelang: " . $appConfigItem->{templatelang} );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': invalid templatelang: " . $appConfigItem->{templatelang} );
                                     }
                                 } else {
-                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify source" );
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'file': must specify source or template" );
                                 }
 
                             } elsif( $appConfigItem->{type} eq 'directory' ) {
 
                             } elsif( $appConfigItem->{type} eq 'directorytree' ) {
                                 unless( $appConfigItem->{source} ) {
-                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify source" );
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': must specify source" );
                                 }
                                 if( ref( $appConfigItem->{source} )) {
-                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'source' must be string" );
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': field 'source' must be string" );
                                 }
                                 foreach my $name ( @names ) {
                                     unless( validFilename( $codeDir, $appConfigItem->{source}, $name )) {
-                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid source: " . $appConfigItem->{source} . " for name $name" );
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'directorytree': invalid source: " . $appConfigItem->{source} . " for name $name" );
                                     }
                                 }
 
+                            } elsif( $appConfigItem->{type} eq 'symlink' ) {
+                                unless( $appConfigItem->{source} ) {
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': must specify source" );
+                                }
+                                if( ref( $appConfigItem->{source} )) {
+                                    fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': field 'source' must be string" );
+                                }
+                                foreach my $name ( @names ) {
+                                    unless( validFilename( $codeDir, $appConfigItem->{source}, $name )) {
+                                        fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] of type 'symlink': invalid source: " . $appConfigItem->{source} . " for name $name" );
+                                    }
+                                }
+
+                            # perlscript handled above
                             } else {
                                 fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type" );
                             }
@@ -340,6 +368,14 @@ sub checkManifest {
                         if( $appConfigItem->{privileges} ) {
                             if( ref( $appConfigItem->{privileges} )) {
                                 fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
+                            }
+                        }
+                        if( $appConfigItem->{createsql} ) {
+                            if( ref( $appConfigItem->{createsql} )) {
+                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'createsql' must be string" );
+                            }
+                            unless( validFilename( $codeDir, $appConfigItem->{createsql} )) {
+                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid createsql: " . $appConfigItem->{createsql} );
                             }
                         }
 

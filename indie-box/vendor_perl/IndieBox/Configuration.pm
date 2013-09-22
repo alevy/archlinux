@@ -26,23 +26,23 @@ package IndieBox::Configuration;
 use IndieBox::Logging;
 use IndieBox::Utils qw( readJsonFromFile );
 use JSON;
-use fields qw( hierarchicalMap flatMap delegate );
+use fields qw( hierarchicalMap flatMap delegates );
 
 ##
 # Constructor.
 # $hierarchicalMap: map of name to value (which may be another map)
-# $delegate: another Configuration object which may be used to resolve unknown variables
+# @delegates: more Configuration objects which may be used to resolve unknown variables
 sub new {
     my $self            = shift;
     my $hierarchicalMap = shift;
-    my $delegate        = shift;
+    my @delegates       = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
     $self->{hierarchicalMap} = $hierarchicalMap;
     $self->{flatMap}         = _flatten( $hierarchicalMap );
-    $self->{delegate}        = $delegate;
+    $self->{delegates}       = \@delegates;
 
     return $self;
 }
@@ -61,10 +61,28 @@ sub get {
     if( defined( $found )) {
         return $found;
     }
-    if( $self->{delegate} ) {
-        return $self->{delegate}->get( $name, $default );
+    foreach my $delegate ( @{$self->{delegates}} ) {
+        my $ret = $delegate->get( $name, undef );
+        if( $ret ) {
+            return $ret;
+        }
+    }
+    return $default;
+}
+
+##
+# Add an additional configuration value. This will fail if the name exists already.
+# $name: name of the configuration value
+# $value: value of the configuration value
+sub put {
+    my $self  = shift;
+    my $name  = shift;
+    my $value = shift;
+
+    if( !defined( $self->{flatMap}->{$name} )) {
+        $self->{flatMap}->{$name} = $value;
     } else {
-        return $default;
+        error( "Have value already for $name" );
     }
 }
 
@@ -83,18 +101,64 @@ sub getResolve {
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
+    my $func = undef;
+    if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
+        $func = $1;
+        $name = $2;
+    }
     my $ret = $self->get( $name, $default );
     if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+        }
+        if( defined( $func )) {
+            $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        die( "Cannot find variable $name" );
+        fatal( "Cannot find variable $name" );
     } else {
         $ret = '${' . $name . '}';
     }
     return $ret;
 }
+
+##
+# Obtain a configuration value, and recursively resolve symbolic references in the value.
+# $name: name of the configuration value
+# $default: value returned if the configuration value has not been set
+# $map: location of additional name-value pairs
+# $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
+# $remainingDepth: remaining recursion levels before abortion
+# return: the value, or default value
+sub getResolveOrNull {
+    my $self           = shift;
+    my $name           = shift;
+    my $default        = shift;
+    my $unresolvedOk   = shift || 0;
+    my $remainingDepth = shift || 16;
+
+    my $func = undef;
+
+    if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
+        $func = $1;
+        $name = $2;
+    }
+    my $ret = $self->get( $name, $default );
+    if( defined( $ret )) {
+        if( $remainingDepth > 0 ) {
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+        }
+        if( defined( $func )) {
+            $ret = _applyFunc( $func, $ret );
+        }
+    } elsif( !$unresolvedOk ) {
+        fatal( "Cannot find variable $name" );
+    } else {
+        $ret = undef;
+    }
+    return $ret;
+}
+
 
 ##
 # Obtain the keys in this Configuration object.
@@ -103,8 +167,8 @@ sub keys {
     my $self = shift;
 
     my @ret = keys %{$self->{flatMap}};
-    if( $self->{delegate} ) {
-        push @ret, $self->{delegate}->keys();
+    foreach my $delegate ( @{$self->{delegates}} ) {
+        push @ret, $delegate->keys();
     }
     return @ret;
 }
@@ -135,7 +199,7 @@ sub replaceVariables {
         }
     } else {
         $ret = $value;
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+)\s*\}/$self->getResolve( $1, undef, $unresolvedOk )/ge;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk )/ge;
     }
     return $ret;
 }
@@ -177,6 +241,31 @@ sub _flatten {
         }
     }
 
+    return $ret;
+}
+
+##
+# Helper method to apply a named function to a value
+# $func: the named function
+# $value: the value to apply the function to
+# return: the value, after having been processed by the function
+sub _applyFunc {
+    my $func  = shift;
+    my $value = shift;
+
+    my $ret = $value;
+    if( 'escapeSquote' eq $func ) {
+        $ret =~ s/'/\\'/g;
+    } elsif( 'escapeDquote' eq $func ) {
+        $ret =~ s/"/\\"/g;
+    } elsif( 'trim' eq $func ) {
+        $ret =~ s/^\s*//g;
+        $ret =~ s/\s*$//g;
+    } elsif( 'cr2space' eq $func ) {
+        $ret =~ s/\s+/ /g;
+    } else {
+        error( "Unknown function $func in varsubst" );
+    }
     return $ret;
 }
 

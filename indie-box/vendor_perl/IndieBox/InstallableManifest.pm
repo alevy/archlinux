@@ -86,7 +86,7 @@ sub validFilename {
     }
 
     unless( -e $testFile ) {
-        die( "Manifest refers to file, but file cannot be found: $testFile" );
+        fatal( "Manifest refers to file, but file cannot be found: $testFile" );
     }
 
     return 1; # FIXME

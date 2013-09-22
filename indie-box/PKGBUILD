@@ -8,7 +8,7 @@ arch=('any')
 url="http://indieboxproject.org/"
 license=('GPL')
 groups=()
-depends=('perl' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'apache')
+depends=('ntp' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'apache')
 backup=( 'etc/indie-box/config.json' )
 source=()
 options=('!strip')
@@ -21,11 +21,15 @@ package() {
     install -m755 $startdir/bin/indie-box-admin $pkgdir/usr/bin/
 
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor
     for f in $startdir/vendor_perl/IndieBox/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/
     done
     for f in $startdir/vendor_perl/IndieBox/AppConfigurationItems/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems/
+    done
+    for f in $startdir/vendor_perl/IndieBox/TemplateProcessor/*.pm; do
+        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor/
     done
 
 # Config files

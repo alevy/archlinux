@@ -90,10 +90,10 @@ sub getMySqlDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( "getDatabase ", $appConfigId, ", ", $installableId, ", ", $itemName );
+    debug( "getMySqlDatabase ", $appConfigId, ", ", $installableId, ", ", $itemName );
 
     my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
-    my $sth = IndieBox::MySql::sqlPrepareExecute( <<SQL, $appConfigId, $installableId, $itemName );
+    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
 SELECT dbName,
        dbHost,
        dbPort,
@@ -140,16 +140,14 @@ SQL
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $privileges: string containing required database privileges, like "create, insert"
-# $createSqlFile: name of a SQL file that needs to be run to create tables etc. for the database
 # return: hash of dbName, dbHost, dbUser, dbPassword, or undef
 sub provisionLocalMySqlDatabase {
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
     my $privileges    = shift;
-    my $createSqlFile = shift;
 
-    debug( "provisionLocalMySqlDatabase", $appConfigId, ", ", $installableId, ", ", $itemName, ", ", $privileges, ", ", $createSqlFile );
+    debug( "provisionLocalMySqlDatabase", $appConfigId, ", ", $installableId, ", ", $itemName, ", ", $privileges );
 
     my $dbName              = IndieBox::Utils::generateRandomIdentifier( 16 ); # unlikely to collide
     my $dbHost              = 'localhost';
@@ -159,7 +157,7 @@ sub provisionLocalMySqlDatabase {
     my $dbUserLidCredType   = 'simple-password';
 
     my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
-    my $sth = IndieBox::MySql::sqlPrepareExecute( <<SQL, $appConfigId, $installableId, $itemName, $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
+    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 INSERT INTO `$dbNamesTableName`(
     appConfigurationId,
     installableId,
@@ -170,7 +168,7 @@ INSERT INTO `$dbNamesTableName`(
     dbUserLid,
     dbUserLidCredential,
     dbUserLidCredType )
-) VALUES (
+VALUES (
     ?,
     ?,
     ?,
@@ -183,12 +181,12 @@ INSERT INTO `$dbNamesTableName`(
 SQL
     $sth->finish();
 
-    $sth = IndieBox::MySql::sqlPrepareExecute( <<SQL );
+    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
 CREATE DATABASE `$dbName` CHARACTER SET = 'utf8';
 SQL
     $sth->finish();
 
-    $sth = IndieBox::MySql::sqlPrepareExecute( <<SQL );
+    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
 GRANT $privileges
    ON $dbName.*
    TO '$dbUserLid'\@'localhost'
@@ -196,20 +194,12 @@ GRANT $privileges
 SQL
     $sth->finish();
 
-    $sth = IndieBox::MySql::sqlPrepareExecute( <<SQL );
+    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
 FLUSH PRIVILEGES;
 SQL
     $sth->finish();
     $dbh->disconnect();
 
-    if( $createSqlFile ) {
-        # from the command-line; that way we don't have to deal with messy statement splitting
-        IndieBox::Utils::myexec(
-                "mysql '--host=$dbHost' '--port=$dbPort'"
-                        . " '--user=$dbUserLid' '--password=$dbUserLidCredential'"
-                        . " '$dbName'",
-                $createSqlFile );
-    }
     return( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 }
 

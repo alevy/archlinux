@@ -33,7 +33,6 @@ use IndieBox::ResourceManager;
 sub post_install {
     my $version = shift;
 
-print "Install::post_install\n";
     IndieBox::MySql::ensureRunning();
     IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
@@ -50,7 +49,6 @@ sub post_upgrade {
     my $newVersion = shift;
     my $oldVersion = shift;
 
-print "Install::post_upgrade\n";
     IndieBox::MySql::ensureRunning();
     IndieBox::MySql::ensureRootPassword();
     IndieBox::ResourceManager::initializeIfNeeded();
@@ -79,4 +77,5 @@ Regards,
 
 MSG
 }
+
 1;

@@ -36,6 +36,8 @@ my $appConfigsDir    = '/etc/httpd/indie-box/appconfigs';
 my $sitesDocumentRootDir            = '/srv/http/sites';
 my $sitesWellknownDir               = '/srv/http/wellknown';
 my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
+my $phpModulesDir     = '/usr/lib/php/modules';
+my $phpModulesConfDir = '/etc/php/conf.d';
 
 ##
 # Ensure that Apache is running.
@@ -139,14 +141,23 @@ sub setupSite {
 
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
+
+    <Directory "$siteDocumentRoot">
+        AllowOverride All
+
+        <IfModule php5_module>
+            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/
+        </IfModule>
+    </Directory>
 CONTENT
 
     foreach my $appConfig ( @{$site->appConfigs} ) {
         if( $appConfig->isDefault ) {
             my $context = $appConfig->context();
             if( $context ) {
-                $$content .= <<CONTENT;
-        RedirectMatch seeother ^/\$ $context/
+                $content .= <<CONTENT;
+
+    RedirectMatch seeother ^/\$ $context/
 CONTENT
                 last;
             }
@@ -154,6 +165,7 @@ CONTENT
     }
 
     $content .= <<CONTENT;
+
     AliasMatch ^/favicon\.ico $siteWellKnownDir/favicon.ico
     AliasMatch ^/robots\.txt  $siteWellKnownDir/robots.txt
     AliasMatch ^/sitemap\.xml $siteWellKnownDir/sitemap.xml
@@ -184,10 +196,10 @@ sub removeSite {
     IndieBox::Utils::deleteFile( $siteFile );
 
     if( -d $appConfigFilesDir ) {
-        IndieBox::Utils::deleteDirectory( $appConfigFilesDir );
+        IndieBox::Utils::rmdir( $appConfigFilesDir );
     }
     if( -d $siteWellKnownDir ) {
-        IndieBox::Utils::deleteDirectory( $siteWellKnownDir );
+        IndieBox::Utils::rmdir( $siteWellKnownDir );
     }
 
     1;
@@ -203,26 +215,54 @@ sub ensureConfigFiles {
     } else {
         warn( "Config file $ourConfigFile is missing" );
     }
-    activateModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
+    activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
 }
 
 ##
 # Activate one ore more Apache modules
-sub activateModules {
+# @modules: list of module names
+sub activateApacheModules {
     my @modules = @_;
 
     foreach my $module ( @modules ) {
-        debug( "Activating Apache2 module: $module" );
-
         if( -e "$modsEnabledDir/$module.load" ) {
-            next; # enabled already
-        }
-        unless( -e "$modsAvailableDir/$module.load" ) {
-            warn( "Cannot find Apache2 module $module; not enabling" );
+            debug( "Apache2 module activated already: $module" );
             next;
         }
+        unless( -e "$modsAvailableDir/$module.load" ) {
+            warn( "Cannot find Apache2 module $module; not activating" );
+            next;
+        }
+        debug( "Activating Apache2 module: $module" );
+
         IndieBox::Utils::myexec( "ln -s '$modsAvailableDir/$module.load' '$modsEnabledDir/$module.load'" );
     }
+
+    1;
+}
+
+##
+# Activate one or more PHP modules
+# @modules: list of module names
+sub activatePhpModules {
+    my @modules = @_;
+
+    foreach my $module ( @modules ) {
+        if( -e "$phpModulesConfDir/$module.ini" ) {
+            debug( "PHP module activated already: $module" );
+            next;
+        }
+        unless( -e "$phpModulesDir/$module.so" ) {
+            warn( "Cannot find PHP module $module; not activating" );
+            next;
+        }
+        debug( "Activating PHP module: $module" );
+
+        IndieBox::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
+extension=$module.so
+END
+    }
+
     1;
 }
 

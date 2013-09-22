@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# An AppConfiguration item that is a file for Indie Box Project
+# An AppConfiguration item that is a directory tree for Indie Box Project
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,13 +21,12 @@
 use strict;
 use warnings;
 
-package IndieBox::AppConfigurationItems::File;
+package IndieBox::AppConfigurationItems::DirectoryTree;
 
 use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
 use IndieBox::Logging;
-use IndieBox::Utils qw( saveFile slurpFile );
 
 ##
 # Constructor
@@ -65,43 +64,24 @@ sub install {
         $names = [ $self->{json}->{name} ];
     }
 
-    my $sourceOrTemplate = $self->{json}->{template};
-    unless( $sourceOrTemplate ) {
-        $sourceOrTemplate = $self->{json}->{source};
-    }
-    my $templateLang = $self->{json}->{templatelang};
-    my $permissions  = $self->{json}->{permissions};
-    my $uname        = $self->{json}->{uname};
-    my $gname        = $self->{json}->{gname};
-    my $mode         = $self->permissionToMode( $permissions, 0644 );
+    my $source = $self->{json}->{source};
 
     foreach my $name ( @$names ) {
         my $localName  = $name;
         $localName =~ s!^.+/!!;
 
-        $sourceOrTemplate =~ s!\$1!$name!g;      # $1: name
-        $sourceOrTemplate =~ s!\$2!$localName!g; # $2: just the name without directories
+        $source =~ s!\$1!$name!g;      # $1: name
+        $source =~ s!\$2!$localName!g; # $2: just the name without directories
 
-        unless( $sourceOrTemplate =~ m#^/# ) {
-            $sourceOrTemplate = "$defaultFromDir/$sourceOrTemplate";
+        unless( $source =~ m#^/# ) {
+            $source = "$defaultFromDir/$source";
         }
         my $fullName = $name;
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
-        if( -r $sourceOrTemplate ) {
-            my $content           = slurpFile( $sourceOrTemplate );
-            my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
-            my $contentToSave = $templateProcessor->process( $content, $config, $sourceOrTemplate );
-
-            unless( saveFile( $fullName, $contentToSave, $mode, $uname, $gname )) {
-                error( "Writing file failed: $fullName" );
-            }
-
-        } else {
-            error( "File does not exist: $sourceOrTemplate" );
-        }
+        IndieBox::Utils::copyRecursively( $source, $fullName );
     }
 }
 
@@ -126,7 +106,7 @@ sub uninstall {
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
-        IndieBox::Utils::deleteFile( $fullName );
+        IndieBox::Utils::deleteRecursively( $fullName );
     }
 }
 

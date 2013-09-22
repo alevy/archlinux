@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# An AppConfiguration item that is a directory for Indie Box Project
+# An AppConfiguration item that is a Perl script to be run for Indie Box Project
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,12 +21,13 @@
 use strict;
 use warnings;
 
-package IndieBox::AppConfigurationItems::Directory;
+package IndieBox::AppConfigurationItems::Perlscript;
 
 use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
 use IndieBox::Logging;
+use IndieBox::Utils qw( saveFile slurpFile );
 
 ##
 # Constructor
@@ -59,57 +60,26 @@ sub install {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $names = $self->{json}->{names};
-    unless( $names ) {
-        $names = [ $self->{json}->{name} ];
+    my $name = $self->{json}->{name};
+
+    my $script = $name;
+    unless( $script =~ m#^/# ) {
+        $script = "$defaultFromDir/$script";
     }
 
-    my $permissions  = $self->{json}->{permissions};
-    my $uname        = $self->{json}->{uname};
-    my $gname        = $self->{json}->{gname};
-    my $mode         = $self->permissionToMode( $permissions, 0755 );
-
-    foreach my $name ( @$names ) {
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
-        }
-        if( -e $fullName ) {
-            error( "Directory $fullName exists already" );
-
-        } else {
-            if( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
-                error( "Directory could not be created: $fullName" );
-            }
-        }
-    }
-}
-
-##
-# Uninstall this item
-# $defaultFromDir: the directory to which "source" paths are relative to
-# $defaultToDir: the directory to which "destination" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
-sub uninstall {
-    my $self           = shift;
-    my $defaultFromDir = shift;
-    my $defaultToDir   = shift;
-    my $config         = shift;
-
-    my $names = $self->{json}->{names};
-    unless( $names ) {
-        $names = [ $self->{json}->{name} ];
+    unless( -r $script ) {
+        error( "File to run does not exist: $script" );
+        return;
     }
 
-    foreach my $name ( reverse @$names ) {
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
-        }
-        IndieBox::Utils::rmdir( $fullName );
+    my $scriptcontent = slurpFile( $script );
+    my $operation = 'install';
+
+    debug( "Running eval $script $operation" );
+
+    unless( eval $scriptcontent ) {
+        error( "Running eval $script $operation failed: $@" );
     }
 }
 
 1;
-
-

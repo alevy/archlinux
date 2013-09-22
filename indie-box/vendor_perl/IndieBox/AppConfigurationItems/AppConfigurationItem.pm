@@ -23,23 +23,30 @@ use warnings;
 
 package IndieBox::AppConfigurationItems::AppConfigurationItem;
 
-use fields qw( json appConfig );
+use IndieBox::TemplateProcessor::Passthrough;
+use IndieBox::TemplateProcessor::Varsubst;
+use IndieBox::TemplateProcessor::Perlscript;
+use IndieBox::TemplateProcessor::Passthrough;
+
+use fields qw( json appConfig installable );
 
 ##
 # Constructor
 # $json: the JSON fragment from the manifest JSON
 # $appConfig: the AppConfiguration object that this item belongs to
-# return: the created File object
+# $installable: the Installable to which this item belongs to
 sub new {
     my $self      = shift;
     my $json      = shift;
     my $appConfig = shift;
+    my $installable = shift;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
-    $self->{json}      = $json;
-    $self->{appConfig} = $appConfig;
+    $self->{json}        = $json;
+    $self->{appConfig}   = $appConfig;
+    $self->{installable} = $installable;
 
     return $self;
 }
@@ -59,6 +66,30 @@ sub permissionToMode {
     } else {
         return $default;
     }
+}
+
+##
+# Internal helper to instantiate the right subclass of TemplateProcessor.
+# return: instance of subclass of TemplateProcessor
+sub _instantiateTemplateProcessor {
+    my $self         = shift;
+    my $templateLang = shift;
+    my $ret;
+
+    if( !defined( $templateLang )) {
+        $ret = new IndieBox::TemplateProcessor::Passthrough();
+
+    } elsif( 'varsubst' eq $templateLang ) {
+        $ret = new IndieBox::TemplateProcessor::Varsubst();
+
+    } elsif( 'perlscript' eq $templateLang ) {
+        $ret = new IndieBox::TemplateProcessor::Perlscript();
+
+    } else {
+        error( "Unknown templatelang: $templateLang" );
+        $ret = new IndieBox::TemplateProcessor::Passthrough();
+    }
+    return $ret;
 }
 
 1;

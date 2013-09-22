@@ -103,7 +103,7 @@ sub executeTriggers {
     } elsif( ref( $triggers ) eq 'ARRAY' ) {
         @triggerList = @$triggers;
     } else {
-        die( "Unexpected type $triggers" );
+        fatal( "Unexpected type $triggers" );
     }
     foreach my $trigger ( @triggerList ) {
         if( 'httpd-reload' eq $trigger ) {
@@ -134,7 +134,7 @@ sub installPackages {
     } elsif( ref( $packages ) eq 'ARRAY' ) {
         @packageList = @$packages;
     } else {
-        die( "Unexpected type $packages" );
+        fatal( "Unexpected type $packages" );
     }
     if( @packageList ) {
         myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ));
