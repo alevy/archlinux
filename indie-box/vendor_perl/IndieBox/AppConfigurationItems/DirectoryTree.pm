@@ -70,18 +70,22 @@ sub install {
         my $localName  = $name;
         $localName =~ s!^.+/!!;
 
-        $source =~ s!\$1!$name!g;      # $1: name
-        $source =~ s!\$2!$localName!g; # $2: just the name without directories
+        my $fromName = $source;
+        $fromName =~ s!\$1!$name!g;      # $1: name
+        $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
+        $fromName = $config->replaceVariables( $fromName );
 
-        unless( $source =~ m#^/# ) {
-            $source = "$defaultFromDir/$source";
+        my $toName = $name;
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $fromName =~ m#^/# ) {
+            $fromName = "$defaultFromDir/$fromName";
         }
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
 
-        IndieBox::Utils::copyRecursively( $source, $fullName );
+        IndieBox::Utils::copyRecursively( $fromName, $toName );
     }
 }
 
@@ -102,11 +106,14 @@ sub uninstall {
     }
 
     foreach my $name ( reverse @$names ) {
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        my $toName = $name;
+
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
-        IndieBox::Utils::deleteRecursively( $fullName );
+        IndieBox::Utils::deleteRecursively( $toName );
     }
 }
 

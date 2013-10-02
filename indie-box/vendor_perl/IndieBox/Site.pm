@@ -46,10 +46,12 @@ sub new {
     $self->{json} = $json;
     $self->_checkJson();
 
+    my $siteId = $self->siteId();
     $self->{config} = new IndieBox::Configuration(
+                "Site=$siteId",
                 {
                     "site.hostname" => $self->hostName(),
-                    "site.siteid" => $self->siteId()
+                    "site.siteid"   => $siteId
                 },
             IndieBox::Host::config() );
 

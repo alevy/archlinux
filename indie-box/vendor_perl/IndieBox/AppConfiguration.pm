@@ -55,6 +55,7 @@ sub new {
     $self->{json}   = $json;
     $self->{site}   = $site;
     $self->{config} = new IndieBox::Configuration(
+                "AppConfiguration=" . $json->{appconfigid},
                 {
                     "appconfig.appconfigid" => $self->appConfigId(),
                     "appconfig.context" => $self->context(),
@@ -166,12 +167,12 @@ sub install {
     $self->_initialize();
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
-    foreach my $roleName ( @$applicableRoleNames ) {
-        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-        if( $dir ) {
-            IndieBox::Utils::mkdir( $dir, 0755 );
-        }
-    }
+#    foreach my $roleName ( @$applicableRoleNames ) {
+#        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+#        if( $dir ) {
+#            IndieBox::Utils::mkdir( $dir, 0755 );
+#        }
+#    }
 
     my $appConfigId = $self->appConfigId;
     IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
@@ -183,7 +184,11 @@ sub install {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
-        my $config = new IndieBox::Configuration( {}, $installable->config, $self->{config} );
+        my $config = new IndieBox::Configuration(
+                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                {},
+                $installable->config,
+                $self->{config} );
 
         # Customization points for this Installable at this AppConfiguration
 
@@ -200,10 +205,14 @@ sub install {
                 }
                 if( defined( $value )) {
                     my $data = $value->{value};
-                    if( $value->{encoding} eq 'base64' ) {
+                    if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
                         $data = decode_base64( $data );
                     }
-                    IndieBox::Utils::saveFile( "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName", $data );
+                    my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
+                    IndieBox::Utils::saveFile( $filename, $data );
+
+                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.filename', $filename );
+                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.value', $data );
                 }
             }
         }
@@ -272,7 +281,11 @@ sub uninstall {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
-        my $config = new IndieBox::Configuration( {}, $installable->config, $self->{config} );
+        my $config = new IndieBox::Configuration(
+                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                {},
+                $installable->config,
+                $self->{config} );
 
         # Now for all the roles
         foreach my $roleName ( reverse @$applicableRoleNames ) {
@@ -298,18 +311,15 @@ sub uninstall {
                             $config );
                 }
             }
-            if( $dir ) {
-                IndieBox::Utils::rmdir( $dir );
-            }
         }
     }
 
-    foreach my $roleName ( @$applicableRoleNames ) {
-        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-        if( $dir ) {
-            IndieBox::Utils::rmdir( $dir );
-        }
-    }
+#    foreach my $roleName ( @$applicableRoleNames ) {
+#        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+#        if( $dir ) {
+#            IndieBox::Utils::rmdir( $dir );
+#        }
+#    }
 }
 
 ##

@@ -41,9 +41,14 @@ sub new {
         $self = fields::new( $self );
     }
 
-    my $json             = readJsonFromFile( manifestFileFor( $packageName ));
-    $self->{config}      = new IndieBox::Configuration( { "package.name" => $packageName }, IndieBox::Host::config() );
-    $self->{json}        = $self->{config}->replaceVariables( $json, 1 );
+    my $json        = readJsonFromFile( manifestFileFor( $packageName ));
+    $self->{config} = new IndieBox::Configuration(
+            "Installable=$packageName",
+            { "package.name" => $packageName },
+            IndieBox::Host::config() );
+
+#    $self->{json}        = $self->{config}->replaceVariables( $json, 1 );
+    $self->{json}        = $json;
     $self->{packageName} = $packageName;
 
     return $self;

@@ -46,10 +46,10 @@ sub new {
     if( $self->{config}->get( 'indiebox.checkmanifest', 1 )) {
         use IndieBox::AppManifest;
 
-        my $codeDir = $self->{config}->getResolve( 'package.codedir' );
-
-        IndieBox::AppManifest::checkManifest( $self->{json}, $codeDir );
+        IndieBox::AppManifest::checkManifest( $packageName, $self->{json}, $self->{config} );
     }
+    trace( "Created App ", $packageName );
+
     return $self;
 }
 

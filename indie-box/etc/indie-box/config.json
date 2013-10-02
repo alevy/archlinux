@@ -13,8 +13,8 @@
         "uname" : "http",
         "gname" : "http",
 
-        "sitefragmentdir" : "/etc/httpd/indie-box-site-fragments",
-        "appconfigfragmentdir" : "/etc/httpd/indie-box-appconfig-fragments",
+        "sitefragmentdir" : "/etc/httpd/indie-box/sites",
+        "appconfigfragmentdir" : "/etc/httpd/indie-box/appconfigs",
         "sitesdir" : "/srv/http/sites"
     },
 

@@ -32,12 +32,14 @@ our @EXPORT_OK = qw( validFilename );
 
 ##
 # Check validity of the manifest JSON.
+# $packageName: name of the package that this manifest JSON belongs to
 # $json: the JSON object
-# $codeDir: path to the package's code directory
+# $config: Configuration object to use for resolving variables
 # return: 1 or exits with fatal error
 sub checkManifest {
-    my $json    = shift;
-    my $codeDir = shift;
+    my $packageName = shift;
+    my $json        = shift;
+    my $config      = shift;
 
     unless( $json ) {
         fatal( "No manifest JSON present" );

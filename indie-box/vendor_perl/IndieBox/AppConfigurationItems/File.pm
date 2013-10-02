@@ -69,6 +69,7 @@ sub install {
     unless( $sourceOrTemplate ) {
         $sourceOrTemplate = $self->{json}->{source};
     }
+
     my $templateLang = $self->{json}->{templatelang};
     my $permissions  = $self->{json}->{permissions};
     my $uname        = $self->{json}->{uname};
@@ -79,28 +80,32 @@ sub install {
         my $localName  = $name;
         $localName =~ s!^.+/!!;
 
-        $sourceOrTemplate =~ s!\$1!$name!g;      # $1: name
-        $sourceOrTemplate =~ s!\$2!$localName!g; # $2: just the name without directories
+        my $fromName = $sourceOrTemplate;
+        $fromName =~ s!\$1!$name!g;      # $1: name
+        $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
+        $fromName = $config->replaceVariables( $fromName );
 
-        unless( $sourceOrTemplate =~ m#^/# ) {
-            $sourceOrTemplate = "$defaultFromDir/$sourceOrTemplate";
+        my $toName = $name;
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $fromName =~ m#^/# ) {
+            $fromName = "$defaultFromDir/$fromName";
         }
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
-        if( -r $sourceOrTemplate ) {
-            my $content           = slurpFile( $sourceOrTemplate );
+        if( -r $fromName ) {
+            my $content           = slurpFile( $fromName );
             my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
             my $contentToSave = $templateProcessor->process( $content, $config, $sourceOrTemplate );
 
-            unless( saveFile( $fullName, $contentToSave, $mode, $uname, $gname )) {
-                error( "Writing file failed: $fullName" );
+            unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
+                error( "Writing file failed: $toName" );
             }
 
         } else {
-            error( "File does not exist: $sourceOrTemplate" );
+            error( "File does not exist: $fromName" );
         }
     }
 }
@@ -122,11 +127,13 @@ sub uninstall {
     }
 
     foreach my $name ( reverse @$names ) {
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        my $toName = $name;
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
-        IndieBox::Utils::deleteFile( $fullName );
+        IndieBox::Utils::deleteFile( $toName );
     }
 }
 

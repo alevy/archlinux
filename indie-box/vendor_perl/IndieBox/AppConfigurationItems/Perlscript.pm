@@ -60,9 +60,9 @@ sub install {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $name = $self->{json}->{name};
+    my $source = $self->{json}->{source};
 
-    my $script = $name;
+    my $script = $source;
     unless( $script =~ m#^/# ) {
         $script = "$defaultFromDir/$script";
     }
@@ -75,7 +75,44 @@ sub install {
     my $scriptcontent = slurpFile( $script );
     my $operation = 'install';
 
-    debug( "Running eval $script $operation" );
+    debug( "Running eval ", $script, ' ', $operation );
+
+    unless( eval $scriptcontent ) {
+        error( "Running eval $script $operation failed: $@" );
+    }
+}
+
+##
+# Uninstall this item
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+sub uninstall {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    my $name = $self->{json}->{name};
+
+    my $source = $self->{json}->{source};
+
+    my $script = $source;
+    $script = $config->replaceVariables( $script );
+
+    unless( $script =~ m#^/# ) {
+        $script = "$defaultFromDir/$script";
+    }
+
+    unless( -r $script ) {
+        error( "File to run does not exist: $script" );
+        return;
+    }
+
+    my $scriptcontent = slurpFile( $script );
+    my $operation = 'uninstall';
+
+    debug( "Running eval ", $script, ' ', $operation );
 
     unless( eval $scriptcontent ) {
         error( "Running eval $script $operation failed: $@" );

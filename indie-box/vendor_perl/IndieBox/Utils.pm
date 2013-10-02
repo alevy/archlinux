@@ -40,6 +40,8 @@ my $jsonParser = JSON->new->relaxed->pretty->utf8();
 sub readJsonFromFile {
     my $file = shift;
 
+    trace( "readJsonFromFile( ", $file, " )" );
+
     my $fileContent = slurpFile( $file );
 
     my $json;
@@ -54,6 +56,8 @@ sub readJsonFromFile {
 # Read and parse JSON from STDIN
 # return: JSON object
 sub readJsonFromStdin {
+    trace( "readJsonFromStdin()" );
+
     local $/;
     my $fileContent = <STDIN>;
 
@@ -80,6 +84,8 @@ sub writeJsonToFile {
     my $uname    = shift;
     my $gname    = shift;
 
+    trace( "writeJsonToFile( ", $fileName, " )" );
+
     saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
 }
 
@@ -88,6 +94,8 @@ sub writeJsonToFile {
 # $content: the content of the file, as JSON object
 sub writeJsonToStdout {
     my $json = shift;
+
+    trace( "writeJsonToStdout()" );
 
     print $jsonParser->encode( $json );
 }
@@ -108,7 +116,7 @@ sub myexec {
     my $outFile;
     my $errFile;
 
-    debug( "Exec: $cmd" );
+    debug( "Exec: ", $cmd );
 
     if( $inContent ) {
         $inFile = File::Temp->new();
@@ -149,6 +157,8 @@ sub myexec {
 sub slurpFile {
     my $filename = shift;
 
+    trace( "slurpFile( ", $filename, " )" );
+
     local $/;
     open( my $fh, '<', $filename ) || fatal( "Cannot read file $filename" );
     my $fileContent = <$fh>;
@@ -178,7 +188,7 @@ sub saveFile {
     unless( defined( $mask )) {
         $mask = 0644;
     }
-    debug( "About to save to file $filename (" . length( $content ) . " bytes, mask " . sprintf( "%o", $mask ) . ", uid $uid, gid $gid)" );
+    debug( "About to save to file ", $filename, " (", length( $content ), " bytes, mask ", sprintf( "%o", $mask ), ", uid ", $uid, " gid ", $gid, " )" );
 
     unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
         error( "Could not write to file $filename: $!" );
@@ -203,6 +213,8 @@ sub saveFile {
 # return: 1 if successful
 sub deleteFile {
     my @files = @_;
+
+    trace( "deleteFile( ", join( ", ", @files ), " )" );
 
     my $ret = 1;
     foreach my $f ( @files ) {
@@ -296,7 +308,7 @@ sub symlink {
 sub rmdir {
     my @dirs = @_;
 
-    debug( "About to delete directories: " . join( ', ', @dirs ));
+    debug( "About to delete directories: ", join( ', ', @dirs ));
 
     my $ret = 1;
     foreach my $d ( @dirs ) {
@@ -324,29 +336,9 @@ sub deleteRecursively {
 
     my $ret = 1;
     if( @files ) {
-        debug( "About to recursively delete files: " . join( ', ', @files ));
+        debug( "About to recursively delete files: ", join( ', ', @files ));
 
-        foreach my $f ( @files ) {
-            if( -d $f ) {
-                opendir( DIR, $f );
-                my @files = readdir( DIR );
-                closedir( DIR );
-
-                deleteRecursively( map { "$f/$_"; } grep { !/^\.{1,2}$/ } @files );
-                unless( CORE::rmdir( $f )) {
-                    error( "Failed to delete directory $f: $!" );
-                    $ret = 0;
-                }
-            } elsif( -f $f || -l $f ) {
-                unless( unlink( $f )) {
-                    error( "Failed to delete file $f: $!" );
-                    $ret = 0;
-                }
-            } else {
-                error( "Failed to delete file $f: does not exist" );
-                $ret = 0;
-            }
-        }
+        myexec( "rm -rf " . join( ' ', map { "'$_'" } @files ));
     }
     return $ret;
 }
@@ -359,9 +351,9 @@ sub copyRecursively {
     my $from = shift;
     my $to   = shift;
 
-    debug( "copyRecursively: $from -> $to" );
+    debug( "copyRecursively: ", $from, ' -> ', $to );
 
-    myexec( "cp -d -r -p '$from' $'to'" );
+    myexec( "cp -d -r -p '$from' '$to'" );
 
     return 1;
 }

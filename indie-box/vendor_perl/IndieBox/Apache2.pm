@@ -226,14 +226,14 @@ sub activateApacheModules {
 
     foreach my $module ( @modules ) {
         if( -e "$modsEnabledDir/$module.load" ) {
-            debug( "Apache2 module activated already: $module" );
+            debug( "Apache2 module activated already: ", $module );
             next;
         }
         unless( -e "$modsAvailableDir/$module.load" ) {
             warn( "Cannot find Apache2 module $module; not activating" );
             next;
         }
-        debug( "Activating Apache2 module: $module" );
+        debug( "Activating Apache2 module: ", $module );
 
         IndieBox::Utils::myexec( "ln -s '$modsAvailableDir/$module.load' '$modsEnabledDir/$module.load'" );
     }
@@ -249,14 +249,14 @@ sub activatePhpModules {
 
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
-            debug( "PHP module activated already: $module" );
+            debug( "PHP module activated already: ", $module );
             next;
         }
         unless( -e "$phpModulesDir/$module.so" ) {
             warn( "Cannot find PHP module $module; not activating" );
             next;
         }
-        debug( "Activating PHP module: $module" );
+        debug( "Activating PHP module: ", $module );
 
         IndieBox::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so

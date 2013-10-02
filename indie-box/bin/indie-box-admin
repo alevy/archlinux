@@ -58,7 +58,12 @@ if( $cmd eq 'deploy' ) {
     if( @ARGV || $json || $brief ) {
         synopsisHelpQuit();
     }
-    my $json = $file ? readJsonFromFile( $file ) : readJsonFromStdin();
+    my $json;
+    if( $file ) {
+        $json = readJsonFromFile( $file );
+    } else {
+        $json = readJsonFromStdin();
+    }
 
     my $newSites = [];
     if( ref( $json ) eq 'HASH' ) {

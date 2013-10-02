@@ -42,7 +42,7 @@ sub config {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
         $raw->{hostname} = hostname;
 
-        $hostConf = new IndieBox::Configuration( $raw );
+        $hostConf = new IndieBox::Configuration( 'Host', $raw );
     }
 }
 

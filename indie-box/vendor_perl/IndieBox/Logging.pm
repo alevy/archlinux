@@ -27,7 +27,7 @@ use Exporter qw( import );
 use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
 
-our @EXPORT = qw( debug warn error fatal );
+our @EXPORT = qw( trace debug warn error fatal );
 my $log;
 
 BEGIN {
@@ -62,56 +62,57 @@ sub setQuiet {
 }
 
 ##
+# Emit a trace message.
+# @msg: the message or message components
+sub trace {
+    my @msg = @_;
+
+    $log->trace( join( '', @msg ));
+}
+
+##
 # Emit a debug message.
-# $msg: the message
+# @msg: the message or message components
 sub debug {
-    my $msg = shift;
+    my @msg = @_;
 
-    $log->debug( $msg );
-
-    1;
+    $log->debug( join( '', @msg ));
 }
 
 ##
 # Emit an info message.
-# $msg: the message
+# @msg: the message or message components
 sub info {
-    my $msg = shift;
+    my @msg = @_;
 
-    $log->info( $msg );
-
-    1;
+    $log->info( join( '', @msg ));
 }
 
 ##
-# Emit awarning message.
-# $msg: the message
+# Emit a warning message.
+# @msg: the message or message components
 sub warn {
-    my $msg = shift;
+    my @msg = @_;
 
-    $log->warn( $msg );
-
-    1;
+    $log->warn( join( '', @msg ));
 }
 
 ##
 # Emit an error message.
-# $msg: the message
+# @msg: the message or message components
 sub error {
-    my $msg = shift;
+    my @msg = @_;
 
-    $log->error( $msg );
-
-    1;
+    $log->error( join( '', @msg ));
 }
 
 ##
 # Emit a fatal error message and exit with code 1.
-# $msg: the message
+# @msg: the message or message components
 sub fatal {
-    my $msg = shift;
+    my @msg = @_;
 
-    $log->fatal( $msg );
+    $log->fatal( join( '', @msg ));
 
     exit 1;
 }

@@ -64,18 +64,22 @@ sub install {
         $names = [ $self->{json}->{name} ];
     }
 
-    my $permissions  = $self->{json}->{permissions};
-    my $uname        = $self->{json}->{uname};
-    my $gname        = $self->{json}->{gname};
-    my $mode         = $self->permissionToMode( $permissions, 0755 );
+    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
+    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
+    my $mode        = $self->permissionToMode( $permissions, 0755 );
 
     foreach my $name ( @$names ) {
         my $fullName = $name;
+
+        $fullName = $config->replaceVariables( $fullName );
+
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
         if( -e $fullName ) {
             error( "Directory $fullName exists already" );
+            # FIXME: chmod, chown
 
         } else {
             if( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
@@ -103,10 +107,15 @@ sub uninstall {
 
     foreach my $name ( reverse @$names ) {
         my $fullName = $name;
+
+        $fullName = $config->replaceVariables( $fullName );
+
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
-        IndieBox::Utils::rmdir( $fullName );
+        IndieBox::Utils::deleteRecursively( $fullName );
+        # Delete recursively, in case there's more stuff in it than we put in.
+        # If that stuff needs preserving, the retentionpolicy should take care of that.
     }
 }
 

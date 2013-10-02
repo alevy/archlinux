@@ -75,25 +75,30 @@ sub install {
         my $localName  = $name;
         $localName =~ s!^.+/!!;
 
-        $source =~ s!\$1!$name!g;      # $1: name
-        $source =~ s!\$2!$localName!g; # $2: just the name without directories
+        my $fromName = $source;
+        $fromName =~ s!\$1!$name!g;      # $1: name
+        $fromName =~ s!\$2!$localName!g; # $2: just the name without directories
 
-        unless( $source =~ m#^/# ) {
-            $source = "$defaultFromDir/$source";
+        $fromName = $config->replaceVariables( $fromName );
+
+        my $toName = $name;
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $fromName =~ m#^/# ) {
+            $fromName = "$defaultFromDir/$fromName";
         }
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
-        if( -r $source ) {
-            unless( -e $fullName ) {
-                IndieBox::Utils::symlink( $source, $fullName, $mode, $uname, $gname );
+        if( -r $fromName ) {
+            unless( -e $toName ) {
+                IndieBox::Utils::symlink( $fromName, $toName, $mode, $uname, $gname );
             } else {
-                error( "Cannot create symlink: $fullName" );
+                error( "Cannot create symlink: $toName" );
             }
 
         } else {
-            error( "File does not exist: $source" );
+            error( "File does not exist: $fromName" );
         }
     }
 }
@@ -115,11 +120,13 @@ sub uninstall {
     }
 
     foreach my $name ( reverse @$names ) {
-        my $fullName = $name;
-        unless( $fullName =~ m#^/# ) {
-            $fullName = "$defaultToDir/$fullName";
+        my $toName = $name;
+        $toName = $config->replaceVariables( $toName );
+
+        unless( $toName =~ m#^/# ) {
+            $toName = "$defaultToDir/$toName";
         }
-        IndieBox::Utils::deleteFile( $fullName );
+        IndieBox::Utils::deleteFile( $toName );
     }
 }
 

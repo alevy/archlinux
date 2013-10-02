@@ -30,14 +30,18 @@ use JSON;
 
 ##
 # Check validity of the manifest JSON.
+# $packageName: name of the package that this manifest JSON belongs to
 # $json: the JSON object
-# $codeDir: path to the package's code directory
+# $config: Configuration object to use for resolving variables
 # return: 1 or exits with fatal error
 sub checkManifest {
-    my $json    = shift;
-    my $codeDir = shift;
+    my $packageName = shift;
+    my $json        = shift;
+    my $config      = shift;
 
-    IndieBox::InstallableManifest::checkManifest( $json, $codeDir );
+    trace( "Checking manifest for ", $packageName );
+
+    IndieBox::InstallableManifest::checkManifest( $packageName, $json, $config );
 
     unless( $json->{type} eq 'app' ) {
         fatal( "Manifest JSON: type must be app, is " . $json->{type} );
@@ -45,6 +49,9 @@ sub checkManifest {
 
     my %retentionBuckets = ();
     if( $json->{roles} ) {
+
+        my $codeDir = $config->getResolve( 'package.codedir' );
+
         while( my( $roleName, $roleJson ) = each %{$json->{roles}} ) {
             if( $roleName eq 'apache2' ) {
                 if( $roleJson->{defaultcontext} ) {
@@ -54,7 +61,7 @@ sub checkManifest {
                     if( ref( $roleJson->{defaultcontext} )) {
                         fatal( "Manifest JSON: roles section: role $roleName: field 'defaultcontext' must be string" );
                     }
-                    if( $roleJson->{defaultcontext} !~ m!^(/[-a-z0-9]+)*$! ) {
+                    unless( $roleJson->{defaultcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
                         fatal( "Manifest JSON: roles section: role $roleName: invalid defaultcontext: " . $roleJson->{defaultcontext} );
                     }
 
@@ -62,7 +69,7 @@ sub checkManifest {
                     if( ref( $roleJson->{fixedcontext} )) {
                         fatal( "Manifest JSON: roles section: role $roleName: field 'fixedcontext' must be string" );
                     }
-                    if( $roleJson->{fixedcontext} !~ m!^(/[-a-z0-9]+)*$! ) {
+                    unless( $roleJson->{fixedcontext} =~ m!^(/[-a-z0-9]+)*$! ) {
                         fatal( "Manifest JSON: roles section: role $roleName: invalid fixedcontext: " . $roleJson->{fixedcontext} );
                     }
                 } else {
@@ -78,7 +85,7 @@ sub checkManifest {
                         if( ref( $depends )) {
                             fatal( "Manifest JSON: roles section: role $roleName: depends[$dependsIndex] must be string" );
                         }
-                        if( $depends !~ m!^[-a-z0-9]+$! ) {
+                        unless( $depends =~ m!^[-a-z0-9]+$! ) {
                             fatal( "Manifest JSON: roles section: role $roleName: depends[$dependsIndex] invalid: $depends" );
                         }
                         ++$dependsIndex;
@@ -94,7 +101,7 @@ sub checkManifest {
                         if( ref( $module )) {
                             fatal( "Manifest JSON: roles section: role $roleName: apache2modules[$modulesIndex] must be string" );
                         }
-                        if( $module !~ m!^[-a-z0-9]+$! ) {
+                        unless( $module =~ m!^[-a-z0-9]+$! ) {
                             fatal( "Manifest JSON: roles section: role $roleName: apache2modules[$modulesIndex] invalid: $module" );
                         }
                         ++$modulesIndex;
@@ -109,7 +116,7 @@ sub checkManifest {
                         if( ref( $module )) {
                             fatal( "Manifest JSON: roles section: role $roleName: phpmodules[$modulesIndex] must be string" );
                         }
-                        if( $module !~ m!^[-a-z0-9]+$! ) {
+                        unless( $module =~ m!^[-a-z0-9]+$! ) {
                             fatal( "Manifest JSON: roles section: role $roleName: phpmodules[$modulesIndex] invalid: $module" );
                         }
                         ++$modulesIndex;
@@ -238,14 +245,14 @@ sub checkManifest {
 
                             # perlscript handled above
                             } else {
-                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type" );
+                                fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type: " . $appConfigItem->{type} );
                             }
 
                             if( $appConfigItem->{uname} ) {
                                 if( ref( $appConfigItem->{uname} )) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be string" );
                                 }
-                                if( $appConfigItem->{uname} !~ m!^[-a-z0-9]+$! ) {
+                                unless( $config->replaceVariables( $appConfigItem->{uname} ) =~ m!^[-a-z0-9]+$! ) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid uname: " . $appConfigItem->{uname} );
                                 }
                             }
@@ -253,7 +260,7 @@ sub checkManifest {
                                 if( ref( $appConfigItem->{gname} )) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be string" );
                                 }
-                                if( $appConfigItem->{gname} !~ m!^[-a-z0-9]+$! ) {
+                                unless( $config->replaceVariables( $appConfigItem->{gname} ) =~ m!^[-a-z0-9]+$! ) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid gname: " . $appConfigItem->{gname} );
                                 }
                             }
@@ -261,7 +268,7 @@ sub checkManifest {
                                 if( ref( $appConfigItem->{mode} )) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'mode' must be string (octal)" );
                                 }
-                                if( $appConfigItem->{mode} !~ m!^(preserve|[0-7]{3,4})$! ) {
+                                unless( $config->replaceVariables( $appConfigItem->{mode} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
                                     fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid mode: " . $appConfigItem->{mode} );
                                 }
                             }
@@ -340,7 +347,7 @@ sub checkManifest {
                         if( ref( $appConfigItem->{name} )) {
                             fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                         }
-                        if( $appConfigItem->{name} !~ m/^[a-z][a-z0-9]*$/ ) {
+                        unless( $appConfigItem->{name} =~ m/^[a-z][a-z0-9]*$/ ) {
                             fatal( "Manifest JSON: roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid symbolic database name: " . $appConfigItem->{name} );
                         }
                         if( $databaseNames{$appConfigItem->{name}} ) {

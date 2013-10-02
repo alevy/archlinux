@@ -26,20 +26,23 @@ package IndieBox::Configuration;
 use IndieBox::Logging;
 use IndieBox::Utils qw( readJsonFromFile );
 use JSON;
-use fields qw( hierarchicalMap flatMap delegates );
+use fields qw( name hierarchicalMap flatMap delegates );
 
 ##
 # Constructor.
+# $name: name for this Configuration object. This helps with debugging.
 # $hierarchicalMap: map of name to value (which may be another map)
 # @delegates: more Configuration objects which may be used to resolve unknown variables
 sub new {
     my $self            = shift;
+    my $name            = shift;
     my $hierarchicalMap = shift;
     my @delegates       = @_;
 
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    $self->{name}            = $name;
     $self->{hierarchicalMap} = $hierarchicalMap;
     $self->{flatMap}         = _flatten( $hierarchicalMap );
     $self->{delegates}       = \@delegates;
@@ -53,21 +56,29 @@ sub new {
 # $default: value returned if the configuration value has not been set
 # return: the value, or default value
 sub get {
-    my $self    = shift;
-    my $name    = shift;
-    my $default = shift;
+    my $self           = shift;
+    my $name           = shift;
+    my $default        = shift;
+    my $remainingDepth = shift || 16;
 
+    my $ret;
     my $found = $self->{flatMap}->{$name};
     if( defined( $found )) {
-        return $found;
-    }
-    foreach my $delegate ( @{$self->{delegates}} ) {
-        my $ret = $delegate->get( $name, undef );
-        if( $ret ) {
-            return $ret;
+        $ret = $found;
+    } else {
+        foreach my $delegate ( @{$self->{delegates}} ) {
+            $ret = $delegate->get( $name, undef, $remainingDepth-1 );
+            if( defined( $ret )) {
+                last;
+            }
         }
     }
-    return $default;
+#    if( defined( $ret )) {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::get( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
+#    } else {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::get( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
+#    }
+    return $ret;
 }
 
 ##
@@ -101,12 +112,14 @@ sub getResolve {
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
+#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::getResolve( ", $self->{name}, ", ", $name, " )\n" );
+
     my $func = undef;
     if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
         $func = $1;
         $name = $2;
     }
-    my $ret = $self->get( $name, $default );
+    my $ret = $self->get( $name, $default, $remainingDepth-1 );
     if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
             $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
@@ -115,10 +128,16 @@ sub getResolve {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( "Cannot find variable $name" );
+        fatal( "Cannot find variable $name\n" . $self->dump() );
     } else {
         $ret = '${' . $name . '}';
     }
+
+#    if( defined( $ret )) {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolve( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
+#    } else {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolve( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
+#    }
     return $ret;
 }
 
@@ -137,28 +156,33 @@ sub getResolveOrNull {
     my $unresolvedOk   = shift || 0;
     my $remainingDepth = shift || 16;
 
-    my $func = undef;
+#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, " )\n" );
 
+    my $func = undef;
     if( $name =~ m!([^\s]+)\s*\(\s*([^\s]+)\s*\)! ) {
         $func = $1;
         $name = $2;
     }
-    my $ret = $self->get( $name, $default );
+    my $ret = $self->get( $name, $default, $remainingDepth-1 );
     if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
         }
         if( defined( $func )) {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( "Cannot find variable $name" );
+        fatal( "Cannot find variable $name\n" . $self->dump() );
     } else {
         $ret = undef;
     }
+#    if( defined( $ret )) {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> ", $ret, "\n" );
+#    } else {
+#        trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::getResolveOrNull( ", $self->{name}, ", ", $name, ", ", $remainingDepth, " ) -> <undef>\n" );
+#    }
     return $ret;
 }
-
 
 ##
 # Obtain the keys in this Configuration object.
@@ -177,30 +201,38 @@ sub keys {
 # Replace all variables in the string values in this hash with the values from this Configuration object.
 # $value: the hash, array or string
 # $unresolvedOk: if true, and a variable cannot be replaced, leave the variable and continue; otherwise die
+# $remainingDepth: remaining recursion levels before abortion
 # return: the same $value
 sub replaceVariables {
-    my $self         = shift;
-    my $value        = shift;
-    my $unresolvedOk = shift || 0;
+    my $self           = shift;
+    my $value          = shift;
+    my $unresolvedOk   = shift || 0;
+    my $remainingDepth = shift || 16;
+
+#    trace( ( '  ' x ( 16-$remainingDepth)), "Attempting to Configuration::replaceVariables( ", $self->dump(), " )" );
 
     my $ret;
     if( ref( $value ) eq 'HASH' ) {
         $ret = {};
         while( my( $key2, $value2 ) = each %$value ) {
-            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk );
+            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk, $remainingDepth-1 );
             $ret->{$key2} = $newValue2;
         }
 
     } elsif( ref( $value ) eq 'ARRAY' ) {
         $ret = [];
         foreach my $value2 ( @$value ) {
-            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk );
+            my $newValue2 = $self->replaceVariables( $value2, $unresolvedOk, $remainingDepth-1 );
             push @$ret, $newValue2
         }
-    } else {
+    } elsif( $value ) {
         $ret = $value;
-        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk )/ge;
+        $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+    } else {
+        $ret = undef;
     }
+#    trace( ( '  ' x ( 16-$remainingDepth)), "Configuration::replaceVariables( ", $self->{name}, ', ', $unresolvedOk, ', ', $remainingDepth, " )" );
+
     return $ret;
 }
 
@@ -209,16 +241,16 @@ sub replaceVariables {
 sub dump {
     my $self = shift;
 
-    my $ret = join( '', map
+    my $ret = "Configuration( " . $self->{name} . ",\n" . join( '', map
         {
             my $key   = $_;
             my $value = $self->getResolve( $_, undef, 1 );
             if( defined( $value )) {
-                "$_ => $value\n";
+                "    $_ => $value\n";
             } else {
-                "$_ => <undef>\n";
+                "    $_ => <undef>\n";
             }
-        } sort $self->keys() );
+        } sort $self->keys() ) . ")";
     return $ret;
 }
 
