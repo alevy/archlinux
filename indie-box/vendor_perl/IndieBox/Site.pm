@@ -226,11 +226,12 @@ sub deploy {
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
     IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
 
+    IndieBox::Apache2::setupSite( $self );
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $appConfig->install();
     }
 
-    IndieBox::Apache2::setupSite( $self );
     IndieBox::Host::siteDeployed( $self );
 
     1;
@@ -241,11 +242,11 @@ sub deploy {
 sub undeploy {
     my $self = shift;
 
-    IndieBox::Apache2::removeSite( $self );
-
     foreach my $appConfig ( @{$self->appConfigs} ) {
         $appConfig->uninstall();
     }
+    IndieBox::Apache2::removeSite( $self );
+
     IndieBox::Host::siteUndeployed( $self );
 
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
