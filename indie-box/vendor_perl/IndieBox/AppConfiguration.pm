@@ -166,13 +166,15 @@ sub install {
 
     $self->_initialize();
 
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
-#    foreach my $roleName ( @$applicableRoleNames ) {
-#        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-#        if( $dir ) {
-#            IndieBox::Utils::mkdir( $dir, 0755 );
-#        }
-#    }
+    foreach my $roleName ( @$applicableRoleNames ) {
+        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        if( $dir && $dir ne $siteDocumentDir ) {
+            IndieBox::Utils::mkdir( $dir, 0755 );
+        }
+    }
 
     my $appConfigId = $self->appConfigId;
     IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
@@ -237,15 +239,12 @@ sub install {
                 }
             }
 
-            my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 ); # some roles don't have a directory
-            if( $dir ) {
-                IndieBox::Utils::mkdir( $dir, 0755 );
-            }
-
             my $appConfigItems = $installableRoleJson->{appconfigitems};
             unless( $appConfigItems ) {
                 next;
             }
+
+            my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $type = $appConfigItem->{type};
                 my $item = $self->_instantiateAppConfigurationItem( $type, $appConfigItem, $installable );
@@ -314,12 +313,13 @@ sub uninstall {
         }
     }
 
-#    foreach my $roleName ( @$applicableRoleNames ) {
-#        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-#        if( $dir ) {
-#            IndieBox::Utils::rmdir( $dir );
-#        }
-#    }
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+    foreach my $roleName ( @$applicableRoleNames ) {
+        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        if( $dir && $dir ne $siteDocumentDir ) {
+            IndieBox::Utils::rmdir( $dir );
+        }
+    }
 }
 
 ##
