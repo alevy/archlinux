@@ -187,7 +187,7 @@ if( $cmd eq 'deploy' ) {
         $site->deploy();
     }
     my $resumeTriggers = {};
-    foreach my $site ( %$oldSites ) {
+    foreach my $site ( values %$oldSites ) {
         $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
