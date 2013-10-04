@@ -234,6 +234,10 @@ sub deploy {
 
     IndieBox::Host::siteDeployed( $self );
 
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $appConfig->runInstaller();
+    }
+
     1;
 }
 

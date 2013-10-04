@@ -142,6 +142,15 @@ sub app {
 }
 
 ##
+# Obtain the installables at this AppConfiguration.
+# return: list of installables
+sub installables {
+    my $self = shift;
+
+    return ( $self->{app} );
+}
+
+##
 # Obtain the instantiated customization points for this AppConfiguration
 # return: customization points hierarchy as given in the site JSON
 sub customizationPoints {
@@ -179,7 +188,7 @@ sub install {
     my $appConfigId = $self->appConfigId;
     IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
 
-    my @installables        = ( $self->{app} );
+    my @installables        = $self->installables();
     my $appConfigCustPoints = $self->customizationPoints();
 
     foreach my $installable ( @installables ) {
@@ -244,15 +253,12 @@ sub install {
                 next;
             }
 
-            my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir = $config->getResolve( 'package.codedir' );
+            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             foreach my $appConfigItem ( @$appConfigItems ) {
-                my $type = $appConfigItem->{type};
-                my $item = $self->_instantiateAppConfigurationItem( $type, $appConfigItem, $installable );
+                my $item = $self->_instantiateAppConfigurationItem( $appConfigItem, $installable );
                 if( $item ) {
-                    $item->install(
-                            $config->getResolve( 'package.codedir' ),
-                            $dir,
-                            $config );
+                    $item->install( $codeDir, $dir, $config );
                 }
             }
         }
@@ -273,7 +279,7 @@ sub uninstall {
     # faster to do a simple recursive delete, instead of going point by point
     IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
 
-    my @installables        = ( $self->{app} );
+    my @installables        = $self->installables();
     my $appConfigCustPoints = $self->customizationPoints();
 
     foreach my $installable ( reverse @installables ) {
@@ -288,8 +294,6 @@ sub uninstall {
 
         # Now for all the roles
         foreach my $roleName ( reverse @$applicableRoleNames ) {
-            my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 ); # some roles don't have a directory
-
             my $installableRoleJson = $installableJson->{roles}->{$roleName};
             unless( $installableRoleJson ) {
                 next;
@@ -299,15 +303,14 @@ sub uninstall {
             unless( $appConfigItems ) {
                 next;
             }
+            my $codeDir = $config->getResolve( 'package.codedir' );
+            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
-                my $type = $appConfigItem->{type};
-                my $item = $self->_instantiateAppConfigurationItem( $type, $appConfigItem, $installable );
+                my $item = $self->_instantiateAppConfigurationItem( $appConfigItem, $installable );
 
                 if( $item ) {
-                    $item->uninstall(
-                            $config->getResolve( 'package.codedir' ),
-                            $dir,
-                            $config );
+                    $item->uninstall( $codeDir, $dir, $config );
                 }
             }
         }
@@ -323,18 +326,52 @@ sub uninstall {
 }
 
 ##
+# Run the installer(s) for the app at this Site
+sub runInstaller {
+    my $self = shift;
+
+    my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+    my @installables        = $self->installables();
+
+    foreach my $installable ( @installables ) {
+        my $packageName = $installable->packageName;
+
+        my $config = new IndieBox::Configuration(
+                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                {},
+                $installable->config,
+                $self->{config} );
+
+        foreach my $roleName ( @$applicableRoleNames ) {
+            my $installerJson = $installable->installableJson->{roles}->{$roleName}->{installer};
+
+            if( $installerJson ) {
+                my $installer = $self->_instantiateAppConfigurationItem( $installerJson, $installable );
+
+                if( $installer ) {
+                    my $codeDir = $config->getResolve( 'package.codedir' );
+                    my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+
+                    $installer->runInstaller( $codeDir, $dir, $config );
+                }
+            }
+        }
+    }
+}
+
+##
 # Internal helper to instantiate the right subclass of AppConfigurationItem.
-# $type: name of the type to instantiate
 # $json: the JSON fragment for the AppConfigurationItem
 # $installable: the Installable that the AppConfigurationItem belongs to
 # return: instance of subclass of AppConfigurationItem, or undef
 sub _instantiateAppConfigurationItem {
     my $self        = shift;
-    my $type        = shift;
     my $json        = shift;
     my $installable = shift;
 
     my $ret;
+    my $type = $json->{type};
+
     if( 'file' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::File->new( $json, $self, $installable );
     } elsif( 'directory' eq $type ) {

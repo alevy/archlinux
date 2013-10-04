@@ -52,6 +52,18 @@ sub new {
 }
 
 ##
+# Default implementation for an installer.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+sub runInstaller {
+    my $self   = shift;
+    my $dir    = shift;
+    my $config = shift;
+
+    error( "Cannot perform runInstaller() on $self" );
+}
+
+##
 # Convert a permission attribute given as string into octal
 # $s: permission attribute as string
 # $default: octal mode if $s is undef

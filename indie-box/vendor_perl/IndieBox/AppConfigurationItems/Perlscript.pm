@@ -119,4 +119,36 @@ sub uninstall {
     }
 }
 
+##
+# Perl implementation for an installer.
+# $defaultFromDir: the directory to which "source" paths are relative to
+# $defaultToDir: the directory to which "destination" paths are relative to
+# $config: the Configuration object that knows about symbolic names and variables
+sub runInstaller {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    my $source = $self->{json}->{source};
+
+    my $script = $source;
+    unless( $script =~ m#^/# ) {
+        $script = "$defaultFromDir/$script";
+    }
+
+    unless( -r $script ) {
+        error( "File to run does not exist: $script" );
+        return;
+    }
+
+    my $scriptcontent = slurpFile( $script );
+    my $operation     = 'runInstaller';
+
+    debug( "Running eval ", $script, ' ', $operation );
+
+    unless( eval $scriptcontent ) {
+        error( "Running eval $script $operation failed: $@" );
+    }
+   }
 1;
