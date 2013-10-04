@@ -138,10 +138,10 @@ sub myexec {
     my $ret = $?;
 
     if( defined( $outContentP )) {
-        ${$outContentP} = slurp( $outFile->filename );
+        ${$outContentP} = slurpFile( $outFile->filename );
     }
     if( defined( $errContentP )) {
-        ${$errContentP} = slurp( $errFile->filename );
+        ${$errContentP} = slurpFile( $errFile->filename );
     }
 
     if( $ret == -1 || $ret & 127) {
