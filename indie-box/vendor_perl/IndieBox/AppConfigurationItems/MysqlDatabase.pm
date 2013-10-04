@@ -165,7 +165,12 @@ sub uninstall {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-}
+    my $name = $self->{json}->{name};
 
+    IndieBox::ResourceManager::unprovisionLocalMySqlDatabase(
+            $self->{appConfig}->appConfigId,
+            $self->{installable}->packageName,
+            $name );
+}
 
 1;

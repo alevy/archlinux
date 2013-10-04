@@ -203,5 +203,62 @@ SQL
     return( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 }
 
+##
+# Unprovision a local MySQL database
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+sub unprovisionLocalMySqlDatabase {
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+
+    debug( "unprovisionLocalMySqlDatabase", $appConfigId, ", ", $installableId, ", ", $itemName );
+
+    my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
+
+    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
+SELECT dbName,
+       dbHost,
+       dbPort
+FROM   `$dbNamesTableName`
+WHERE  appConfigurationId = ?
+  AND  installableId = ?
+  AND  itemName = ?
+SQL
+
+    my $dbName;
+    my $dbHost;
+    my $dbPort;
+
+    while( my $ref = $sth->fetchrow_hashref() ) {
+        if( $dbName ) {
+            error( "More than one found, not good: $dbName" );
+            last;
+        }
+        $dbName              = $ref->{'dbName'};
+        $dbHost              = $ref->{'dbHost'};
+        $dbPort              = $ref->{'dbPort'};
+    }
+    $sth->finish();
+
+    if( $dbName ) {
+        my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
+DELETE FROM `$dbNamesTableName`
+WHERE  appConfigurationId = ?
+  AND  installableId = ?
+  AND  itemName = ?
+SQL
+        $sth->finish();
+
+        $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
+DROP DATABASE `$dbName`;
+SQL
+        $sth->finish();
+    }
+
+    $dbh->disconnect();
+}
+
 1;
 
