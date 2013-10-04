@@ -192,6 +192,12 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
+} elsif( $cmd eq 'backup' ) {
+    fatal( "Not implemented yet, sorry" );
+
+} elsif( $cmd eq 'restore' ) {
+    fatal( "Not implemented yet, sorry" );
+
 } else {
     synopsisHelpQuit();
 }
@@ -256,6 +262,62 @@ END
         Update all installed code on this device. This will perform
         package updates, configuration updates, database migrations
         et al as needed.
+
+END
+    }
+    print "    $0 backup --siteid <siteid> --out <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Back up all data from all applications installed at a currently
+        deployed site with siteid to backupfile.
+
+END
+    }
+    print "    $0 backup --appconfigid <appconfigid> --out <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Back up all data from the currently deployed application at
+        AppConfiguration appconfigid to backupfile.
+
+END
+    }
+    print "    $0 restore --in <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Restore all sites contained in backupfile. This includes all
+        applications and their data. Currently deployed sites not mentioned in
+        backupfile will remain unchanged. This will overwrite the currently
+        deployed sites and all of their data.
+
+END
+    }
+    print "    $0 restore --siteid <siteid> --in <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Restore all applications and their data to the currently deployed
+        site with siteid from the backup file. This will overwrite the
+        currently deployed site and all of its data.
+
+END
+    }
+    print "    $0 restore --appconfigid <appconfigid> --in <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Restore AppConfiguration appconfigid on a currently deployed
+        site to the configuration contained in the backup file. This will overwrite
+        the currently deployed AppConfiguration and all of its data.
+
+END
+    }
+    print "    $0 restore --appconfigid <fromappconfigid> --translate <fromappconfigid>=><toappconfigid> --in <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Restore AppConfiguration toappconfigid on a currently deployed
+        site to the configuration contained in the backup file for AppConfiguration
+        fromappconfigid. This will overwrite the currently deployed AppConfiguration
+        toappconfigid and all of its data.
+        Note: there is no space before and after the =>, and the > may have to be
+        escaped in your shell.
 
 END
     }
