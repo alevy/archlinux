@@ -30,7 +30,9 @@ use JSON;
 use Lchown;
 use POSIX;
 
-our @EXPORT = qw( readJsonFromFile readJsonFromStdin myexec saveFile slurpFile );
+our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
+                  writeJsonToFile writeJsonToStdout writeJsonToString
+                  myexec saveFile slurpFile );
 my $jsonParser = JSON->new->relaxed->pretty->utf8();
 
 ##
@@ -47,7 +49,7 @@ sub readJsonFromFile {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( "JSON parsing error in file $file: $@" );
+    } or fatal( 'JSON parsing error in file', $file, ':', $@ );
 
     return $json;
 }
@@ -56,7 +58,7 @@ sub readJsonFromFile {
 # Read and parse JSON from STDIN
 # return: JSON object
 sub readJsonFromStdin {
-    trace( "readJsonFromStdin()" );
+    trace( 'readJsonFromStdin()' );
 
     local $/;
     my $fileContent = <STDIN>;
@@ -64,7 +66,24 @@ sub readJsonFromStdin {
     my $json;
     eval {
         $json = $jsonParser->decode( $fileContent );
-    } or fatal( "JSON parsing error from <stdin>: $@" );
+    } or fatal( 'JSON parsing error from <stdin>:', $@ );
+
+    return $json;
+}
+
+##
+# Read and parse JSON from String
+# $string: the JSON string
+# return: JSON object
+sub readJsonFromString {
+    my $string = shift;
+
+    trace( 'readJsonFromString()' );
+
+    my $json;
+    eval {
+        $json = $jsonParser->decode( $string );
+    } or fatal( 'JSON parsing error:', $@ );
 
     return $json;
 }
@@ -72,7 +91,7 @@ sub readJsonFromStdin {
 ##
 # Write a JSON file.
 # $filename: the name of the file to create/write
-# $content: the content of the file, as JSON object
+# $json: the JSON object to write
 # $mask: permissions on the file
 # $uname: owner of the file
 # $gname: group of the file
@@ -84,20 +103,31 @@ sub writeJsonToFile {
     my $uname    = shift;
     my $gname    = shift;
 
-    trace( "writeJsonToFile( ", $fileName, " )" );
+    trace( 'writeJsonToFile(', $fileName, ')' );
 
     saveFile( $fileName, $jsonParser->encode( $json ), $mask, $uname, $gname );
 }
 
 ##
 # Write JSON to STDOUT
-# $content: the content of the file, as JSON object
+# $json: the JSON object to write
 sub writeJsonToStdout {
     my $json = shift;
 
-    trace( "writeJsonToStdout()" );
+    trace( 'writeJsonToStdout()' );
 
     print $jsonParser->encode( $json );
+}
+
+##
+# Write JSON to string
+# $json: the JSON object to write
+sub writeJsonToString {
+    my $json = shift;
+
+    trace( 'writeJsonToString()' );
+
+    return $jsonParser->encode( $json );
 }
 
 ##
@@ -116,7 +146,7 @@ sub myexec {
     my $outFile;
     my $errFile;
 
-    debug( "Exec: ", $cmd );
+    debug( 'Exec:', $cmd );
 
     if( $inContent ) {
         $inFile = File::Temp->new();
@@ -145,7 +175,7 @@ sub myexec {
     }
 
     if( $ret == -1 || $ret & 127) {
-        error( "Failed to execute $cmd (error code $ret): $!" );
+        error( 'Failed to execute', $cmd, "(error code $ret):", $! );
     }
     return $ret;
 }
@@ -157,10 +187,10 @@ sub myexec {
 sub slurpFile {
     my $filename = shift;
 
-    trace( "slurpFile( ", $filename, " )" );
+    trace( 'slurpFile(', $filename, ')' );
 
     local $/;
-    open( my $fh, '<', $filename ) || fatal( "Cannot read file $filename" );
+    open( my $fh, '<', $filename ) || fatal( 'Cannot read file', $filename );
     my $fileContent = <$fh>;
     close $fh;
 
@@ -188,10 +218,10 @@ sub saveFile {
     unless( defined( $mask )) {
         $mask = 0644;
     }
-    debug( "About to save to file ", $filename, " (", length( $content ), " bytes, mask ", sprintf( "%o", $mask ), ", uid ", $uid, " gid ", $gid, " )" );
+    debug( 'About to save to file', $filename, '(', length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, 'gid ', $gid, ')' );
 
     unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
-        error( "Could not write to file $filename: $!" );
+        error( "Could not write to file $filename:", $! );
         return 0;
     }
 
@@ -214,13 +244,13 @@ sub saveFile {
 sub deleteFile {
     my @files = @_;
 
-    trace( "deleteFile( ", join( ", ", @files ), " )" );
+    trace( 'deleteFile(', join( ", ", @files ), ')' );
 
     my $ret = 1;
     foreach my $f ( @files ) {
         if( -f $f || -l $f ) {
             unless( unlink( $f )) {
-                error( "Failed to delete file $f: $!" );
+                error( "Failed to delete file $f:", $! );
                 $ret = 0;
             }
         } elsif( -e $f ) {
@@ -252,19 +282,19 @@ sub mkdir {
     }
 
     if( -d $filename ) {
-        warn( "Directory $filename exists already" );
+        warn( 'Directory exists already', $filename );
         return 1;
     }
     if( -e $filename ) {
-        error( "Failed to create directory $filename: something is there already" );
+        error( 'Failed to create directory, something is there already:', $filename );
         return 0;
     }
 
-    debug( "Creating directory $filename" );
+    debug( 'Creating directory', $filename );
 
     my $ret = CORE::mkdir $filename;
     unless( $ret ) {
-        error( "Failed to create directory $filename: $!" );
+        error( "Failed to create directory $filename:", $! );
     }
 
     chmod $mask, $filename;
@@ -289,11 +319,11 @@ sub symlink {
     my $uid     = getUid( shift );
     my $gid     = getGid( shift );
 
-    debug( "About to symlink $oldfile $newfile" );
+    debug( 'About to symlink', $oldfile, $newfile );
 
     my $ret = symlink $oldfile, $newfile;
     unless( $ret ) {
-        error( "Failed to symlink $oldfile $newfile" );
+        error( 'Failed to symlink', $oldfile, $newfile );
     }
     if( $uid >= 0 || $gid >= 0 ) {
         lchown $uid, $gid, $newfile;
@@ -308,17 +338,17 @@ sub symlink {
 sub rmdir {
     my @dirs = @_;
 
-    debug( "About to delete directories: ", join( ', ', @dirs ));
+    debug( 'About to delete directories:', join( ', ', @dirs ));
 
     my $ret = 1;
     foreach my $d ( @dirs ) {
         if( -d $d ) {
             unless( CORE::rmdir( $d )) {
-                error( "Failed to delete directory $d: $!" );
+                error( "Failed to delete directory $d:", $! );
                 $ret = 0;
             }
         } elsif( -e $d ) {
-            error( "Cannot delete directory $d, file exists but isn't a directory" );
+            error( 'Cannot delete directory. File exists but isn\'t a directory', $d );
             $ret = 0;
         } else {
             warn( "Cannot delete directory $d, does not exist" );

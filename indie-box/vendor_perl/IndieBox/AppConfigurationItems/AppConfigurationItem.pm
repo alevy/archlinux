@@ -60,7 +60,25 @@ sub runInstaller {
     my $dir    = shift;
     my $config = shift;
 
-    error( "Cannot perform runInstaller() on $self" );
+    error( 'Cannot perform runInstaller() on', $self );
+}
+
+##
+# Default implementation to back this item up.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+sub backup {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+    my $filesToDelete    = shift;
+
+    error( 'Cannot perform backup() on', $self );
 }
 
 ##
@@ -98,10 +116,42 @@ sub _instantiateTemplateProcessor {
         $ret = new IndieBox::TemplateProcessor::Perlscript();
 
     } else {
-        error( "Unknown templatelang: $templateLang" );
+        error( 'Unknown templatelang:', $templateLang );
         $ret = new IndieBox::TemplateProcessor::Passthrough();
     }
     return $ret;
+}
+
+##
+# Helper method to add a directory hierarchy to a zip file
+# $zip: the ZIP object
+# $fileName: the name of the object in the filesystem
+# $zipName: the name of the object in the zip file
+sub _addRecursive {
+    my $self     = shift;
+    my $zip      = shift;
+    my $fileName = shift;
+    my $zipName  = shift;
+
+    if( -f $fileName ) {
+        $zip->addFile( $fileName, $zipName );
+
+    } elsif( -d $fileName ) {
+        $zip->addDirectory( "$fileName/", "$zipName/" );
+
+        my @children = grep { !/^\.{1,2}$/ } <$fileName/*>;
+        foreach my $child ( @children ) {
+            my $relative = $child;
+            $relative =~ s!^$fileName/!!;
+
+            $self->_addRecursive( $zip, $child, "$zipName/$relative" );
+        }
+
+    } else {
+        warn( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
+    }
+
+    1;
 }
 
 1;

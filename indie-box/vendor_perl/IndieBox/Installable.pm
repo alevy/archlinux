@@ -91,6 +91,33 @@ sub customizationPoints {
 }
 
 ##
+# Determine the role names that this Installable has information about
+# return: array of role names
+sub roleNames {
+    my $self = shift;
+
+    my $rolesJson = $self->{json}->{roles};
+    if( $rolesJson ) {
+        my @roleNames = keys %$rolesJson;
+        return \@roleNames;
+    } else {
+        return [];
+    }
+}
+
+##
+# Determine the JSON AppConfigurationItems in the role with this name
+# $roleName: name of the role
+# return: array of JSON AppConfigurationItems
+sub appConfigItemsInRole {
+    my $self     = shift;
+    my $roleName = shift;
+
+    my $ret = $self->{json}->{roles}->{$roleName}->{appconfigitems};
+    return $ret;
+}
+
+##
 # Add names of packages that are required to run the specified roles for this Installable.
 # $roleNames: array of role names
 # $packages: hash of packages

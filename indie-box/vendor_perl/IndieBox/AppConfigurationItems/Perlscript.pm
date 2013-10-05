@@ -68,17 +68,17 @@ sub install {
     }
 
     unless( -r $script ) {
-        error( "File to run does not exist: $script" );
+        error( 'File to run does not exist:', $script );
         return;
     }
 
     my $scriptcontent = slurpFile( $script );
     my $operation = 'install';
 
-    debug( "Running eval ", $script, ' ', $operation );
+    debug( 'Running eval', $script, $operation );
 
     unless( eval $scriptcontent ) {
-        error( "Running eval $script $operation failed: $@" );
+        error( 'Running eval', $script, $operation, 'failed:', $@ );
     }
 }
 
@@ -105,17 +105,17 @@ sub uninstall {
     }
 
     unless( -r $script ) {
-        error( "File to run does not exist: $script" );
+        error( 'File to run does not exist:', $script );
         return;
     }
 
     my $scriptcontent = slurpFile( $script );
     my $operation = 'uninstall';
 
-    debug( "Running eval ", $script, ' ', $operation );
+    debug( 'Running eval', $script, $operation );
 
     unless( eval $scriptcontent ) {
-        error( "Running eval $script $operation failed: $@" );
+        error( 'Running eval', $script, $operation, 'failed:', $@ );
     }
 }
 
@@ -138,17 +138,18 @@ sub runInstaller {
     }
 
     unless( -r $script ) {
-        error( "File to run does not exist: $script" );
+        error( 'File to run does not exist:', $script );
         return;
     }
 
     my $scriptcontent = slurpFile( $script );
     my $operation     = 'runInstaller';
 
-    debug( "Running eval ", $script, ' ', $operation );
+    debug( 'Running eval', $script, $operation );
 
     unless( eval $scriptcontent ) {
-        error( "Running eval $script $operation failed: $@" );
+        error( 'Running eval', $script, $operation, 'failed:', $@ );
     }
-   }
+}
+
 1;

@@ -48,7 +48,7 @@ log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
     }
 
     $log = Log::Log4perl->get_logger( __FILE__ );
-    $log->trace( "Initialized log4perl" );
+    $log->trace( 'Initialized log4perl' );
 }
 
 ##
@@ -67,7 +67,9 @@ sub setQuiet {
 sub trace {
     my @msg = @_;
 
-    $log->trace( join( '', @msg ));
+    if( $log->is_debug()) {
+        $log->trace( join( ' ', @msg ));
+    }
 }
 
 ##
@@ -76,7 +78,9 @@ sub trace {
 sub debug {
     my @msg = @_;
 
-    $log->debug( join( '', @msg ));
+    if( $log->is_trace()) {
+        $log->debug( join( ' ', @msg ));
+    }
 }
 
 ##
@@ -85,7 +89,9 @@ sub debug {
 sub info {
     my @msg = @_;
 
-    $log->info( join( '', @msg ));
+    if( $log->is_debug()) {
+        $log->info( join( ' ', @msg ));
+    }
 }
 
 ##
@@ -94,7 +100,9 @@ sub info {
 sub warn {
     my @msg = @_;
 
-    $log->warn( join( '', @msg ));
+    if( $log->is_warn()) {
+        $log->warn( join( ' ', @msg ));
+    }
 }
 
 ##
@@ -103,7 +111,9 @@ sub warn {
 sub error {
     my @msg = @_;
 
-    $log->error( join( '', @msg ));
+    if( $log->is_error()) {
+        $log->error( join( ' ', @msg ));
+    }
 }
 
 ##
@@ -112,7 +122,9 @@ sub error {
 sub fatal {
     my @msg = @_;
 
-    $log->fatal( join( '', @msg ));
+    if( $log->is_fatal()) {
+        $log->fatal( join( ' ', @msg ));
+    }
 
     exit 1;
 }

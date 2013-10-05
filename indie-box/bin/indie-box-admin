@@ -22,6 +22,7 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use IndieBox::Backup;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Site;
@@ -119,6 +120,21 @@ if( $cmd eq 'deploy' ) {
     my $oldSites = IndieBox::Host::sites();
     my @newSites = values %$newSitesHash;
 
+    # make sure AppConfigIds are unique
+    foreach my $newSite ( @newSites ) {
+        foreach my $newAppConfig ( $newSite->appConfigs ) {
+            foreach my $oldSite ( values %$oldSites ) {
+                foreach my $oldAppConfig ( $oldSite->appConfigs ) {
+                    if( $newAppConfig->appConfigId eq $oldAppConfig->appConfigId ) {
+                        if( $newSite->siteId ne $oldSite->siteId ) {
+                            fatal(    'Non-unique appconfigid ' . $newAppConfig->appConfigId
+                                    . ' in sites ' . $newSite->siteId . ' and ' . $oldSite->siteId );
+                        }
+                    }
+                }
+            }
+        }
+    }
     my $prerequisites = {};
     foreach my $site ( @newSites ) {
         $site->addToPrerequisites( $applicableRoleNames, $prerequisites );
@@ -279,12 +295,17 @@ if( $cmd eq 'deploy' ) {
 
 } elsif( $cmd eq 'backup' ) {
     if( @ARGV || $json || $brief || @translates || $file || $in || !$out ) {
+        synopsisHelpQuit();
     }
-    fatal( "Not implemented yet, sorry" );
+    my $backup = new IndieBox::Backup( \@siteIds, \@appconfigIds );
+    $backup->exportBackup( $out );
 
 } elsif( $cmd eq 'restore' ) {
     if( @ARGV || $json || $brief || $file || !$in || $out ) {
+        synopsisHelpQuit();
     }
+    my $backup = new IndieBox::Backup( \@siteIds, \@appconfigIds, $in );
+
     fatal( "Not implemented yet, sorry" );
 
 } else {

@@ -3,6 +3,10 @@
         "checkmanifest" : true
     },
 
+    "host" : {
+        "tmpdir" : "/tmp"
+    },
+
     "package" : {
         "codedir" : "/usr/share/${package.name}",
         "datadir" : "/usr/lib/${package.name}",

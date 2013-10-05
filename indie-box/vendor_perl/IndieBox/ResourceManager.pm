@@ -260,5 +260,27 @@ SQL
     $dbh->disconnect();
 }
 
+##
+# Export the content of a local MySQL database
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+# $fileName: the file to write to
+sub exportLocalMySqlDatabase {
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+    my $fileName      = shift;
+
+    debug( "exportLocalMySqlDatabase", $appConfigId, $installableId, $itemName, $fileName );
+
+    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+            = getMySqlDatabase( $appConfigId, $installableId, $itemName );
+
+    my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
+
+    IndieBox::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" );
+}
+
 1;
 

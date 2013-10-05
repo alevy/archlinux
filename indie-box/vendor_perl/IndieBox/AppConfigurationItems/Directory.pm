@@ -119,6 +119,34 @@ sub uninstall {
     }
 }
 
+##
+# Back this item up.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+sub backup {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+    my $filesToDelete    = shift;
+
+    my $names = $self->{json}->{names};
+    unless( $names ) {
+        $names = [ $self->{json}->{name} ];
+    }
+    if( @$names != 1 ) {
+        fatal( "Cannot backup item with more than one name: " . join( @$names ));
+    }
+
+    my $bucket   = $self->{json}->{retentionbucket};
+
+    $self->_addRecursive( $zip, "$dir/" . $names->[0], "$contextPathInZip/$bucket" );
+}
+
 1;
 
 

@@ -77,6 +77,15 @@ sub appConfigId {
 }
 
 ##
+# Obtain the ApConfiguration JSON
+# return: ApConfiguration JSON
+sub appConfigurationJson {
+    my $self = shift;
+
+    return $self->{json};
+}
+
+##
 # Obtain the Site object that this AppConfiguration belongs to.
 # return: Site object
 sub site {
@@ -256,7 +265,7 @@ sub install {
             my $codeDir = $config->getResolve( 'package.codedir' );
             my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             foreach my $appConfigItem ( @$appConfigItems ) {
-                my $item = $self->_instantiateAppConfigurationItem( $appConfigItem, $installable );
+                my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
                 if( $item ) {
                     $item->install( $codeDir, $dir, $config );
                 }
@@ -307,7 +316,7 @@ sub uninstall {
             my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
-                my $item = $self->_instantiateAppConfigurationItem( $appConfigItem, $installable );
+                my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
 
                 if( $item ) {
                     $item->uninstall( $codeDir, $dir, $config );
@@ -346,7 +355,7 @@ sub runInstaller {
             my $installerJson = $installable->installableJson->{roles}->{$roleName}->{installer};
 
             if( $installerJson ) {
-                my $installer = $self->_instantiateAppConfigurationItem( $installerJson, $installable );
+                my $installer = $self->instantiateAppConfigurationItem( $installerJson, $installable );
 
                 if( $installer ) {
                     my $codeDir = $config->getResolve( 'package.codedir' );
@@ -360,11 +369,11 @@ sub runInstaller {
 }
 
 ##
-# Internal helper to instantiate the right subclass of AppConfigurationItem.
+# Instantiate the right subclass of AppConfigurationItem.
 # $json: the JSON fragment for the AppConfigurationItem
 # $installable: the Installable that the AppConfigurationItem belongs to
 # return: instance of subclass of AppConfigurationItem, or undef
-sub _instantiateAppConfigurationItem {
+sub instantiateAppConfigurationItem {
     my $self        = shift;
     my $json        = shift;
     my $installable = shift;
