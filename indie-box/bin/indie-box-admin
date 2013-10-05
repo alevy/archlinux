@@ -33,13 +33,23 @@ my $brief = 0;
 my $help  = 0;
 my $cmd;
 my $file;
+my $in;
+my $out;
+my @siteIds;
+my @appconfigIds;
+my @translates;
 
 my $parseOk = GetOptions(
-        'quiet'  => \$quiet,
-        'json'   => \$json,
-        'brief'  => \$brief,
-        'help'   => \$help,
-        'file=s' => \$file );
+        'quiet'       => \$quiet,
+        'json'        => \$json,
+        'brief'       => \$brief,
+        'help'        => \$help,
+        'siteid'      => \@siteIds,
+        'appconfigid' => \@appconfigIds,
+        'translate'   => \@translates,
+        'file=s'      => \$file,
+        'in=s'        => \$in,
+        'out=s'       => \$out );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
@@ -55,7 +65,7 @@ if( $quiet ) {
 $cmd = shift @ARGV;
 
 if( $cmd eq 'deploy' ) {
-    if( @ARGV || $json || $brief ) {
+    if( @ARGV || $json || $brief || @appconfigIds || @translates || $in || $out ) {
         synopsisHelpQuit();
     }
     my $json;
@@ -65,26 +75,58 @@ if( $cmd eq 'deploy' ) {
         $json = readJsonFromStdin();
     }
 
-    my $newSites = [];
+    my $newSitesHash = {};
     if( ref( $json ) eq 'HASH' ) {
-        push @$newSites, new IndieBox::Site( $json );
-    } elsif( ref( $json ) eq 'ARRAY' ) {
-        foreach my $siteJson ( @$json ) {
-            push @$newSites, new IndieBox::Site( $siteJson );
+        $json = [ $json ];
+    }
+    if( ref( $json ) eq 'ARRAY' ) {
+        if( @siteIds ) {
+            foreach my $siteJson ( @$json ) {
+                my $site = new IndieBox::Site( $siteJson );
+
+                foreach my $siteId ( @siteIds ) {
+                    if( $site->siteId eq $siteId ) {
+                        if( $newSitesHash->{$siteId} ) {
+                            fatal( "Duplicate site definition: $siteId" );
+                        }
+                        $newSitesHash->{$siteId} = $site;
+                        @siteIds = grep { $_ != $siteId } @siteIds;
+                        last;
+                    }
+                }
+            }
+            if( @siteIds > 1 ) {
+                fatal( "Site definitions not found in JSON: " . join( ' ', @siteIds ));
+            } elsif( @siteIds ) {
+                fatal( "Site definitions not found in JSON: " . join( ' ', @siteIds ));
+            }
+        } else {
+            foreach my $siteJson ( @$json ) {
+                my $site   = new IndieBox::Site( $siteJson );
+                my $siteId = $site->siteId;
+                if( $newSitesHash->{$siteId} ) {
+                    fatal( "Duplicate site definition: $siteId" );
+                }
+                $newSitesHash->{$siteId} = $site;
+            }
         }
+    } else {
+        fatal( "Not a Site JSON file" );
     }
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
 
     my $oldSites = IndieBox::Host::sites();
+    my @newSites = values %$newSitesHash;
+
     my $prerequisites = {};
-    foreach my $site ( @$newSites ) {
+    foreach my $site ( @newSites ) {
         $site->addToPrerequisites( $applicableRoleNames, $prerequisites );
     }
     IndieBox::Host::installPackages( $prerequisites );
 
     my $suspendTriggers = {};
-    foreach my $site ( @$newSites ) {
+    foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             $oldSite->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
@@ -94,7 +136,7 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $suspendTriggers );
 
-    foreach my $site ( @$newSites ) {
+    foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             $oldSite->undeploy();
@@ -103,20 +145,17 @@ if( $cmd eq 'deploy' ) {
     }
 
     my $resumeTriggers = {};
-    foreach my $site ( @$newSites ) {
+    foreach my $site ( @newSites ) {
         $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } elsif( $cmd eq 'undeploy' ) {
-    unless( @ARGV ) {
-        fatal( "No sites given to undeploy." );
-    }
-    if( $json || $brief ) {
+    if( @ARGV || $json || $brief || ( @siteIds == 0 ) || @appconfigIds || @translates || $in || $out || $file ) {
         synopsisHelpQuit();
     }
     my $oldSites = IndieBox::Host::sites();
-    foreach my $siteId ( @ARGV ) {
+    foreach my $siteId ( @siteIds ) {
         unless( $oldSites->{$siteId} ) {
             fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
         }
@@ -133,41 +172,87 @@ if( $cmd eq 'deploy' ) {
     }
 
 } elsif( $cmd eq 'listsites' ) {
-    if( @ARGV || $quiet ) {
+    if( @ARGV || @appconfigIds || @translates || $file || $in || $out ) {
         synopsisHelpQuit();
     }
     my $sites = IndieBox::Host::sites();
     if( $json ) {
         my $sitesJson = {};
-        foreach my $site ( values %$sites ) {
-            $sitesJson->{$site->siteId} = $site->siteJson;
+        if( @siteIds ) {
+            foreach my $siteId ( @siteIds ) {
+                my $site = $sites->{$siteId};
+                if( $site ) {
+                    $sitesJson->{$site->siteId} = $site->siteJson;
+                } else {
+                    fatal( "Cannot find site with siteid $siteId." );
+                }
+            }
+        } else {
+            foreach my $site ( values %$sites ) {
+                $sitesJson->{$site->siteId} = $site->siteJson;
+            }
         }
         IndieBox::Utils::writeJsonToStdout( $sitesJson );
     } elsif( $brief ) {
-        foreach my $site ( values %$sites ) {
-            print $site->siteId . "\n";
-        }
-    } else { # human-readable
-        foreach my $site ( values %$sites ) {
-            print "Site: " . $site->siteId . "\n";
-            print "    Hostname: " . $site->hostName . "\n";
-            foreach my $appConfig ( @{$site->appConfigs} ) {
-                if( $appConfig->isDefault ) {
-                    my $context = $appConfig->context;
-                    print "    (default) Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+        if( @siteIds ) {
+            foreach my $siteId ( @siteIds ) {
+                my $site = $sites->{$siteId};
+                if( $site ) {
+                    print $site->siteId . "\n";
+                } else {
+                    fatal( "Cannot find site with siteid $siteId." );
                 }
             }
-            foreach my $appConfig ( @{$site->appConfigs} ) {
-                unless( $appConfig->isDefault ) {
-                    my $context = $appConfig->context;
-                    print "              Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+        } else {
+            foreach my $site ( values %$sites ) {
+                print $site->siteId . "\n";
+            }
+        }
+    } else { # human-readable
+        if( @siteIds ) {
+            foreach my $siteId ( @siteIds ) {
+                my $site = $sites->{$siteId};
+                if( $site ) {
+                    print "Site: " . $site->siteId . "\n";
+                    print "    Hostname: " . $site->hostName . "\n";
+                    foreach my $appConfig ( @{$site->appConfigs} ) {
+                        if( $appConfig->isDefault ) {
+                            my $context = $appConfig->context;
+                            print "    (default) Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                        }
+                    }
+                    foreach my $appConfig ( @{$site->appConfigs} ) {
+                        unless( $appConfig->isDefault ) {
+                            my $context = $appConfig->context;
+                            print "              Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                        }
+                    }
+                } else {
+                    fatal( "Cannot find site with siteid $siteId." );
+                }
+            }
+        } else {
+            foreach my $site ( values %$sites ) {
+                print "Site: " . $site->siteId . "\n";
+                print "    Hostname: " . $site->hostName . "\n";
+                foreach my $appConfig ( @{$site->appConfigs} ) {
+                    if( $appConfig->isDefault ) {
+                        my $context = $appConfig->context;
+                        print "    (default) Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                    }
+                }
+                foreach my $appConfig ( @{$site->appConfigs} ) {
+                    unless( $appConfig->isDefault ) {
+                        my $context = $appConfig->context;
+                        print "              Context: " . ( $context ? $context : '(root)' ) . " : " . $appConfig->app->packageName . "\n";
+                    }
                 }
             }
         }
     }
 
 } elsif( $cmd eq 'update' ) {
-    if( @ARGV || $json || $brief ) {
+    if( @ARGV || $json || $brief || @siteIds || @appconfigIds || @translates || $file || $in || $out ) {
         synopsisHelpQuit();
     }
 
@@ -193,9 +278,13 @@ if( $cmd eq 'deploy' ) {
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } elsif( $cmd eq 'backup' ) {
+    if( @ARGV || $json || $brief || @translates || $file || $in || !$out ) {
+    }
     fatal( "Not implemented yet, sorry" );
 
 } elsif( $cmd eq 'restore' ) {
+    if( @ARGV || $json || $brief || $file || !$in || $out ) {
+    }
     fatal( "Not implemented yet, sorry" );
 
 } else {
@@ -219,27 +308,29 @@ END
     } else {
         print "Synopsis:\n";
     }
-    print "    $0 deploy [--quiet]\n";
+    print "    $0 deploy [--quiet] [--siteid <siteid> ]...\n";
     if( $long ) {
         print <<END;
         Deploy or update one or more websites. This includes setting up the
         virtual host(s), installing and configuring all web applications for
-        the website(s). The website configuration(s) will be provided as a JSON
-        file from stdin.
+        the website(s). The website configuration(s) will be provided as a
+        JSON file from stdin. If one or more siteids are given, only deploy
+        the sites with those siteids.
 
 END
     }
-    print "    $0 deploy [--quiet] -f <site.json>\n";
+    print "    $0 deploy [--quiet] [--siteid <siteid> ] ... --file <site.json>\n";
     if( $long ) {
         print <<END;
         Deploy or update one or more websites. This includes setting up the
         virtual host(s), installing and configuring all web applications for
         the website(s). The website configuration(s) will be provided as JSON
-        file <site.json>.
+        file <site.json>. If one or more siteids are given, only deploy
+        the sites with those siteids.
 
 END
     }
-    print "    $0 undeploy [--quiet] <siteid>...\n";
+    print "    $0 undeploy [--quiet] --siteid <siteid> [ --siteid <siteid> ]...\n";
     if( $long ) {
         print <<END;
         Undeploy one or more previously deployed website(s).
