@@ -122,9 +122,9 @@ if( $cmd eq 'deploy' ) {
 
     # make sure AppConfigIds are unique
     foreach my $newSite ( @newSites ) {
-        foreach my $newAppConfig ( $newSite->appConfigs ) {
+        foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             foreach my $oldSite ( values %$oldSites ) {
-                foreach my $oldAppConfig ( $oldSite->appConfigs ) {
+                foreach my $oldAppConfig ( @{$oldSite->appConfigs} ) {
                     if( $newAppConfig->appConfigId eq $oldAppConfig->appConfigId ) {
                         if( $newSite->siteId ne $oldSite->siteId ) {
                             fatal(    'Non-unique appconfigid ' . $newAppConfig->appConfigId
