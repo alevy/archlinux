@@ -78,12 +78,12 @@ sub install {
             $fullName = "$defaultToDir/$fullName";
         }
         if( -e $fullName ) {
-            error( "Directory $fullName exists already" );
+            error( 'Directory exists already:', $fullName );
             # FIXME: chmod, chown
 
         } else {
             if( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
-                error( "Directory could not be created: $fullName" );
+                error( 'Directory could not be created:', $fullName );
             }
         }
     }
@@ -139,7 +139,7 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( "Cannot backup item with more than one name: " . join( @$names ));
+        fatal( 'Cannot backup item with more than one name:', join( @$names ));
     }
 
     my $bucket   = $self->{json}->{retentionbucket};

@@ -93,7 +93,7 @@ sub put {
     if( !defined( $self->{flatMap}->{$name} )) {
         $self->{flatMap}->{$name} = $value;
     } else {
-        error( "Have value already for $name" );
+        error( 'Have value already for', $name );
     }
 }
 
@@ -128,7 +128,7 @@ sub getResolve {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( "Cannot find variable $name\n" . $self->dump() );
+        fatal( 'Cannot find variable', $name, "\n" . $self->dump() );
     } else {
         $ret = '${' . $name . '}';
     }
@@ -172,7 +172,7 @@ sub getResolveOrNull {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( "Cannot find variable $name\n" . $self->dump() );
+        fatal( 'Cannot find variable', $name, "\n" . $self->dump() );
     } else {
         $ret = undef;
     }
@@ -296,7 +296,7 @@ sub _applyFunc {
     } elsif( 'cr2space' eq $func ) {
         $ret =~ s/\s+/ /g;
     } else {
-        error( "Unknown function $func in varsubst" );
+        error( 'Unknown function', $func, 'in varsubst' );
     }
     return $ret;
 }

@@ -63,10 +63,10 @@ sub new {
         foreach my $siteId ( @$siteIds ) {
             my $site = $mySites->{$siteId};
             unless( defined( $site )) {
-                fatal( "This server does not run site $siteId" );
+                fatal( 'This server does not run site', $siteId );
             }
             if( $sites->{$siteId}) {
-                fatal( "Duplicate siteid $siteId" );
+                fatal( 'Duplicate siteid', $siteId );
             }
             $sites->{$siteId} = $site;
 
@@ -78,7 +78,7 @@ sub new {
     if( defined( $appConfigIds ) && @$appConfigIds ) {
         foreach my $appConfigId ( @$appConfigIds ) {
             if( $appConfigs->{$appConfigId} ) {
-                fatal( "Duplicate appconfigid $appConfigId" );
+                fatal( 'Duplicate appconfigid', $appConfigId );
             }
             my $foundAppConfig = undef;
             foreach my $mySite ( values %$mySites ) {
@@ -89,7 +89,7 @@ sub new {
                 }
             }
             unless( $foundAppConfig ) {
-                fatal( "This server does not run a site that has an app with appconfigid $appConfigId" );
+                fatal( 'This server does not run a site that has an app with appconfigid', $appConfigId );
             }
         }
     }
@@ -125,12 +125,12 @@ sub newFromArchive {
 
     $self->{zip} = Archive::Zip->new();
     unless( $self->{zip}->read( $archive ) == AZ_OK ) {
-        fatal( "Failed reading file $archive" );
+        fatal( 'Failed reading file', $archive );
     }
 
     my $foundFileType = $self->{zip}->contents( $zipFileTypeEntry );
     unless( $foundFileType eq $fileType ) {
-        fatal( "Invalid file type: $foundFileType" );
+        fatal( 'Invalid file type:', $foundFileType );
     }
 
     foreach my $siteJsonFile ( $self->{zip}->membersMatching( "$zipFileSiteEntry/.*\.json" )) {
@@ -240,7 +240,7 @@ sub exportBackup {
     $self->{zip}->writeToFileNamed( $outFile );
 
     foreach my $current ( @{$self->{filesToDelete}} ) {
-        unlink $current || myError( "Could not unlink $current" );
+        unlink $current || error( 'Could not unlink', $current );
     }
     $self->{filesToDelete} = [];
     $self->{zip}           = undef;

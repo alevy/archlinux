@@ -94,11 +94,11 @@ sub install {
             unless( -e $toName ) {
                 IndieBox::Utils::symlink( $fromName, $toName, $mode, $uname, $gname );
             } else {
-                error( "Cannot create symlink: $toName" );
+                error( 'Cannot create symlink:', $toName );
             }
 
         } else {
-            error( "File does not exist: $fromName" );
+            error( 'File does not exist:', $fromName );
         }
     }
 }

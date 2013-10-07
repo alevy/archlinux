@@ -50,7 +50,7 @@ sub initializeIfNeeded {
     my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
 
     unless( $rootUser ) {
-        error( "Cannot find MySQL root user credentials" );
+        error( 'Cannot find MySQL root user credentials' );
         return 0;
     }
 
@@ -90,7 +90,7 @@ sub getMySqlDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( "getMySqlDatabase ", $appConfigId, ", ", $installableId, ", ", $itemName );
+    debug( 'getMySqlDatabase', $appConfigId, $installableId, $itemName );
 
     my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
     my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
@@ -114,7 +114,7 @@ SQL
 
     while( my $ref = $sth->fetchrow_hashref() ) {
         if( $dbName ) {
-            error( "More than one found, not good: $dbName" );
+            error( 'More than one found, not good:', $dbName );
             last;
         }
         $dbName              = $ref->{'dbName'};
@@ -147,7 +147,7 @@ sub provisionLocalMySqlDatabase {
     my $itemName      = shift;
     my $privileges    = shift;
 
-    debug( "provisionLocalMySqlDatabase", $appConfigId, ", ", $installableId, ", ", $itemName, ", ", $privileges );
+    debug( 'provisionLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $privileges );
 
     my $dbName              = IndieBox::Utils::generateRandomIdentifier( 16 ); # unlikely to collide
     my $dbHost              = 'localhost';
@@ -213,7 +213,7 @@ sub unprovisionLocalMySqlDatabase {
     my $installableId = shift;
     my $itemName      = shift;
 
-    debug( "unprovisionLocalMySqlDatabase", $appConfigId, ", ", $installableId, ", ", $itemName );
+    debug( 'unprovisionLocalMySqlDatabase', $appConfigId, $installableId, $itemName );
 
     my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
 
@@ -233,7 +233,7 @@ SQL
 
     while( my $ref = $sth->fetchrow_hashref() ) {
         if( $dbName ) {
-            error( "More than one found, not good: $dbName" );
+            error( 'More than one found, not good:', $dbName );
             last;
         }
         $dbName              = $ref->{'dbName'};
@@ -272,7 +272,7 @@ sub exportLocalMySqlDatabase {
     my $itemName      = shift;
     my $fileName      = shift;
 
-    debug( "exportLocalMySqlDatabase", $appConfigId, $installableId, $itemName, $fileName );
+    debug( 'exportLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $fileName );
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
             = getMySqlDatabase( $appConfigId, $installableId, $itemName );

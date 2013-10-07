@@ -42,20 +42,20 @@ sub checkManifest {
     my $config      = shift;
 
     unless( $json ) {
-        fatal( "No manifest JSON present" );
+        fatal( 'No manifest JSON present' );
     }
     unless( $json->{type} ) {
-        fatal( "Manifest JSON: type: missing" );
+        fatal( 'Manifest JSON: type: missing' );
     }
 
     if( $json->{roles} ) {
         unless( ref( $json->{roles} ) eq 'HASH' ) {
-            fatal( "Manifest JSON: roles section: not a JSON object" );
+            fatal( 'Manifest JSON: roles section: not a JSON object' );
         }
     }
     if( $json->{customizationpoints} ) {
         unless( ref( $json->{customizationpoints} ) eq 'HASH' ) {
-            fatal( "Manifest JSON: customizationpoints section: not a JSON object" );
+            fatal( 'Manifest JSON: customizationpoints section: not a JSON object' );
         }
     }
 }
@@ -88,7 +88,7 @@ sub validFilename {
     }
 
     unless( -e $testFile ) {
-        fatal( "Manifest refers to file, but file cannot be found: $testFile" );
+        fatal( 'Manifest refers to file, but file cannot be found:', $testFile );
     }
 
     return 1; # FIXME

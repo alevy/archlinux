@@ -42,7 +42,7 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 ##
 # Ensure that Apache is running.
 sub ensureRunning {
-    debug( "Apache2::ensureRunning" );
+    debug( 'Apache2::ensureRunning' );
 
     IndieBox::Utils::myexec( 'systemctl enable httpd' );
     IndieBox::Utils::myexec( 'systemctl restart httpd' );
@@ -53,7 +53,7 @@ sub ensureRunning {
 ##
 # Reload configuration
 sub reload {
-    debug( "Apache2::reload" );
+    debug( 'Apache2::reload' );
 
     IndieBox::Utils::myexec( 'systemctl reload httpd' );
 
@@ -63,7 +63,7 @@ sub reload {
 ##
 # Restart configuration
 sub restart {
-    debug( "Apache2::restart" );
+    debug( 'Apache2::restart' );
 
     IndieBox::Utils::myexec( 'systemctl restart httpd' );
 
@@ -82,7 +82,7 @@ sub setupPlaceholderSite {
     my $siteDocumentRoot  = "$placeholderSitesDocumentRootDir/$placeholderName";
 
     unless( -d $siteDocumentRoot ) {
-        error( "Placeholder site $placeholderName does not exist at $siteDocumentRoot" );
+        error( 'Placeholder site', $placeholderName, 'does not exist at', $siteDocumentRoot );
     }
 
     my $content .= <<CONTENT;
@@ -208,12 +208,12 @@ sub removeSite {
 ##
 # Make the changes to Apache configuration files are in place that are needed by Indie Box.
 sub ensureConfigFiles {
-    debug( "Apache2::ensureConfigFiles" );
+    debug( 'Apache2::ensureConfigFiles' );
 
     if( -e $ourConfigFile ) {
         IndieBox::Utils::myexec( "cp -f '$ourConfigFile' '$mainConfigFile'" );
     } else {
-        warn( "Config file $ourConfigFile is missing" );
+        warn( 'Config file', $ourConfigFile, 'is missing' );
     }
     activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
 }
@@ -226,14 +226,14 @@ sub activateApacheModules {
 
     foreach my $module ( @modules ) {
         if( -e "$modsEnabledDir/$module.load" ) {
-            debug( "Apache2 module activated already: ", $module );
+            debug( 'Apache2 module activated already:', $module );
             next;
         }
         unless( -e "$modsAvailableDir/$module.load" ) {
-            warn( "Cannot find Apache2 module $module; not activating" );
+            warn( 'Cannot find Apache2 module, not activating:', $module );
             next;
         }
-        debug( "Activating Apache2 module: ", $module );
+        debug( 'Activating Apache2 module:', $module );
 
         IndieBox::Utils::myexec( "ln -s '$modsAvailableDir/$module.load' '$modsEnabledDir/$module.load'" );
     }
@@ -249,14 +249,14 @@ sub activatePhpModules {
 
     foreach my $module ( @modules ) {
         if( -e "$phpModulesConfDir/$module.ini" ) {
-            debug( "PHP module activated already: ", $module );
+            debug( 'PHP module activated already:', $module );
             next;
         }
         unless( -e "$phpModulesDir/$module.so" ) {
-            warn( "Cannot find PHP module $module; not activating" );
+            warn( 'Cannot find PHP module, not activating:', $module );
             next;
         }
-        debug( "Activating PHP module: ", $module );
+        debug( 'Activating PHP module:', $module );
 
         IndieBox::Utils::saveFile( "$phpModulesConfDir/$module.ini", <<END );
 extension=$module.so

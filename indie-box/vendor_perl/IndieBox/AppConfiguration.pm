@@ -394,7 +394,7 @@ sub instantiateAppConfigurationItem {
     } elsif( 'mysql-database' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::MysqlDatabase->new( $json, $self, $installable );
     } else {
-        error( "Unknown AppConfigurationItem type: $type" );
+        error( 'Unknown AppConfigurationItem type:', $type );
         $ret = undef;
     }
     return $ret;

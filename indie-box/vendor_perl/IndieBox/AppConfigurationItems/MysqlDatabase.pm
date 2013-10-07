@@ -90,7 +90,7 @@ sub install {
                     $self->_createDb( $defaultFromDir, $config, $create, $dbName, $dbHost, $dbPort, $rootUser, $rootPass );
                 }
             } else {
-                error( "Failed to find MySQL root user/pass" );
+                error( 'Failed to find MySQL root user/pass' );
             }
         }
     }

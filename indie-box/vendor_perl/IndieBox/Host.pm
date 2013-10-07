@@ -103,7 +103,7 @@ sub executeTriggers {
     } elsif( ref( $triggers ) eq 'ARRAY' ) {
         @triggerList = @$triggers;
     } else {
-        fatal( "Unexpected type $triggers" );
+        fatal( 'Unexpected type:', $triggers );
     }
     foreach my $trigger ( @triggerList ) {
         if( 'httpd-reload' eq $trigger ) {
@@ -111,7 +111,7 @@ sub executeTriggers {
         } elsif( 'httpd-restart' eq $trigger ) {
             IndieBox::Apache2::restart();
         } else {
-            warn( "Unknown trigger: $trigger" );
+            warn( 'Unknown trigger:', $trigger );
         }
     }
 }
@@ -134,7 +134,7 @@ sub installPackages {
     } elsif( ref( $packages ) eq 'ARRAY' ) {
         @packageList = @$packages;
     } else {
-        fatal( "Unexpected type $packages" );
+        fatal( 'Unexpected type:', $packages );
     }
     if( @packageList ) {
         myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ));

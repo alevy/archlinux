@@ -351,7 +351,7 @@ sub rmdir {
             error( 'Cannot delete directory. File exists but isn\'t a directory', $d );
             $ret = 0;
         } else {
-            warn( "Cannot delete directory $d, does not exist" );
+            warn( 'Cannot delete directory, does not exist', $d );
             next;
         }
     }
@@ -366,9 +366,9 @@ sub deleteRecursively {
 
     my $ret = 1;
     if( @files ) {
-        debug( "About to recursively delete files: ", join( ', ', @files ));
+        debug( 'About to recursively delete files:', join( ', ', @files ));
 
-        myexec( "rm -rf " . join( ' ', map { "'$_'" } @files ));
+        myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ));
     }
     return $ret;
 }
@@ -381,7 +381,7 @@ sub copyRecursively {
     my $from = shift;
     my $to   = shift;
 
-    debug( "copyRecursively: ", $from, ' -> ', $to );
+    debug( 'copyRecursively:', $from, $to );
 
     myexec( "cp -d -r -p '$from' '$to'" );
 
@@ -403,7 +403,7 @@ sub getUid {
     } else {
         my @uinfo = getpwnam( $uname );
         unless( @uinfo ) {
-            error( "Cannot find user '$uname'. Using 'nobody' instead." );
+            error( 'Cannot find user. Using \'nobody\' instead:', $uname );
             @uinfo = getpwnam( 'nobody' );
         }
         $uid = $uinfo[2];
@@ -426,7 +426,7 @@ sub getGid {
     } else {
         my @ginfo = getgrnam( $gname );
         unless( @ginfo ) {
-            error( "Cannot find group '$gname'. Using 'nogroup' instead." );
+            error( 'Cannot find group. Using \'nogroup\' instead.',  $gname );
             @ginfo = getgrnam( 'nogroup' );
         }
         $gid = $ginfo[2];

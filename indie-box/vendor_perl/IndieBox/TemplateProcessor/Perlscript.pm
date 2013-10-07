@@ -54,7 +54,7 @@ sub process {
 
     my $ret = eval $raw;
     unless( $ret ) {
-        error( "Error when attempting to eval file $rawFileName: $@" );
+        error( "Error when attempting to eval file $rawFileName:", $@ );
     }
 
     return $ret;

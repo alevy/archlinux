@@ -101,11 +101,11 @@ sub install {
             my $contentToSave = $templateProcessor->process( $content, $config, $sourceOrTemplate );
 
             unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
-                error( "Writing file failed: $toName" );
+                error( 'Writing file failed:', $toName );
             }
 
         } else {
-            error( "File does not exist: $fromName" );
+            error( 'File does not exist:', $fromName );
         }
     }
 }
@@ -157,7 +157,7 @@ sub backup {
         $names = [ $self->{json}->{name} ];
     }
     if( @$names != 1 ) {
-        fatal( "Cannot backup item with more than one name: " . join( @$names ));
+        fatal( 'Cannot backup item with more than one name:', join( @$names ));
     }
 
     my $bucket   = $self->{json}->{retentionbucket};
