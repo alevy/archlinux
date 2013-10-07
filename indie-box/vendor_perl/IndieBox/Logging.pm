@@ -67,7 +67,7 @@ sub setQuiet {
 sub trace {
     my @msg = @_;
 
-    if( $log->is_debug()) {
+    if( $log->is_trace()) {
         $log->trace( join( ' ', @msg ));
     }
 }
@@ -78,7 +78,7 @@ sub trace {
 sub debug {
     my @msg = @_;
 
-    if( $log->is_trace()) {
+    if( $log->is_debug()) {
         $log->debug( join( ' ', @msg ));
     }
 }
@@ -89,7 +89,7 @@ sub debug {
 sub info {
     my @msg = @_;
 
-    if( $log->is_debug()) {
+    if( $log->is_info()) {
         $log->info( join( ' ', @msg ));
     }
 }
