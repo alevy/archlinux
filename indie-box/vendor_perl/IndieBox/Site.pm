@@ -223,20 +223,18 @@ sub addToPrerequisites {
 sub deploy {
     my $self = shift;
 
+    debug( 'Site', $self->{json}->{siteid}, '->deploy' );
+
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
     IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
 
     IndieBox::Apache2::setupSite( $self );
 
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->install();
+        $appConfig->deploy();
     }
 
     IndieBox::Host::siteDeployed( $self );
-
-    foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->runInstaller();
-    }
 
     1;
 }
@@ -246,8 +244,10 @@ sub deploy {
 sub undeploy {
     my $self = shift;
 
+    debug( 'Site', $self->{json}->{siteid}, '->undeploy' );
+
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->uninstall();
+        $appConfig->undeploy();
     }
     IndieBox::Apache2::removeSite( $self );
 
@@ -278,10 +278,6 @@ sub suspend {
     my $self     = shift;
     my $triggers = shift;
 
-    print "Placeholder: suspend\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
-
     IndieBox::Apache2::setupPlaceholderSite( $self, 'maintenance' );
 
     $triggers->{'httpd-reload'} = 1;
@@ -294,9 +290,7 @@ sub resume {
     my $self     = shift;
     my $triggers = shift;
 
-    print "Placeholder: resume\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
+    IndieBox::Apache2::setupSite( $self );
 
     $triggers->{'httpd-reload'} = 1;
 }
@@ -305,14 +299,78 @@ sub resume {
 # Permanently disable this site
 # $triggers: triggers to be executed may be added to this hash
 sub disable {
-    my $self     = shift;
-    my $triggers = shift;
+     my $self     = shift;
+     my $triggers = shift;
 
-    print "Placeholder: disable\n";
-    print "    siteid:        " . $self->siteId . "\n";
-    print "    hostname:      " . $self->hostName . "\n";
+    IndieBox::Apache2::setupPlaceholderSite( $self, 'nosuchsite' );
 
     $triggers->{'httpd-reload'} = 1;
+}
+
+##
+# Back up this site.
+# $filename: optional filename to back up to
+# return: the Backup object
+sub backup {
+    my $self     = shift;
+    my $filename = shift;
+
+    debug( 'Site', $self->{json}->{siteid}, '->backup' );
+
+    unless( $filename ) {
+        $filename = $self->{config}->getResolve( 'site.backupfile' );
+    }
+
+    my $backup = new IndieBox::Backup( [ $self->siteId ], undef, $filename );
+    return $backup;
+}
+
+##
+# Restore this entire Site.
+# $backup: the Backup object from which to restore the Site
+# $oldSite: the Site before the restore, or undef if none
+sub restoreSite {
+    my $self    = shift;
+    my $backup  = shift;
+    my $oldSite = shift;
+
+    debug( 'Site', $self->{json}->{siteid}, '->restoreSite' );
+
+    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
+    IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
+
+    IndieBox::Apache2::setupSite( $self );
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $appConfig->deploy();
+    }
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $backup->restoreAppConfiguration( $oldSite, $appConfig );
+    }
+
+    IndieBox::Host::siteDeployed( $self );
+
+    1;
+}
+
+##
+# Restore a single AppConfiguration to this Site.
+# $backup: the Backup object from which to restore the AppConfiguration
+# $oldSite: the Site before the restore, or undef if none
+# $appConfigId: the appconfigid of the AppConfiguration to restore
+sub restoreAppConfiguration {
+    my $self        = shift;
+    my $backup      = shift;
+    my $oldSite     = shift;
+    my $appConfigId = shift;
+
+    debug( 'Site', $self->{json}->{siteid}, '->restoreAppConfiguration' );
+
+    my $appConfig = $oldSite->appConfig( $appConfigId );
+    $appConfig->deploy();
+    $backup->restoreAppConfiguration( $self, $oldSite, $appConfig );
+
+    IndieBox::Host::siteDeployed( $self );
 }
 
 ##

@@ -30,6 +30,7 @@ use IndieBox::AppConfigurationItems::DirectoryTree;
 use IndieBox::AppConfigurationItems::File;
 use IndieBox::AppConfigurationItems::MysqlDatabase;
 use IndieBox::AppConfigurationItems::Perlscript;
+use IndieBox::AppConfigurationItems::Sqlscript;
 use IndieBox::AppConfigurationItems::Symlink;
 use IndieBox::Logging;
 use JSON;
@@ -47,7 +48,7 @@ my $APPCONFIGPARSDIR = '/etc/indie-box/appconfigpars';
 sub new {
     my $self = shift;
     my $json = shift;
-    my $site = shift;
+    my $site = shift; # this may be undef when restoring from backup
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -57,11 +58,11 @@ sub new {
     $self->{config} = new IndieBox::Configuration(
                 "AppConfiguration=" . $json->{appconfigid},
                 {
-                    "appconfig.appconfigid" => $self->appConfigId(),
-                    "appconfig.context" => $self->context(),
+                    "appconfig.appconfigid"    => $self->appConfigId(),
+                    "appconfig.context"        => $self->context(),
                     "appconfig.contextorslash" => $self->contextOrSlash(),
                 },
-                $self->{site}->config );
+                defined( $site ) ? $site->config : undef );
 
     # No checking required, IndieBox::Site::new has done that already
     return $self;
@@ -77,8 +78,8 @@ sub appConfigId {
 }
 
 ##
-# Obtain the ApConfiguration JSON
-# return: ApConfiguration JSON
+# Obtain the AppConfiguration JSON
+# return: AppConfiguration JSON
 sub appConfigurationJson {
     my $self = shift;
 
@@ -178,12 +179,17 @@ sub config {
 }
 
 ##
-# Install this AppConfiguration.
-sub install {
+# Deploy this AppConfiguration.
+sub deploy {
     my $self = shift;
+
+    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->deploy' );
 
     $self->_initialize();
 
+    unless( $self->{site} ) {
+        fatal( 'Cannot deploy AppConfiguration without site' );
+    }
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
@@ -275,11 +281,17 @@ sub install {
 }
 
 ##
-# Uninstall this AppConfiguration.
-sub uninstall {
+# Undeploy this AppConfiguration.
+sub undeploy {
     my $self = shift;
 
+    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->undeploy' );
+
     $self->_initialize();
+
+    unless( $self->{site} ) {
+        fatal( 'Cannot undeploy AppConfiguration without site' );
+    }
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
 
@@ -335,9 +347,43 @@ sub uninstall {
 }
 
 ##
-# Run the installer(s) for the app at this Site
+# Run the installer(s) for the app at this AppConfiguration
 sub runInstaller {
     my $self = shift;
+
+    return $self->_runPostDeploy( 'installers', 'install' );
+}
+
+##
+# Run the uninstaller(s) for the app at this AppConfiguration
+sub runUninstaller {
+    my $self = shift;
+
+    return $self->_runPostDeploy( 'uninstallers', 'uninstall' );
+}
+
+##
+# Run the upgrader(s) for the app at this AppConfiguration
+sub runUpgrader {
+    my $self = shift;
+
+    return $self->_runPostDeploy( 'upgraders', 'upgrade' );
+}
+
+##
+# Common code for running installers, uninstallers and upgraders
+# $jsonSection: name of the JSON section that holds the script(s)
+# $methodName: name of the method on AppConfigurationItem to invoke
+sub _runPostDeploy {
+    my $self        = shift;
+    my $jsonSection = shift;
+    my $methodName  = shift;
+
+    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
+
+    unless( $self->{site} ) {
+        fatal( 'Cannot _runPostDeploy AppConfiguration without site' );
+    }
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
     my @installables        = $self->installables();
@@ -352,16 +398,20 @@ sub runInstaller {
                 $self->{config} );
 
         foreach my $roleName ( @$applicableRoleNames ) {
-            my $installerJson = $installable->installableJson->{roles}->{$roleName}->{installer};
+            my $itemsJson = $installable->installableJson->{roles}->{$roleName}->{$jsonSection};
 
-            if( $installerJson ) {
-                my $installer = $self->instantiateAppConfigurationItem( $installerJson, $installable );
+            unless( $itemsJson ) {
+                next;
+            }
 
-                if( $installer ) {
-                    my $codeDir = $config->getResolve( 'package.codedir' );
-                    my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $codeDir = $config->getResolve( 'package.codedir' );
+            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
-                    $installer->runInstaller( $codeDir, $dir, $config );
+            foreach my $itemJson ( @$itemsJson ) {
+                my $item = $self->instantiateAppConfigurationItem( $itemJson, $installable );
+
+                if( $item ) {
+                    $item->runPostDeployScript( $methodName, $codeDir, $dir, $config );
                 }
             }
         }
@@ -390,7 +440,9 @@ sub instantiateAppConfigurationItem {
     } elsif( 'symlink' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::Symlink->new( $json, $self, $installable );
     } elsif( 'perlscript' eq $type ) {
-        $ret = IndieBox::AppConfigurationItems::Perlscript->new( $json, $self, $installable );
+        $ret = IndieBox::AppConfigurationItems::Sqlscript->new( $json, $self, $installable );
+    } elsif( 'sqlscript' eq $type ) {
+        $ret = IndieBox::AppConfigurationItems::Sqlscript->new( $json, $self, $installable );
     } elsif( 'mysql-database' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::MysqlDatabase->new( $json, $self, $installable );
     } else {

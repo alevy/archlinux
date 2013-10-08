@@ -23,10 +23,10 @@ use warnings;
 
 package IndieBox::AppConfigurationItems::AppConfigurationItem;
 
+use IndieBox::Logging;
 use IndieBox::TemplateProcessor::Passthrough;
-use IndieBox::TemplateProcessor::Varsubst;
 use IndieBox::TemplateProcessor::Perlscript;
-use IndieBox::TemplateProcessor::Passthrough;
+use IndieBox::TemplateProcessor::Varsubst;
 
 use fields qw( json appConfig installable );
 
@@ -52,15 +52,72 @@ sub new {
 }
 
 ##
-# Default implementation for an installer.
-# $dir: the directory in which the app was installed
+# Run a post-deploy Perl script. May be overridden.
+# $methodName: the type of post-install
+# $defaultFromDir: the package directory
+# $defaultToDir: the directory in which the installable was installed
 # $config: the Configuration object that knows about symbolic names and variables
-sub runInstaller {
-    my $self   = shift;
-    my $dir    = shift;
-    my $config = shift;
+sub runPostDeployScript {
+    my $self           = shift;
+    my $methodName     = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
 
-    error( 'Cannot perform runInstaller() on', $self );
+    if( 'install' eq $methodName ) {
+        $self->runInstallScript( $defaultFromDir, $defaultToDir, $config );
+
+    } elsif( 'uninstall' eq $methodName ) {
+        $self->runUninstallScript( $defaultFromDir, $defaultToDir, $config );
+
+    } elsif( 'upgrade' eq $methodName ) {
+        $self->runUpgradeScript( $defaultFromDir, $defaultToDir, $config );
+
+    } else {
+        error( 'Cannot perform runPostDeployScript( $methodName ) on', $self );
+    }
+}
+
+##
+# Run a post-deploy Perl install script. May be overridden.
+# $defaultFromDir: the package directory
+# $defaultToDir: the directory in which the installable was installed
+# $config: the Configuration object that knows about symbolic names and variables
+sub runInstallScript {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    error( 'Cannot perform runInstallScript on', $self );
+}
+
+##
+# Run a pre-undeploy Perl uninstall script. May be overridden.
+# $defaultFromDir: the package directory
+# $defaultToDir: the directory in which the installable was installed
+# $config: the Configuration object that knows about symbolic names and variables
+sub runUninstallScript {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    error( 'Cannot perform runUninstallScript on', $self );
+}
+
+##
+# Run a post-deploy Perl upgrade script. May be overridden.
+# $defaultFromDir: the package directory
+# $defaultToDir: the directory in which the installable was installed
+# $config: the Configuration object that knows about symbolic names and variables
+sub runUpgradeScript {
+    my $self           = shift;
+    my $defaultFromDir = shift;
+    my $defaultToDir   = shift;
+    my $config         = shift;
+
+    error( 'Cannot perform runUpgradeScript on', $self );
 }
 
 ##
@@ -79,6 +136,22 @@ sub backup {
     my $filesToDelete    = shift;
 
     error( 'Cannot perform backup() on', $self );
+}
+
+##
+# Default implementation to restore this item from backup.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+sub restore {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+
+    error( 'Cannot perform restore() on', $self );
 }
 
 ##
@@ -153,5 +226,37 @@ sub _addRecursive {
 
     1;
 }
+
+##
+# Helper method to restore a directory hierarchy from a zip file
+# $zip: the ZIP object
+# $zipName: the name of the object in the zip file
+# $fileName: the name of the object in the filesystem
+sub _restoreRecursive {
+    my $self     = shift;
+    my $zip      = shift;
+    my $zipName  = shift;
+    my $fileName = shift;
+    my $mode     = shift;
+    my $uid      = shift;
+    my $gid      = shift;
+
+    $zip->extractTree( $zipName, $fileName );
+
+    if( $mode == -1 ) {
+        $mode = "755"; #
+    }
+    IndieBox::Utils::myexec "chmod -R $mode $fileName"; # no -h on Linux
+
+    if( $uid >= 0 ) {
+        IndieBox::Utils::myexec "chown -R -h $uid $fileName";
+    }
+    if( $gid >= 0 ) {
+        IndieBox::Utils::myexec "chgrp -R -h $gid $fileName";
+    }
+
+    1;
+}
+
 
 1;

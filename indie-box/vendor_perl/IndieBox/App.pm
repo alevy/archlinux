@@ -48,7 +48,7 @@ sub new {
 
         IndieBox::AppManifest::checkManifest( $packageName, $self->{json}, $self->{config} );
     }
-    trace( 'Created App', $packageName );
+    trace( 'Created app', $packageName );
 
     return $self;
 }

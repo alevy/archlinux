@@ -194,7 +194,7 @@ sub checkManifest {
                         if( ref( $appConfigItem->{type} )) {
                             myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
                         }
-                        if( $appConfigItem->{type} eq 'perlscript' ) {
+                        if( $appConfigItem->{type} eq 'perlscript' || $appConfigItem->{type} eq 'sqlscript' ) {
                             unless( $appConfigItem->{source} ) {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify source" );
                             }
@@ -205,10 +205,10 @@ sub checkManifest {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid name: " . $appConfigItem->{name} );
                             }
                             if( $appConfigItem->{name} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: name not permitted for type perlscript" );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: name not permitted for type " . $appConfigItem->{type} );
                             }
                             if( $appConfigItem->{names} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: names not permitted for type perlscript" );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: names not permitted for type " . $appConfigItem->{type} );
                             }
                         } else {
                             my @names = ();
@@ -306,7 +306,7 @@ sub checkManifest {
                                     }
                                 }
 
-                            # perlscript handled above
+                            # perlscript and sqlscript handled above
                             } else {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type: " . $appConfigItem->{type} );
                             }
@@ -377,21 +377,6 @@ sub checkManifest {
                         ++$triggersIndex;
                     }
                 }
-                if( $roleJson->{installer} ) {
-                    unless( ref( $roleJson->{installer} ) eq 'HASH' ) {
-                        myFatal( $packageName, "roles section: role $roleName: installer: not a JSON object" );
-                    }
-                    if( ref( $roleJson->{installer}->{type} )) {
-                        myFatal( $packageName, "roles section: role $roleName: installer: field 'type' must be string" );
-                    }
-                    if( $roleJson->{installer}->{type} ne 'perlscript' ) {
-                        myFatal( $packageName, "roles section: role $roleName: installer: unknown type: " . $roleJson->{installer}->{type} );
-                    }
-                    if( ref( $roleJson->{installer}->{name} ) ) {
-                        myFatal( $packageName, "roles section: role $roleName: installer: invalid name" );
-                    }
-                    ## FIXME: check for existence of file
-                }
 
             } elsif( $roleName eq 'mysql' ) {
                 my %databaseNames = ();
@@ -440,14 +425,6 @@ sub checkManifest {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
                             }
                         }
-                        if( $appConfigItem->{createsql} ) {
-                            if( ref( $appConfigItem->{createsql} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'createsql' must be string" );
-                            }
-                            unless( validFilename( $codeDir, $appConfigItem->{createsql} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid createsql: " . $appConfigItem->{createsql} );
-                            }
-                        }
 
                         ++$appConfigIndex;
                     }
@@ -456,8 +433,69 @@ sub checkManifest {
             } else {
                 myFatal( $packageName, "roles section: unknown role $roleName" );
             }
+
+            foreach my $postInstallCategory ( 'installers', 'uninstallers', 'upgraders' ) {
+                unless( defined( $roleJson->{$postInstallCategory} )) {
+                    next;
+                }
+                unless( ref( $roleJson->{$postInstallCategory} ) eq 'ARRAY' ) {
+                    myFatal( $packageName, "$postInstallCategory section: not an array" );
+                }
+                my $itemsIndex = 0;
+                foreach my $item ( @{$roleJson->{$postInstallCategory}} ) {
+                    if( ref( $item->{type} )) {
+                        myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: field 'type' must be string" );
+                    }
+                    if( $item->{type} ne 'perlscript' && $item->{type} ne 'sqlscript' ) {
+                        myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: unknown type: " . $item->{type} );
+                    }
+                    if( $item->{source} ) {
+                        if( $item->{template} ) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template, not both" );
+                        }
+                        if( ref( $item->{source} )) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'source' must be string" );
+                        }
+                        unless( validFilename( $codeDir, $item->{source} )) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid source" );
+                        }
+                    } else {
+                        unless( $item->{template} ) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': specify source or template" );
+                        }
+                        unless( validFilename( $codeDir, $item->{template} )) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid template" );
+                        }
+                        if( ref( $item->{templatelang} )) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex] of type '" . $item->{type} . "': field 'templatelang' must be string" );
+                        }
+                        unless( $item->{templatelang} =~ m!^(varsubst|perlscript)$! ) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . " [$itemsIndex] of type '" . $item->{type} . "': invalid templatelang: " . $item->{templatelang} );
+                        }
+                    }
+                    if( $item->{type} eq 'sqlscript' ) {
+                        unless( $item->{name} ) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: must specify 'name'" );
+                        }
+                        if( ref( $item->{name} )) {
+                            myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid 'name'" );
+                        }
+                        if( $item->{delimiter} ) {
+                            if( ref( $item->{delimiter} )) {
+                                myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
+                            }
+                            if( $item->{delimiter} !~ m!^[;|\$]$! ) {
+                                myFatal( $packageName, "roles section: role $roleName: $postInstallCategory" . "[$itemsIndex]: invalid delimiter" );
+                            }
+                        }
+                    }
+
+                    ++$itemsIndex;
+                }
+            }
         }
     }
+
     if( $json->{customizationpoints} ) {
         unless( ref( $json->{customizationpoints} ) eq 'HASH' ) {
             myFatal( $packageName, "customizationpoints section: not a JSON object" );

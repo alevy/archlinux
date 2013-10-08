@@ -33,6 +33,7 @@ use Sys::Hostname;
 my $SITES_DIR      = '/etc/indie-box/sites';
 my $HOST_CONF_FILE = '/etc/indie-box/config.json';
 my $hostConf       = undef;
+my $now            = time();
 
 ##
 # Obtain the host Configuration object.
@@ -40,7 +41,10 @@ my $hostConf       = undef;
 sub config {
     unless( $hostConf ) {
         my $raw = readJsonFromFile( $HOST_CONF_FILE );
-        $raw->{hostname} = hostname;
+
+        $raw->{hostname}        = hostname;
+        $raw->{now}->{unixtime} = $now;
+        $raw->{now}->{tstamp}   = IndieBox::Utils::time2string( $now );
 
         $hostConf = new IndieBox::Configuration( 'Host', $raw );
     }
@@ -68,6 +72,8 @@ sub siteDeployed {
     my $siteId   = $site->siteId;
     my $siteJson = $site->siteJson;
 
+    trace( 'Host::siteDeployed', $siteId );
+
     IndieBox::Utils::writeJsonToFile( "$SITES_DIR/$siteId.json", $siteJson );
 }
 
@@ -78,6 +84,8 @@ sub siteUndeployed {
     my $site = shift;
 
     my $siteId   = $site->siteId;
+
+    trace( 'Host::siteUndeployed', $siteId );
 
     IndieBox::Utils::deleteFile( "$SITES_DIR/$siteId.json" );
 }
@@ -96,6 +104,8 @@ sub applicableRoleNames {
 # $triggers: array of trigger names
 sub executeTriggers {
     my $triggers = shift;
+
+    trace( 'Host::executeTriggers' );
 
     my @triggerList;
     if( ref( $triggers ) eq 'HASH' ) {
@@ -119,6 +129,8 @@ sub executeTriggers {
 ##
 # Update all the code currently installed on this host.
 sub updateCode {
+    trace( 'Host::updateCode' );
+
     myexec( 'pacman -Syu' );
 }
 
@@ -127,6 +139,8 @@ sub updateCode {
 # $packages: List of packages
 sub installPackages {
     my $packages = shift;
+
+    trace( 'Host::installPackages' );
 
     my @packageList;
     if( ref( $packages ) eq 'HASH' ) {

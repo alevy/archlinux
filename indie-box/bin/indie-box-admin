@@ -37,7 +37,7 @@ my $file;
 my $in;
 my $out;
 my @siteIds;
-my @appconfigIds;
+my @appConfigIds;
 my @translates;
 
 my $parseOk = GetOptions(
@@ -45,8 +45,8 @@ my $parseOk = GetOptions(
         'json'        => \$json,
         'brief'       => \$brief,
         'help'        => \$help,
-        'siteid'      => \@siteIds,
-        'appconfigid' => \@appconfigIds,
+        'siteid=s'    => \@siteIds,
+        'appconfigid' => \@appConfigIds,
         'translate'   => \@translates,
         'file=s'      => \$file,
         'in=s'        => \$in,
@@ -65,10 +65,17 @@ if( $quiet ) {
 
 $cmd = shift @ARGV;
 
+my $adminBackups = {};
+
+debug( 'Command', $cmd );
+
 if( $cmd eq 'deploy' ) {
-    if( @ARGV || $json || $brief || @appconfigIds || @translates || $in || $out ) {
+    if( @ARGV || $json || $brief || @appConfigIds || @translates || $in || $out ) {
         synopsisHelpQuit();
     }
+
+    debug( 'Parsing site JSON and checking' );
+
     my $json;
     if( $file ) {
         $json = readJsonFromFile( $file );
@@ -135,11 +142,16 @@ if( $cmd eq 'deploy' ) {
             }
         }
     }
+
+    debug( 'Installing prerequisites' );
+
     my $prerequisites = {};
     foreach my $site ( @newSites ) {
         $site->addToPrerequisites( $applicableRoleNames, $prerequisites );
     }
     IndieBox::Host::installPackages( $prerequisites );
+
+    debug( 'Setting up placeholder sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( @newSites ) {
@@ -152,13 +164,21 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $suspendTriggers );
 
+    debug( 'Backing up, undeploying and redeploying' );
+
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
+            my $backup = $oldSite->backup();
             $oldSite->undeploy();
+            $site->restoreSite( $backup, $oldSite );
+            $adminBackups->{$site->siteId} = $backup;
+        } else {
+            $site->deploy();
         }
-        $site->deploy();
     }
+
+    debug( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( @newSites ) {
@@ -166,29 +186,57 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
+    debug( 'Running installers/upgraders' );
+
+    foreach my $site ( @newSites ) {
+        my $oldSite = $oldSites->{$site->siteId};
+        if( $oldSite ) {
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                $appConfig->runUpgrader();
+            }
+        } else {
+            foreach my $appConfig ( @{$site->appConfigs} ) {
+                $appConfig->runInstaller();
+            }
+        }
+    }
+
 } elsif( $cmd eq 'undeploy' ) {
-    if( @ARGV || $json || $brief || ( @siteIds == 0 ) || @appconfigIds || @translates || $in || $out || $file ) {
+    if( @ARGV || $json || $brief || ( @siteIds == 0 ) || @appConfigIds || @translates || $in || $out || $file ) {
         synopsisHelpQuit();
     }
-    my $oldSites = IndieBox::Host::sites();
+
+    debug( 'Looking for site(s)' );
+
+    my $sites    = IndieBox::Host::sites();
+    my $oldSites = {};
     foreach my $siteId ( @siteIds ) {
-        unless( $oldSites->{$siteId} ) {
+        my $site = $sites->{$siteId};
+        if( $site ) {
+            $oldSites->{$siteId} = $site;
+        } else {
             fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
         }
     }
+
+    debug( 'Disabling site(s)' );
+
     my $disableTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $site->disable( $disableTriggers ); # replace with "404 page"
+    foreach my $oldSite ( values %$oldSites ) {
+        $oldSite->disable( $disableTriggers ); # replace with "404 page"
     }
     IndieBox::Host::executeTriggers( $disableTriggers );
 
-    foreach my $siteId ( @ARGV ) {
-        my $site = $oldSites->{$siteId};
-        $site->undeploy();
+    debug( 'Backing up and undeploying' );
+
+    foreach my $oldSite ( values %$oldSites ) {
+        my $backup  = $oldSite->backup();
+        $oldSite->undeploy();
+        $adminBackups->{$oldSite->siteId} = $backup;
     }
 
 } elsif( $cmd eq 'listsites' ) {
-    if( @ARGV || @appconfigIds || @translates || $file || $in || $out ) {
+    if( @ARGV || @appConfigIds || @translates || $file || $in || $out ) {
         synopsisHelpQuit();
     }
     my $sites = IndieBox::Host::sites();
@@ -268,11 +316,13 @@ if( $cmd eq 'deploy' ) {
     }
 
 } elsif( $cmd eq 'update' ) {
-    if( @ARGV || $json || $brief || @siteIds || @appconfigIds || @translates || $file || $in || $out ) {
+    if( @ARGV || $json || $brief || @siteIds || @appConfigIds || @translates || $file || $in || $out ) {
         synopsisHelpQuit();
     }
 
     my $oldSites = IndieBox::Host::sites();
+
+    debug( 'Suspending sites' );
 
     my $suspendTriggers = {};
     foreach my $site ( values %$oldSites ) {
@@ -280,13 +330,22 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $suspendTriggers );
 
+    debug( 'Backing up and undeploying' );
+
     foreach my $site ( values %$oldSites ) {
+        $adminBackups->{$site->siteId} = $site->backup();
         $site->undeploy();
     }
+
+    debug( 'Updating code' );
+
     IndieBox::Host::updateCode();
     foreach my $site ( values %$oldSites ) {
-        $site->deploy();
+        $site->restoreSite( $adminBackups->{$site->siteId}, $site );
     }
+
+    debug( 'Resuming sites' );
+
     my $resumeTriggers = {};
     foreach my $site ( values %$oldSites ) {
         $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
@@ -297,19 +356,229 @@ if( $cmd eq 'deploy' ) {
     if( @ARGV || $json || $brief || @translates || $file || $in || !$out ) {
         synopsisHelpQuit();
     }
-    my $backup = new IndieBox::Backup( \@siteIds, \@appconfigIds );
-    $backup->exportBackup( $out );
+    my $oldSites = IndieBox::Host::sites();
+    my $resumeSites = ();
+    my $suspendTriggers = {};
+
+    debug( 'Suspending sites' );
+
+    if( @siteIds != 0 || @appConfigIds != 0 ) {
+        # first make sure there is no overlap between them
+        foreach my $siteId ( @siteIds ) {
+            my $oldSite = $oldSites->{$siteId};
+            if( $oldSite ) {
+                if( @appConfigIds ) {
+                    foreach my $oldSiteAppConfig ( $oldSite->appConfigs ) {
+                        foreach my $appConfigId ( @appConfigIds ) {
+                            if( $oldSiteAppConfig->appConfigId eq $appConfigId ) {
+                                fatal( "AppConfiguration $appConfigId is already part of site $siteId" );
+                            }
+                        }
+                    }
+                }
+            } else {
+                fatal( "Cannot find site $siteId" );
+            }
+        }
+        foreach my $siteId ( @siteIds ) {
+            my $oldSite = $oldSites->{$siteId};
+            if( $oldSite ) {
+                $oldSite->suspend( $suspendTriggers );
+                $resumeSites->{$siteId} = $oldSite;
+            }
+        }
+        foreach my $appconfigId ( @appConfigIds ) {
+            foreach my $oldSite ( values %$oldSites ) {
+                my $foundAppConfig;
+                foreach my $oldAppconfig ( @{$oldSite->appconfigs()} ) {
+                    if( $appconfigId eq $oldAppconfig->appConfigId() ) {
+                        my $foundAppConfig = $oldAppconfig;
+                        last;
+                    }
+                }
+                if( $foundAppConfig ) {
+                    $oldSite->suspend( $suspendTriggers );
+                    $resumeSites->{$oldSite->siteId} = $oldSite;
+                } else {
+                    fatal( "Cannot find appconfiguration $appconfigId" );
+                }
+            }
+        }
+    } else {
+        foreach my $oldSite ( values %$oldSites ) {
+            $oldSite->suspend( $suspendTriggers );
+            $resumeSites->{$oldSite->siteId} = $oldSite;
+        }
+    }
+    IndieBox::Host::executeTriggers( $suspendTriggers );
+
+    debug( 'Creating and exporting backup' );
+
+    my $backup = new IndieBox::Backup( \@siteIds, \@appConfigIds, $out );
+
+    debug( 'Resuming sites' );
+
+    my $resumeTriggers = {};
+    foreach my $site ( values %$resumeSites ) {
+        $site->resume( $resumeTriggers );
+    }
+    IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } elsif( $cmd eq 'restore' ) {
     if( @ARGV || $json || $brief || $file || !$in || $out ) {
         synopsisHelpQuit();
     }
-    my $backup = new IndieBox::Backup( \@siteIds, \@appconfigIds, $in );
 
-    fatal( "Not implemented yet, sorry" );
+    debug( 'Parsing translation table (if any)' );
+
+    my $translationTable = {};
+    foreach my $translate ( @translates ) {
+        if( $translate =~ m!^(.*)=>(.*)$! ) {
+            my $from = $1;
+            my $to   = $2;
+
+            if( $translationTable->{$from} ) {
+                fatal( "Have translation from $from already" );
+            }
+            $translationTable->{$from} = $to;
+        } else {
+            fatal( "Invalid translation: $translate" );
+        }
+    }
+
+    my $backup             = newFromArchive IndieBox::Backup( $in );
+    my $sitesInBackup      = $backup->sites();
+    my $appConfigsInBackup = $backup->appConfigs();
+    my $sites              = IndieBox::Host::sites();
+    my $sitesToSuspend     = {};
+    my $sitesToResume      = {};
+    my $sitesOfAppConfigs  = {};
+
+    debug( 'Checking arguments' );
+
+    if( @siteIds ) {
+        foreach my $siteId ( @siteIds ) {
+            my $siteInBackup = $sitesInBackup->{$siteId};
+            my $site         = $sites->{$siteId};
+            unless( $siteInBackup ) {
+                fatal( "No site with siteid $siteId found in backup file $in" );
+            }
+            if( $site ) {
+                $sitesToSuspend->{$siteId} = $site;
+            }
+            $sitesToResume->{$siteId} = $siteInBackup;
+        }
+
+    } elsif( @appConfigIds == 0 ) {
+        @siteIds = keys %$sitesInBackup;
+    }
+    if( @appConfigIds ) {
+        foreach my $appConfigId ( @appConfigIds ) {
+            unless( $appConfigsInBackup->{$appConfigId} ) {
+                fatal( "No AppConfiguration with appconfigid $appConfigId found in backup file $in" );
+            }
+            my $foundSite;
+            foreach my $site ( values %$sites ) {
+                if( $site->appConfig( $appConfigId )) {
+                    $foundSite = $site;
+                    last;
+                }
+            }
+            unless( $foundSite ) {
+                fatal( "No AppConfiguration with appconfigid $appConfigId currently deployed" );
+            }
+            $sitesOfAppConfigs->{$appConfigId}    = $foundSite;
+            $sitesToSuspend->{$foundSite->siteId} = $foundSite;
+            $sitesToResume->{$foundSite->siteId}  = $foundSite;
+        }
+    }
+    if( @siteIds || @appConfigIds ) {
+        foreach my $from ( keys %$translationTable ) {
+            my $found;
+            foreach my $id ( @siteIds, @appConfigIds ) {
+                if( $id eq $from ) {
+                    $found = 1;
+                    last;
+                }
+            }
+            unless( $found ) {
+                fatal( "Cannot find $from specified in translation among siteids or appconfigids" );
+            }
+        }
+    }
+
+    # make sure no AppConfiguration has moved from one site to another since the backup
+    foreach my $siteId ( @siteIds ) {
+        my $site = $sites->{$siteId};
+        unless( $site ) {
+            next;
+        }
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            my $appConfigId = $appConfig->appConfigId;
+            foreach my $siteInBackup ( values %$sitesInBackup ) {
+                if( $siteInBackup->siteId eq $siteId ) {
+                    next;
+                }
+                foreach my $appConfigInBackup ( @{$siteInBackup->appConfigs} ) {
+                    if( $appConfigId eq $appConfigInBackup->appConfigId ) {
+                        fatal( "AppConfiguration $appConfigId belongs to deployed site $siteId"
+                               . " and to different site " . $siteInBackup->siteId . " in backup" );
+                    }
+                }
+            }
+        }
+    }
+
+    debug( 'Suspending sites' );
+
+    my $suspendTriggers = {};
+    foreach my $site ( values %$sitesToSuspend ) {
+        $site->suspend( $suspendTriggers ); # replace with "in progress page"
+    }
+    IndieBox::Host::executeTriggers( $suspendTriggers );
+
+    debug( 'Restoring sites' );
+
+    foreach my $siteId ( @siteIds ) {
+        my $site         = $sites->{$siteId};
+        my $siteInBackup = $sitesInBackup->{$siteId};
+        $siteInBackup->restoreSite( $backup, $site );
+    }
+
+    debug( 'Restoring AppConfigurations' );
+
+    foreach my $appConfigId ( @appConfigIds ) {
+        my $site = $sitesOfAppConfigs->{$appConfigId};
+        $site->restoreAppConfiguration( $backup, $site, $appConfigId );
+    }
+
+    trace( 'Resuming sites' );
+
+    my $resumeTriggers = {};
+    foreach my $site ( values %$sitesToResume ) {
+        $site->resume( $resumeTriggers );
+    }
+    IndieBox::Host::executeTriggers( $resumeTriggers );
 
 } else {
     synopsisHelpQuit();
+}
+
+if( %$adminBackups ) {
+    debug( 'Purging backups' );
+
+    my $backupLifetime = IndieBox::Host::config()->getResolve( 'host.adminbackuplifetime', -1 );
+    if( $backupLifetime >= 0 ) {
+        my $cutoff = time() - $backupLifetime;
+        foreach my $backup ( values %$adminBackups ) {
+            if( $backup->startTime() < $cutoff ) {
+                my $fileName = $backup->fileName();
+                if( $fileName && -e $fileName ) {
+                    IndieBox::Utils::deleteFile( $fileName );
+                }
+            }
+        }
+    }
 }
 
 #####
@@ -409,6 +678,17 @@ END
         Restore all applications and their data to the currently deployed
         site with siteid from the backup file. This will overwrite the
         currently deployed site and all of its data.
+
+END
+    }
+    print "    $0 restore --siteid <fromsiteid> --translate <fromsiteid>=><tositeid> --in <backupfile>\n";
+    if( $long ) {
+        print <<END;
+        Restore all applications and their data to the currently deployed
+        site with tositeid from the site with fromsiteid in the backup file.
+        This will overwrite the currently deployed site and all of its data.
+        Note: there is no space before and after the =>, and the > may have to be
+        escaped in your shell.
 
 END
     }

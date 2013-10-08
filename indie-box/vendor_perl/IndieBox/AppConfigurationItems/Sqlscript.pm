@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# An AppConfiguration item that is a Perl script to be run for Indie Box Project
+# An AppConfiguration item that is a SQL script to be run for Indie Box Project
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package IndieBox::AppConfigurationItems::Perlscript;
+package IndieBox::AppConfigurationItems::Sqlscript;
 
 use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
 use fields;
@@ -60,26 +60,7 @@ sub install {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $source = $self->{json}->{source};
-
-    my $script = $source;
-    unless( $script =~ m#^/# ) {
-        $script = "$defaultFromDir/$script";
-    }
-
-    unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
-        return;
-    }
-
-    my $scriptcontent = slurpFile( $script );
-    my $operation = 'install';
-
-    debug( 'Running eval', $script, $operation );
-
-    unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
-    }
+    error( 'Cannot perform install on', $self );
 }
 
 ##
@@ -93,30 +74,7 @@ sub uninstall {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $name = $self->{json}->{name};
-
-    my $source = $self->{json}->{source};
-
-    my $script = $source;
-    $script = $config->replaceVariables( $script );
-
-    unless( $script =~ m#^/# ) {
-        $script = "$defaultFromDir/$script";
-    }
-
-    unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
-        return;
-    }
-
-    my $scriptcontent = slurpFile( $script );
-    my $operation = 'uninstall';
-
-    debug( 'Running eval', $script, $operation );
-
-    unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
-    }
+    error( 'Cannot perform install on', $self );
 }
 
 ##
@@ -132,25 +90,44 @@ sub runPostDeployScript {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $source = $self->{json}->{source};
+    my $sourceOrTemplate = $self->{json}->{template};
+    unless( $sourceOrTemplate ) {
+        $sourceOrTemplate = $self->{json}->{source};
+    }
+    my $templateLang = $self->{json}->{templatelang};
+    my $delimiter    = $self->{json}->{delimiter};
+    my $name         = $self->{json}->{name};
 
-    my $script = $source;
-    unless( $script =~ m#^/# ) {
-        $script = "$defaultFromDir/$script";
+    unless( $sourceOrTemplate =~ m#^/# ) {
+        $sourceOrTemplate = "$defaultFromDir/$sourceOrTemplate";
     }
 
-    unless( -r $script ) {
-        error( 'File to run does not exist:', $script );
-        return;
-    }
+    if( -r $sourceOrTemplate ) {
+        my $content           = slurpFile( $sourceOrTemplate );
+        my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
 
-    my $scriptcontent = slurpFile( $script );
-    my $operation     = $methodName;
+        my $sql = $templateProcessor->process( $content, $config, $sourceOrTemplate );
 
-    debug( 'Running eval', $script, $operation );
+        my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
 
-    unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
+        my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+                = IndieBox::ResourceManager::getMySqlDatabase(
+                        $self->{appConfig}->appConfigId,
+                        $self->{installable}->packageName,
+                        $name );
+
+        # from the command-line; that way we don't have to deal with messy statement splitting
+        my $cmd = "mysql '--host=$dbHost' '--port=$dbPort'";
+        $cmd .= " '--user=$rootUser' '--password=$rootPass'";
+        if( $delimiter ) {
+            $cmd .= " '--delimiter=$delimiter'";
+        }
+        $cmd .= " '$dbName'";
+
+        IndieBox::Utils::myexec( $cmd, $sql );
+
+    } else {
+        error( 'File does not exist:', $sourceOrTemplate );
     }
 }
 

@@ -160,9 +160,56 @@ sub backup {
         fatal( 'Cannot backup item with more than one name:', join( @$names ));
     }
 
-    my $bucket   = $self->{json}->{retentionbucket};
+    my $toName = $names->[0];
+    $toName = $config->replaceVariables( $toName );
+    unless( $toName =~ m#^/# ) {
+        $toName = "$dir/$toName";
+    }
 
-    $zip->addFile( "$dir/" . $names->[0], "$contextPathInZip/$bucket" );
+    my $bucket = $self->{json}->{retentionbucket};
+
+    $zip->addFile( $toName, "$contextPathInZip/$bucket" );
+}
+
+##
+# Default implementation to restore this item from backup.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+sub restore {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+
+    my $names = $self->{json}->{names};
+    unless( $names ) {
+        $names = [ $self->{json}->{name} ];
+    }
+    if( @$names != 1 ) {
+        fatal( 'Cannot restore item with more than one name:', join( @$names ));
+    }
+
+    my $toName = $names->[0];
+    $toName = $config->replaceVariables( $toName );
+    unless( $toName =~ m#^/# ) {
+        $toName = "$dir/$toName";
+    }
+
+    my $bucket  = $self->{json}->{retentionbucket};
+    my $contentToSave = $zip->contents( "$contextPathInZip/$bucket" );
+    if( $contentToSave ) {
+        my $permissions  = $self->{json}->{permissions};
+        my $uname        = $self->{json}->{uname};
+        my $gname        = $self->{json}->{gname};
+        my $mode         = $self->permissionToMode( $permissions, 0644 );
+
+        unless( saveFile( $toName, $contentToSave, $mode, $uname, $gname )) {
+            error( 'Writing file failed:', $toName );
+        }
+    }
 }
 
 1;

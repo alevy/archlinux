@@ -91,7 +91,7 @@ sub dbConnect {
     $connectString .= "host=$host;";
     $connectString .= "port=$port;";
 
-    debug( 'Connecting to database as user', $user, 'with', $connectString );
+    trace( 'dbConnect as user', $user, 'with', $connectString );
 
     my $dbh = DBI->connect( "DBI:mysql:${connectString}",
                             $user,
@@ -126,7 +126,7 @@ sub sqlPrepare {
     my $dbh  = shift;
     my $sql  = shift;
 
-    debug( 'Preparing SQL:', ( length( $sql ) > 80 ? ( substr( $sql, 0, 80 ) . '...(truncated)' ) : $sql ));
+    trace( 'Preparing SQL:', ( length( $sql ) > 400 ? ( substr( $sql, 0, 400 ) . '...(truncated)' ) : $sql ));
 
     my $sth = $dbh->prepare( $sql );
     return $sth;
@@ -142,9 +142,9 @@ sub sqlExecute {
     my @args = @_;
 
     if( @args ) {
-        debug( 'Executing SQL with arguments', join( ', ', @args ));
+        trace( 'Executing SQL with arguments', join( ', ', @args ));
     } else {
-        debug( 'Executing SQL without arguments' );
+        trace( 'Executing SQL without arguments' );
     }
     $sth->execute( @args );
     return $sth;

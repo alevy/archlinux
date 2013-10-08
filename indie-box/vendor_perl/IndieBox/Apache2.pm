@@ -42,7 +42,7 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 ##
 # Ensure that Apache is running.
 sub ensureRunning {
-    debug( 'Apache2::ensureRunning' );
+    trace( 'Apache2::ensureRunning' );
 
     IndieBox::Utils::myexec( 'systemctl enable httpd' );
     IndieBox::Utils::myexec( 'systemctl restart httpd' );
@@ -53,7 +53,7 @@ sub ensureRunning {
 ##
 # Reload configuration
 sub reload {
-    debug( 'Apache2::reload' );
+    trace( 'Apache2::reload' );
 
     IndieBox::Utils::myexec( 'systemctl reload httpd' );
 
@@ -63,7 +63,7 @@ sub reload {
 ##
 # Restart configuration
 sub restart {
-    debug( 'Apache2::restart' );
+    trace( 'Apache2::restart' );
 
     IndieBox::Utils::myexec( 'systemctl restart httpd' );
 
@@ -75,6 +75,8 @@ sub restart {
 sub setupPlaceholderSite {
     my $site            = shift;
     my $placeholderName = shift;
+
+    trace( 'Apache2::setupPlaceholderSite' );
 
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
@@ -113,6 +115,8 @@ CONTENT
 # $site: the Site
 sub setupSite {
     my $site = shift;
+
+    trace( 'Apache2::setupSite' );
 
     my $siteId            = $site->siteId;
     my $hostName          = $site->hostName;
@@ -187,6 +191,8 @@ CONTENT
 sub removeSite {
     my $site = shift;
 
+    trace( 'Apache2::removeSite' );
+
     my $siteId            = $site->siteId;
     my $siteFile          = "$sitesDir/$siteId.conf";
     my $appConfigFilesDir = "$appConfigsDir/$siteId";
@@ -208,7 +214,7 @@ sub removeSite {
 ##
 # Make the changes to Apache configuration files are in place that are needed by Indie Box.
 sub ensureConfigFiles {
-    debug( 'Apache2::ensureConfigFiles' );
+    trace( 'Apache2::ensureConfigFiles' );
 
     if( -e $ourConfigFile ) {
         IndieBox::Utils::myexec( "cp -f '$ourConfigFile' '$mainConfigFile'" );

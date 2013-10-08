@@ -70,7 +70,6 @@ sub install {
                     $name );
     unless( $dbName ) {
         my $privs  = $self->{json}->{privileges};
-        my $create = $self->{json}->{create};
 
         ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
                 = IndieBox::ResourceManager::provisionLocalMySqlDatabase(
@@ -79,20 +78,6 @@ sub install {
                         $name,
                         $privs );
 
-        if( $create ) {
-            my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
-            if( $rootUser ) {
-                if( ref( $create ) eq 'ARRAY' ) {
-                    foreach my $section ( @$create ) {
-                        $self->_createDb( $defaultFromDir, $config, $section, $dbName, $dbHost, $dbPort, $rootUser, $rootPass );
-                    }
-                } else {
-                    $self->_createDb( $defaultFromDir, $config, $create, $dbName, $dbHost, $dbPort, $rootUser, $rootPass );
-                }
-            } else {
-                error( 'Failed to find MySQL root user/pass' );
-            }
-        }
     }
     # now insert those values into the config object
     $config->put( "appconfig.mysql.dbname.$name",           $dbName );
@@ -102,57 +87,6 @@ sub install {
     $config->put( "appconfig.mysql.dbusercredential.$name", $dbUserLidCredential );
 }
 
-##
-# Helper method to run a SQL init script for a new database.
-# $defaultFromDir: the directory to which "source" paths are relative to
-# $config: the Configuration object that knows about symbolic names and variables
-# $json: applicable JSON fragment from the manifest JSON
-# $dbName: database name
-# $dbHost: host on which the database runs
-# $dbPort: port at which the database can be reached
-# $dbUserLid: username of the database user
-# $dbUserLidCredential: credential of the database user
-sub _createDb {
-    my $self                = shift;
-    my $defaultFromDir      = shift;
-    my $config              = shift;
-    my $json                = shift;
-    my $dbName              = shift;
-    my $dbHost              = shift;
-    my $dbPort              = shift;
-    my $dbUserLid           = shift;
-    my $dbUserLidCredential = shift;
-
-    my $sourceOrTemplate = $json->{template};
-    unless( $sourceOrTemplate ) {
-        $sourceOrTemplate = $json->{source};
-    }
-    my $templateLang = $json->{templatelang};
-    my $delimiter    = $json->{delimiter};
-
-    unless( $sourceOrTemplate =~ m#^/# ) {
-        $sourceOrTemplate = "$defaultFromDir/$sourceOrTemplate";
-    }
-
-    my $content = slurpFile( $sourceOrTemplate );
-    my $sql;
-    if( $templateLang ) {
-        my $templateProcessor = $self->_instantiateTemplateProcessor( $templateLang );
-        $sql = $templateProcessor->process( $content, $config, $sourceOrTemplate );
-    } else {
-        $sql = $content;
-    }
-
-    # from the command-line; that way we don't have to deal with messy statement splitting
-    my $cmd = "mysql '--host=$dbHost' '--port=$dbPort'";
-    $cmd .= " '--user=$dbUserLid' '--password=$dbUserLidCredential'";
-    if( $delimiter ) {
-        $cmd .= " '--delimiter=$delimiter'";
-    }
-    $cmd .= " '$dbName'";
-
-    IndieBox::Utils::myexec( $cmd, $sql );
-}
 
 ##
 # Uninstall this item
@@ -203,6 +137,37 @@ sub backup {
     $zip->addFile( $tmp->filename, "$contextPathInZip/$bucket" );
 
     push @$filesToDelete, $tmp->filename;
+}
+
+##
+# Restore this item from backup.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+sub restore {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+
+    my $name   = $self->{json}->{name};
+    my $bucket = $self->{json}->{retentionbucket};
+    my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
+
+    my $member = $zip->memberNamed( "$contextPathInZip/$bucket" );
+    if( $member ) {
+        my $tmp = File::Temp->new( UNLINK => 1, DIR => $tmpDir );
+
+        $zip->extractMember( $member, $tmp->filename );
+
+        IndieBox::ResourceManager::importLocalMySqlDatabase(
+                $self->{appConfig}->appConfigId,
+                $self->{installable}->packageName,
+                $name,
+                $tmp->filename );
+    }
 }
 
 1;

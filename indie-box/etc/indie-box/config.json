@@ -4,7 +4,9 @@
     },
 
     "host" : {
-        "tmpdir" : "/tmp"
+        "tmpdir" : "/tmp",
+        "backupdir" : "/var/lib/indie-box/backups",
+        "adminbackuplifetime" : -1
     },
 
     "package" : {
@@ -29,7 +31,8 @@
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
             "authgroupfile" : "${apache2.sitefragmentdir}/${site.siteid}.groups",
-        }
+        },
+        "backupfile" : "${host.backupdir}/${site.siteid}.${now.tstamp}.indie-backup"
     },
 
     "appconfig" : {
@@ -37,6 +40,7 @@
             "datadir" : "${package.datadir}/${appconfig.appconfigid}",
             "dir" : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
-        }
+        },
+        "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup"
     }
 }

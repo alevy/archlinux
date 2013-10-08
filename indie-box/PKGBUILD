@@ -41,6 +41,9 @@ package() {
 # Manifest files
     mkdir -p $pkgdir/var/lib/indie-box/manifests
 
+# Backup files
+    mkdir -p $pkgdir/var/lib/indie-box/backups
+
 # Web server config files
     mkdir -p $pkgdir/etc/httpd/conf
     mkdir -p $pkgdir/etc/httpd/indie-box/appconfigs

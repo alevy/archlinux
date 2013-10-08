@@ -29,6 +29,7 @@ use File::Temp;
 use JSON;
 use Lchown;
 use POSIX;
+use Time::Local qw( timegm );
 
 our @EXPORT = qw( readJsonFromFile readJsonFromStdin readJsonFromString
                   writeJsonToFile writeJsonToStdout writeJsonToString
@@ -42,7 +43,7 @@ my $jsonParser = JSON->new->relaxed->pretty->utf8();
 sub readJsonFromFile {
     my $file = shift;
 
-    trace( "readJsonFromFile( ", $file, " )" );
+    trace( 'readJsonFromFile(', $file, ')' );
 
     my $fileContent = slurpFile( $file );
 
@@ -218,7 +219,7 @@ sub saveFile {
     unless( defined( $mask )) {
         $mask = 0644;
     }
-    debug( 'About to save to file', $filename, '(', length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, 'gid ', $gid, ')' );
+    trace( 'saveFile(', $filename, length( $content ), 'bytes, mask', sprintf( "%o", $mask ), ', uid', $uid, ', gid', $gid, ')' );
 
     unless( sysopen( F, $filename, O_CREAT | O_WRONLY | O_TRUNC )) {
         error( "Could not write to file $filename:", $! );
@@ -290,7 +291,7 @@ sub mkdir {
         return 0;
     }
 
-    debug( 'Creating directory', $filename );
+    trace( 'Creating directory', $filename );
 
     my $ret = CORE::mkdir $filename;
     unless( $ret ) {
@@ -319,7 +320,7 @@ sub symlink {
     my $uid     = getUid( shift );
     my $gid     = getGid( shift );
 
-    debug( 'About to symlink', $oldfile, $newfile );
+    trace( 'Symlink', $oldfile, $newfile );
 
     my $ret = symlink $oldfile, $newfile;
     unless( $ret ) {
@@ -338,7 +339,7 @@ sub symlink {
 sub rmdir {
     my @dirs = @_;
 
-    debug( 'About to delete directories:', join( ', ', @dirs ));
+    trace( 'Delete directories:', join( ', ', @dirs ));
 
     my $ret = 1;
     foreach my $d ( @dirs ) {
@@ -348,7 +349,7 @@ sub rmdir {
                 $ret = 0;
             }
         } elsif( -e $d ) {
-            error( 'Cannot delete directory. File exists but isn\'t a directory', $d );
+            error( "Cannot delete directory. File exists but isn't a directory", $d );
             $ret = 0;
         } else {
             warn( 'Cannot delete directory, does not exist', $d );
@@ -366,7 +367,7 @@ sub deleteRecursively {
 
     my $ret = 1;
     if( @files ) {
-        debug( 'About to recursively delete files:', join( ', ', @files ));
+        trace( 'Recursively delete files:', join( ', ', @files ));
 
         myexec( 'rm -rf ' . join( ' ', map { "'$_'" } @files ));
     }
@@ -458,6 +459,34 @@ sub generateRandomPassword {
     for( my $i=0 ; $i<$length ; ++$i ) {
         $ret .= ("a".."z", "A".."Z", 0..9)[rand 62];
     }
+    return $ret;
+}
+
+##
+# Format time consistency
+# return: formatted time
+sub time2string {
+    my $time = shift;
+
+    my ( $sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst ) = gmtime( $time );
+    my $ret = sprintf "%.4d%.2d%.2d-%.2d%.2d%.2d", ($year+1900), ( $mon+1 ), $mday, $hour, $min, $sec;
+    return $ret;
+}
+
+##
+# Parse formatted timed correctly
+# $s: the string produced by time2string
+# return: UNIX time
+sub string2time {
+    my $s = shift;
+    my $ret;
+
+    if( $s =~ m!^(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$! ) {
+        $ret = timegm( $6, $5, $4, $3, $2-1, $1-1900 );
+    } else {
+        fatal( "Cannot parse time string $s" );
+    }
+
     return $ret;
 }
 
