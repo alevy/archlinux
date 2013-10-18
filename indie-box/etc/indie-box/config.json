@@ -11,7 +11,7 @@
 
     "package" : {
         "codedir" : "/usr/share/${package.name}",
-        "datadir" : "/usr/lib/${package.name}",
+        "datadir" : "/var/lib/${package.name}",
         "manifestdir" : "/var/lib/indie-box/manifests"
     },
 
