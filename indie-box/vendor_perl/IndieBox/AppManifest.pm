@@ -179,7 +179,7 @@ sub checkManifest {
                         if( ref( $module )) {
                             myFatal( $packageName, "roles section: role $roleName: phpmodules[$modulesIndex] must be string" );
                         }
-                        unless( $module =~ m!^[-a-z0-9]+$! ) {
+                        unless( $module =~ m!^[-_a-z0-9]+$! ) {
                             myFatal( $packageName, "roles section: role $roleName: phpmodules[$modulesIndex] invalid: $module" );
                         }
                         ++$modulesIndex;
