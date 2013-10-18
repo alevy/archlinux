@@ -9,7 +9,14 @@ url="http://indieboxproject.org/"
 license=('GPL')
 groups=()
 depends=('ntp' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache')
-backup=( 'etc/indie-box/config.json' )
+backup=(
+    'etc/indie-box/config.json'
+    'etc/httpd/indie-box/defaults.conf'
+    'etc/httpd/indie-box/defaultsite.conf'
+    'etc/httpd/indie-box/errors.conf'
+    'etc/httpd/indie-box/logging.conf'
+    'etc/httpd/indie-box/usersettings.conf'
+)
 source=()
 options=('!strip')
 install=install
