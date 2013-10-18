@@ -33,7 +33,7 @@ my $log;
 BEGIN {
     my $logfile = '/etc/indie-box/log4perl.conf';
 
-    if( -r $logfile ) {
+    if( -w $logfile ) {
         Log::Log4perl->init( $logfile );
     } else {
         my $config = q(
