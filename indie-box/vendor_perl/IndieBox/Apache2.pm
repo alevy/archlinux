@@ -221,7 +221,7 @@ sub ensureConfigFiles {
     } else {
         warn( 'Config file', $ourConfigFile, 'is missing' );
     }
-    activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime' ); # always need those
+    activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime', 'log_config' ); # always need those
 }
 
 ##
