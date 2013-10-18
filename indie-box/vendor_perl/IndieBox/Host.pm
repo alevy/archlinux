@@ -131,7 +131,7 @@ sub executeTriggers {
 sub updateCode {
     trace( 'Host::updateCode' );
 
-    myexec( 'pacman -Syu' );
+    myexec( 'pacman -Syu --noconfirm' );
 }
 
 ##
