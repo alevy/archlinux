@@ -118,29 +118,6 @@ sub appConfigItemsInRole {
 }
 
 ##
-# Add names of packages that are required to run the specified roles for this Installable.
-# $roleNames: array of role names
-# $packages: hash of packages
-sub addToPrerequisites {
-    my $self      = shift;
-    my $roleNames = shift;
-    my $packages  = shift;
-
-    foreach my $roleName ( @$roleNames ) {
-        my $roleJson = $self->{json}->{roles}->{$roleName};
-        if( $roleJson ) {
-            my $depends = $roleJson->{depends};
-            if( $depends ) {
-                foreach my $depend ( @$depends ) {
-                    $packages->{$depend} = $depend;
-                }
-            }
-        }
-    }
-    1;
-}
-
-##
 # Obtain the filename of the manifest file for a package with a given identifier
 # $identifier: the package identifier
 # return: the filename

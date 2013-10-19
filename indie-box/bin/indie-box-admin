@@ -144,10 +144,18 @@ if( $cmd eq 'deploy' ) {
     }
 
     debug( 'Installing prerequisites' );
+    # This is a two-step process: first we need to install the applications that haven't been
+    # installed yet, and then we need to install their dependencies
 
     my $prerequisites = {};
     foreach my $site ( @newSites ) {
-        $site->addToPrerequisites( $applicableRoleNames, $prerequisites );
+        $site->addInstallablesToPrerequisites( $applicableRoleNames, $prerequisites );
+    }
+    IndieBox::Host::installPackages( $prerequisites );
+
+    $prerequisites = {};
+    foreach my $site ( @newSites ) {
+        $site->addDependenciesToPrerequisites( $applicableRoleNames, $prerequisites );
     }
     IndieBox::Host::installPackages( $prerequisites );
 

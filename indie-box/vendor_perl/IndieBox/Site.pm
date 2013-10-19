@@ -203,17 +203,50 @@ sub appConfig {
 }
 
 ##
-# Add names of packages that are required to run the specified roles for this site.
+# Add names of application packages that are required to run the specified roles for this site.
 # $roleNames: array of role names
 # $packages: hash of packages
-sub addToPrerequisites {
+sub addInstallablesToPrerequisites {
     my $self      = shift;
     my $roleNames = shift;
     my $packages  = shift;
 
-    foreach my $appConfig ( @{ $self->appConfigs} ) {
-        my $app = $appConfig->app;
-        $app->addToPrerequisites( $roleNames, $packages );
+    # This may be invoked before the Application JSON of some of the applications is
+    # available, so we cannot access $appConfig->app for example.
+
+    my $jsonAppConfigs = $self->{json}->{appconfigs};
+    foreach my $jsonAppConfig ( @$jsonAppConfigs ) {
+        my $appId = $jsonAppConfig->{appid};
+
+        $packages->{$appId} = $appId;
+    }
+
+    1;
+}
+
+##
+# Add names of dependent packages that are required to run the specified roles for this site.
+# $roleNames: array of role names
+# $packages: hash of packages
+sub addDependenciesToPrerequisites {
+    my $self      = shift;
+    my $roleNames = shift;
+    my $packages  = shift;
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        foreach my $installable ( $appConfig->installables ) {
+            foreach my $roleName ( @$roleNames ) {
+                my $roleJson = $installable->{json}->{roles}->{$roleName};
+                if( $roleJson ) {
+                    my $depends = $roleJson->{depends};
+                    if( $depends ) {
+                        foreach my $depend ( @$depends ) {
+                            $packages->{$depend} = $depend;
+                        }
+                    }
+                }
+            }
+        }
     }
     1;
 }

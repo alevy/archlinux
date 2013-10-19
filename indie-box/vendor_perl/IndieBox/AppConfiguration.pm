@@ -55,14 +55,7 @@ sub new {
     }
     $self->{json}   = $json;
     $self->{site}   = $site;
-    $self->{config} = new IndieBox::Configuration(
-                "AppConfiguration=" . $json->{appconfigid},
-                {
-                    "appconfig.appconfigid"    => $self->appConfigId(),
-                    "appconfig.context"        => $self->context(),
-                    "appconfig.contextorslash" => $self->contextOrSlash(),
-                },
-                defined( $site ) ? $site->config : undef );
+    $self->{config} = undef; # initialized when needed
 
     # No checking required, IndieBox::Site::new has done that already
     return $self;
@@ -157,6 +150,8 @@ sub app {
 sub installables {
     my $self = shift;
 
+    $self->_initialize();
+
     return ( $self->{app} );
 }
 
@@ -174,6 +169,18 @@ sub customizationPoints {
 # return: the Configuration object
 sub config {
     my $self = shift;
+
+    unless( $self->{config} ) {
+        my $site = $self->site();
+        $self->{config} = new IndieBox::Configuration(
+                    "AppConfiguration=" . $self->appConfigId(),
+                    {
+                        "appconfig.appconfigid"    => $self->appConfigId(),
+                        "appconfig.context"        => $self->context(),
+                        "appconfig.contextorslash" => $self->contextOrSlash(),
+                    },
+                    defined( $site ) ? $site->config : undef );
+    }
 
     return $self->{config};
 }
@@ -194,7 +201,7 @@ sub deploy {
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
     foreach my $roleName ( @$applicableRoleNames ) {
-        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        my $dir = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
         if( $dir && $dir ne $siteDocumentDir ) {
             IndieBox::Utils::mkdir( $dir, 0755 );
         }
@@ -214,7 +221,7 @@ sub deploy {
                 "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
                 {},
                 $installable->config,
-                $self->{config} );
+                $self->config );
 
         # Customization points for this Installable at this AppConfiguration
 
@@ -269,7 +276,7 @@ sub deploy {
             }
 
             my $codeDir = $config->getResolve( 'package.codedir' );
-            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $dir     = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
                 if( $item ) {
@@ -311,7 +318,7 @@ sub undeploy {
                 "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
                 {},
                 $installable->config,
-                $self->{config} );
+                $self->config );
 
         # Now for all the roles
         foreach my $roleName ( reverse @$applicableRoleNames ) {
@@ -325,7 +332,7 @@ sub undeploy {
                 next;
             }
             my $codeDir = $config->getResolve( 'package.codedir' );
-            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $dir     = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
             foreach my $appConfigItem ( reverse @$appConfigItems ) {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
@@ -339,7 +346,7 @@ sub undeploy {
 
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
     foreach my $roleName ( @$applicableRoleNames ) {
-        my $dir = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+        my $dir = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
         if( $dir && $dir ne $siteDocumentDir ) {
             IndieBox::Utils::rmdir( $dir );
         }
@@ -395,7 +402,7 @@ sub _runPostDeploy {
                 "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
                 {},
                 $installable->config,
-                $self->{config} );
+                $self->config );
 
         foreach my $roleName ( @$applicableRoleNames ) {
             my $itemsJson = $installable->installableJson->{roles}->{$roleName}->{$jsonSection};
@@ -405,7 +412,7 @@ sub _runPostDeploy {
             }
 
             my $codeDir = $config->getResolve( 'package.codedir' );
-            my $dir     = $self->{config}->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+            my $dir     = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
             foreach my $itemJson ( @$itemsJson ) {
                 my $item = $self->instantiateAppConfigurationItem( $itemJson, $installable );
