@@ -11,6 +11,7 @@ groups=()
 depends=('ntp' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache')
 backup=(
     'etc/indie-box/config.json'
+    'etc/indie-box/log4perl.conf'
     'etc/httpd/indie-box/defaults.conf'
     'etc/httpd/indie-box/defaultsite.conf'
     'etc/httpd/indie-box/errors.conf'
