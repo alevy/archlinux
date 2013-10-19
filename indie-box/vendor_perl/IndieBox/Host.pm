@@ -140,8 +140,6 @@ sub updateCode {
 sub installPackages {
     my $packages = shift;
 
-    trace( 'Host::installPackages' );
-
     my @packageList;
     if( ref( $packages ) eq 'HASH' ) {
         @packageList = keys %$packages;
@@ -150,8 +148,13 @@ sub installPackages {
     } else {
         fatal( 'Unexpected type:', $packages );
     }
+    trace( 'Host::installPackages', @packageList );
+
     if( @packageList ) {
-        myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ));
+        my $err;
+        if( myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ), undef, undef, \$err )) {
+            fatal( 'Failed to install package(s). Pacman says:', $err );
+        }
     }
 }
 
