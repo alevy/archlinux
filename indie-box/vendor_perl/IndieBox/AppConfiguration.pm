@@ -447,7 +447,7 @@ sub instantiateAppConfigurationItem {
     } elsif( 'symlink' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::Symlink->new( $json, $self, $installable );
     } elsif( 'perlscript' eq $type ) {
-        $ret = IndieBox::AppConfigurationItems::Sqlscript->new( $json, $self, $installable );
+        $ret = IndieBox::AppConfigurationItems::Perlscript->new( $json, $self, $installable );
     } elsif( 'sqlscript' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::Sqlscript->new( $json, $self, $installable );
     } elsif( 'mysql-database' eq $type ) {
