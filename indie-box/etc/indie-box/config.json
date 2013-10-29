@@ -4,14 +4,15 @@
     },
 
     "host" : {
-        "tmpdir" : "/tmp",
+        "tmpdir"    : "/tmp",
         "backupdir" : "/var/lib/indie-box/backups",
+
         "adminbackuplifetime" : -1
     },
 
     "package" : {
-        "codedir" : "/usr/share/${package.name}",
-        "datadir" : "/var/lib/${package.name}",
+        "codedir"     : "/usr/share/${package.name}",
+        "datadir"     : "/var/lib/${package.name}",
         "manifestdir" : "/var/lib/indie-box/manifests"
     },
 
@@ -19,18 +20,19 @@
         "uname" : "http",
         "gname" : "http",
 
-        "sitefragmentdir" : "/etc/httpd/indie-box/sites",
+        "sitefragmentdir"      : "/etc/httpd/indie-box/sites",
         "appconfigfragmentdir" : "/etc/httpd/indie-box/appconfigs",
-        "sitesdir" : "/srv/http/sites"
+        "sitesdir"             : "/srv/http/sites",
+        "ssldir"               : "/etc/httpd/indie-box/ssl",
     },
 
     "site" : {
         "apache2" : {
-            "sitedocumentdir" : "${apache2.sitesdir}/${site.siteid}",
-            "sitefragmentfile" : "${apache2.sitefragmentdir}/${site.siteid}.conf",
+            "sitedocumentdir"      : "${apache2.sitesdir}/${site.siteid}",
+            "sitefragmentfile"     : "${apache2.sitefragmentdir}/${site.siteid}.conf",
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
-            "authgroupfile" : "${apache2.sitefragmentdir}/${site.siteid}.groups",
+            "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups",
         },
         "backupfile" : "${host.backupdir}/${site.siteid}.${now.tstamp}.indie-backup"
     },
@@ -38,7 +40,8 @@
     "appconfig" : {
         "apache2" : {
             "datadir" : "${package.datadir}/${appconfig.appconfigid}",
-            "dir" : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
+            "dir"     : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
+            
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
         },
         "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup"

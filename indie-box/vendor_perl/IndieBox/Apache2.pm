@@ -131,16 +131,63 @@ sub setupSite {
     unless( -d $appConfigFilesDir ) {
         IndieBox::Utils::mkdir( $appConfigFilesDir );
     }
-
-    my $content .= <<CONTENT;
+    
+    my $siteFileContent = <<CONTENT;
 #
 # Apache config fragment for site $siteId at host $hostName
 #
 # (C) 2013 Indie Box Project
 # Generated automatically, do not modify.
 #
+CONTENT
+    
+    my $siteAtPort;
+    my $sslDir;
+    my $sslKey;
+    my $sslCert;
+    my $sslCertChain;
+    my $sslCaCert;
+    
+    if( $site->hasSsl ) {
+	    $siteAtPort = 443;
+        $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
+    ServerName $hostName
+
+    Redirect / https://$hostName/
+</VirtualHost>
+CONTENT
+
+        $sslDir       = $site->config->getResolve( 'apache2.ssldir' );
+        $sslKey       = $site->sslKey;
+        $sslCert      = $site->sslCert;
+        $sslCertChain = $site->sslCertChain;
+        $sslCaCert    = $site->sslCaCert;
+        
+        if( $sslKey ) {
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', 'www-data' ); # avoid overwrite by www-data
+        }
+        if( $sslCert ) {
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.crt",      $sslCert,      0440, 'root', 'www-data' );
+        }
+        if( $sslCertChain ) {
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.crtchain", $sslCertChain, 0440, 'root', 'www-data' );
+        }
+
+        if( $sslCaCert ) {
+            cldstr::runtime::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', 'www-data' );
+        }
+
+
+	} else {
+		# No SSL
+	    $siteAtPort = 80;
+	}
+	
+    $siteFileContent .= <<CONTENT;
+
+<VirtualHost *:$siteAtPort>
     ServerName $hostName
 
     DocumentRoot "$siteDocumentRoot"
@@ -150,25 +197,46 @@ sub setupSite {
         AllowOverride All
 
         <IfModule php5_module>
-            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/
+            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/enx
         </IfModule>
     </Directory>
 CONTENT
 
-    foreach my $appConfig ( @{$site->appConfigs} ) {
-        if( $appConfig->isDefault ) {
-            my $context = $appConfig->context();
-            if( $context ) {
-                $content .= <<CONTENT;
+    if( $site->hasSsl ) {
+        $siteFileContent .= <<CONTENT;
+
+    # our own key
+    SSLCertificateKeyFile $sslDir/$siteId.key
+
+    # our own cert
+    SSLCertificateFile $sslDir/$siteId.crt
+ 
+    # the CA certs explaining where we got our own cert from
+    SSLCertificateChainFile $sslDir/$siteId.crtchain
+CONTENT
+        if( $sslCaCert ) {
+            $siteFileContent .= <<CONTENT;
+
+    # the CA certs explaining where our clients got their certs from
+    SSLCACertificateFile $sslDir/$siteId.cacert
+CONTENT
+		}
+	}
+
+	foreach my $appConfig ( @{$site->appConfigs} ) {
+		if( $appConfig->isDefault ) {
+			my $context = $appConfig->context();
+			if( $context ) {
+				$siteFileContent .= <<CONTENT;
 
     RedirectMatch seeother ^/\$ $context/
 CONTENT
-                last;
-            }
-        }
-    }
+				last;
+			}
+		}
+	}
 
-    $content .= <<CONTENT;
+    $siteFileContent .= <<CONTENT;
 
     AliasMatch ^/favicon\.ico $siteWellKnownDir/favicon.ico
     AliasMatch ^/robots\.txt  $siteWellKnownDir/robots.txt
@@ -178,15 +246,15 @@ CONTENT
 </VirtualHost>
 CONTENT
 
-    IndieBox::Utils::saveFile( $siteFile, $content, 0644 );
-
+    IndieBox::Utils::saveFile( $siteFile, $siteFileContent, 0644 );
+    
     1;
 }
 
 ##
 # Do what is necessary to remove a site. This includes:
-# * remove an Apache2 configuration fragment for the site
-# * delete directories etc.
+#  * remove an Apache2 configuration fragment for the site
+#  * delete directories etc.
 # $site: the Site
 sub removeSite {
     my $site = shift;
@@ -222,6 +290,31 @@ sub ensureConfigFiles {
         warn( 'Config file', $ourConfigFile, 'is missing' );
     }
     activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime', 'log_config' ); # always need those
+
+    # Make sure we have default SSL keys and a self-signed cert
+
+    my $sslDir  = '/etc/httpd/conf';
+    my $crtFile = "$sslDir/server.crt";
+    my $keyFile = "$sslDir/server.key";
+    my $csrFile = "$sslDir/server.csr";
+    
+    my $uid = 0;  # avoid overwrite by http
+    my $gid = IndieBox::Utils::getGid( 'http' );
+
+    unless( -f $keyFile ) {
+        IndieBox::Utils::myexec( "openssl genrsa -out '$keyFile' 4096" );
+        chmod 0040, $keyFile;
+        chown $uid, $gid, $keyFile;
+    }
+    unless( -f $crtFile ) {
+        IndieBox::Utils::myexec(
+                "openssl req -new -key '$keyFile' -out '$csrFile'"
+                . ' -subj "/CN=localhost.localdomain"' );
+
+        IndieBox::Utils::myexec( "openssl x509 -req -days 3650 -in '$csrFile' -signkey '$keyFile' -out '$crtFile'" );
+        chmod 0040, $crtFile;
+        chown $uid, $gid, $crtFile;
+    }
 }
 
 ##

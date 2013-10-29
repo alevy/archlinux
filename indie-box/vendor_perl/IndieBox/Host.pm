@@ -148,11 +148,15 @@ sub installPackages {
     } else {
         fatal( 'Unexpected type:', $packages );
     }
-    trace( 'Host::installPackages', @packageList );
+    
+    # only install what isn't installed yet
+	my @filteredPackageList = grep { myexec( "pacman -Ql $_ > /dev/null" ) } @packageList;
 
-    if( @packageList ) {
+    trace( 'Host::installPackages', @filteredPackageList );
+
+    if( @filteredPackageList ) {
         my $err;
-        if( myexec( 'pacman -S --noconfirm ' . join( ' ', @packageList ), undef, undef, \$err )) {
+        if( myexec( 'pacman -S --noconfirm ' . join( ' ', @filteredPackageList ), undef, undef, \$err )) {
             fatal( 'Failed to install package(s). Pacman says:', $err );
         }
     }

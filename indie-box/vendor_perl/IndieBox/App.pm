@@ -28,7 +28,7 @@ use fields;
 
 use IndieBox::Configuration;
 use IndieBox::Logging;
-use IndieBox::Utils qw( readJsonFromFile );
+use IndieBox::Utils;
 use JSON;
 
 ##

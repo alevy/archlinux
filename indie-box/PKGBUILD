@@ -11,7 +11,7 @@ groups=()
 depends=('ntp' 'perl' 'perl-lchown' 'perl-json' 'perl-log-log4perl' 'mariadb' 'perl-dbi' 'perl-dbd-mysql' 'perl-archive-zip' 'apache')
 backup=(
     'etc/indie-box/config.json'
-    'etc/indie-box/log4perl.conf'
+    'etc/indie-box/log.conf'
     'etc/httpd/indie-box/defaults.conf'
     'etc/httpd/indie-box/defaultsite.conf'
     'etc/httpd/indie-box/errors.conf'
@@ -41,10 +41,10 @@ package() {
     done
 
 # Config files
-    mkdir -p $pkgdir/etc/indie-box/sites
-    mkdir -p $pkgdir/etc/indie-box/appconfigpars
+    mkdir -p $pkgdir/etc/indie-box/{appconfigpars,sites,ssl}
+
     install -m644 $startdir/etc/indie-box/config.json $pkgdir/etc/indie-box/
-    install -m644 $startdir/etc/indie-box/log4perl.conf $pkgdir/etc/indie-box/
+    install -m644 $startdir/etc/indie-box/log.conf    $pkgdir/etc/indie-box/
 
 # Manifest files
     mkdir -p $pkgdir/var/lib/indie-box/manifests
@@ -54,10 +54,7 @@ package() {
 
 # Web server config files
     mkdir -p $pkgdir/etc/httpd/conf
-    mkdir -p $pkgdir/etc/httpd/indie-box/appconfigs
-    mkdir -p $pkgdir/etc/httpd/indie-box/mods-available
-    mkdir -p $pkgdir/etc/httpd/indie-box/mods-enabled
-    mkdir -p $pkgdir/etc/httpd/indie-box/sites
+    mkdir -p $pkgdir/etc/httpd/indie-box/{appconfigs,mods-available,mods-enabled,sites,ssl}
     install -m644 $startdir/etc/httpd/conf/httpd-indie-box.conf $pkgdir/etc/httpd/conf/
     for f in $startdir/etc/httpd/indie-box/*.conf; do
         install -m644 $f $pkgdir/etc/httpd/indie-box/

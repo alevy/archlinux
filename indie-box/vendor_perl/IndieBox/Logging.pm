@@ -31,7 +31,7 @@ our @EXPORT = qw( trace debug warn error fatal );
 my $log;
 
 BEGIN {
-    my $logfile = '/etc/indie-box/log4perl.conf';
+    my $logfile = '/etc/indie-box/log.conf';
 
     if( -w $logfile ) {
         Log::Log4perl->init( $logfile );

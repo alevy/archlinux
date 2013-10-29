@@ -21,6 +21,7 @@
 use strict;
 use warnings;
 
+use Cwd;
 use Getopt::Long;
 use IndieBox::Backup;
 use IndieBox::Host;
@@ -82,6 +83,7 @@ if( $cmd eq 'deploy' ) {
     } else {
         $json = readJsonFromStdin();
     }
+    $json = IndieBox::Utils::insertSlurpedFiles( $json, getcwd() );
 
     my $newSitesHash = {};
     if( ref( $json ) eq 'HASH' ) {

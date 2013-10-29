@@ -261,6 +261,9 @@ sub deploy {
 
             if( 'apache2' eq $roleName ) {
                 my $apache2modules = $installableRoleJson->{apache2modules};
+                if( $self->site->hasSsl ) {
+					push @$apache2modules, 'ssl';
+				}
                 if( $apache2modules ) {
                     IndieBox::Apache2::activateApacheModules( @$apache2modules );
                 }
