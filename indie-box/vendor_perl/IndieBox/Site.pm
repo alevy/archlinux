@@ -100,7 +100,7 @@ sub config {
 sub hasSsl {
     my $self = shift;
 
-    return ( $self->{json}->{ssl}->{key} ? 1 : 0 );
+    return ( defined( $self->{json}->{ssl}->{key} ) ? 1 : 0 );
 }
 
 ##
@@ -128,6 +128,14 @@ sub sslCertChain {
     my $self = shift;
 
     return $self->{json}->{ssl}->{crtchain};
+}
+
+##
+# Obtain the SSL certificate chain to be used with clients, if any has been provided.
+sub sslCaCert {
+    my $self = shift;
+
+    return $self->{json}->{ssl}->{cacrt};
 }
 
 ##
@@ -443,6 +451,9 @@ sub _checkJson {
         unless( $json->{ssl}->{crtchain} || !ref( $json->{ssl}->{crtchain} )) {
             fatal( 'Site JSON: ssl section: missing or invalid crtchain' );
         }
+        if( $json->{ssl}->{cacrt} && ref( $json->{ssl}->{cacrt} )) {
+            fatal( 'Site JSON: ssl section: invalid cacrt' );
+		}
     }
 
     if( $json->{wellknown} ) {

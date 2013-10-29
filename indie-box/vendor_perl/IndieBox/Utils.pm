@@ -132,6 +132,40 @@ sub writeJsonToString {
 }
 
 ##
+# Replace all string values in JSON that start with @ with the content of the
+# file whose filename is the remainder of the value.
+sub insertSlurpedFiles {
+	my $json = shift;
+	my $pwd  = shift;
+	my $ret;
+	
+	if( ref( $json ) eq 'ARRAY' ) {
+		$ret = [];
+		foreach my $item ( @$json ) {
+			push @$ret, insertSlurpedFiles( $item, $pwd );
+		}
+		
+	} elsif( ref( $json ) eq 'HASH' ) {
+		$ret = {};
+		while( my( $name, $value ) = each %$json ) {
+			$ret->{$name} = insertSlurpedFiles( $value, $pwd );
+		}
+		
+	} elsif( ref( $json ) ) {
+		$ret = $json;
+		
+	} else {
+		# string
+		if( $json =~ m!^\@(.*)$! ) {
+			$ret = slurpFile( "$pwd/$1" );
+		} else {
+			$ret = $json;
+		}
+	}
+    return $ret;	
+}
+
+##
 # Execute a command, and optionally read/write standard stream to/from strings
 # $cmd: the commaand
 # $inContent: optional string containing what will be sent to stdin

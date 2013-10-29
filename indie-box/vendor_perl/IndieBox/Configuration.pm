@@ -24,7 +24,7 @@ use warnings;
 package IndieBox::Configuration;
 
 use IndieBox::Logging;
-use IndieBox::Utils qw( readJsonFromFile );
+use IndieBox::Utils;
 use JSON;
 use fields qw( name hierarchicalMap flatMap delegates );
 
