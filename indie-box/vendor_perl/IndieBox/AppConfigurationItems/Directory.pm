@@ -179,10 +179,11 @@ sub restore {
     }
 
     my $bucket = $self->{json}->{retentionbucket};
-    my $permissions  = $self->{json}->{permissions};
-    my $uname        = $self->{json}->{uname};
-    my $gname        = $self->{json}->{gname};
-    my $mode         = $self->permissionToMode( $permissions, 0644 );
+
+    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
+    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
+    my $mode        = $self->permissionToMode( $permissions, 0755 );
 
     my $uid = IndieBox::Utils::getUid( $uname );
     my $gid = IndieBox::Utils::getGid( $gname );
@@ -191,5 +192,4 @@ sub restore {
 }
 
 1;
-
 
