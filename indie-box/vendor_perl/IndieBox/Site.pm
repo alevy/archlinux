@@ -503,7 +503,31 @@ sub _checkJson {
             ++$i;
         }
     }
+    
+    $self->_checkJsonValidKeys( $json );
+    
     return 1;
+}
+
+##
+# Recursive check that Site JSON only has valid keys. This catches typos.
+# $json: the JSON, or JSON sub-tree
+sub _checkJsonValidKeys {
+	my $self = shift;
+    my $json = shift;
+    
+	if( ref( $json ) eq 'HASH' ) {
+        while( my( $key, $value ) = each %$json ) {
+			unless( $key =~ m!^[a-z]+$! ) {
+				fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
+			}
+			$self->_checkJsonValidKeys( $value );
+		}
+    } elsif( ref( $json ) eq 'ARRAY' ) {
+        foreach my $element ( @$json ) {
+			$self->_checkJsonValidKeys( $element );
+		}
+	}
 }
 
 1;

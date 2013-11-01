@@ -176,7 +176,7 @@ CONTENT
         }
 
         if( $sslCaCert ) {
-            cldstr::runtime::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', 'www-data' );
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', 'www-data' );
         }
 
 
@@ -218,7 +218,7 @@ CONTENT
             $siteFileContent .= <<CONTENT;
 
     # the CA certs explaining where our clients got their certs from
-    SSLCACertificateFile $sslDir/$siteId.cacert
+    SSLCACertificateFile $sslDir/$siteId.cacrt
 CONTENT
 		}
 	}
