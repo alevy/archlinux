@@ -205,6 +205,8 @@ CONTENT
     if( $site->hasSsl ) {
         $siteFileContent .= <<CONTENT;
 
+    SSLEngine on
+
     # our own key
     SSLCertificateKeyFile $sslDir/$siteId.key
 
