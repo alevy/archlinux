@@ -288,7 +288,11 @@ if( $cmd eq 'deploy' ) {
                 my $site = $sites->{$siteId};
                 if( $site ) {
                     print "Site: " . $site->siteId . "\n";
-                    print "    Hostname: " . $site->hostName . "\n";
+                    if( $site->hasSsl ) {
+                        print "    Hostname: " . $site->hostName . " (SSL)\n";
+                    } else {
+                        print "    Hostname: " . $site->hostName . "\n";
+                    }
                     foreach my $appConfig ( @{$site->appConfigs} ) {
                         if( $appConfig->isDefault ) {
                             my $context = $appConfig->context;
@@ -308,7 +312,11 @@ if( $cmd eq 'deploy' ) {
         } else {
             foreach my $site ( values %$sites ) {
                 print "Site: " . $site->siteId . "\n";
-                print "    Hostname: " . $site->hostName . "\n";
+				if( $site->hasSsl ) {
+					print "    Hostname: " . $site->hostName . " (SSL)\n";
+				} else {
+					print "    Hostname: " . $site->hostName . "\n";
+				}
                 foreach my $appConfig ( @{$site->appConfigs} ) {
                     if( $appConfig->isDefault ) {
                         my $context = $appConfig->context;
