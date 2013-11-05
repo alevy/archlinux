@@ -47,7 +47,6 @@ sub new {
             { "package.name" => $packageName },
             IndieBox::Host::config() );
 
-#    $self->{json}        = $self->{config}->replaceVariables( $json, 1 );
     $self->{json}        = $json;
     $self->{packageName} = $packageName;
 

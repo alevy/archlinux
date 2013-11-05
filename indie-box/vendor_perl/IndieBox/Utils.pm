@@ -134,21 +134,23 @@ sub writeJsonToString {
 ##
 # Replace all string values in JSON that start with @ with the content of the
 # file whose filename is the remainder of the value.
+# $json: the JSON that may contain @-values
+# $dir: the directory to which relative paths are relative to
 sub insertSlurpedFiles {
 	my $json = shift;
-	my $pwd  = shift;
+	my $dir  = shift;
 	my $ret;
 	
 	if( ref( $json ) eq 'ARRAY' ) {
 		$ret = [];
 		foreach my $item ( @$json ) {
-			push @$ret, insertSlurpedFiles( $item, $pwd );
+			push @$ret, insertSlurpedFiles( $item, $dir );
 		}
 		
 	} elsif( ref( $json ) eq 'HASH' ) {
 		$ret = {};
 		while( my( $name, $value ) = each %$json ) {
-			$ret->{$name} = insertSlurpedFiles( $value, $pwd );
+			$ret->{$name} = insertSlurpedFiles( $value, $dir );
 		}
 		
 	} elsif( ref( $json ) ) {
@@ -157,7 +159,7 @@ sub insertSlurpedFiles {
 	} else {
 		# string
 		if( $json =~ m!^\@(.*)$! ) {
-			$ret = slurpFile( "$pwd/$1" );
+			$ret = slurpFile( "$dir/$1" );
 		} else {
 			$ret = $json;
 		}
