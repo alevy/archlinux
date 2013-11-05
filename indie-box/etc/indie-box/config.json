@@ -39,11 +39,11 @@
 
     "appconfig" : {
         "apache2" : {
-            "datadir" : "${package.datadir}/${appconfig.appconfigid}",
             "dir"     : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
             
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
         },
+        "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
         "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup"
     }
 }
