@@ -110,7 +110,7 @@ sub checkManifest {
         }
     }
 
-    my %retentionBuckets = ();
+    my $retentionBuckets = {};
     if( $json->{roles} ) {
 
         my $codeDir = $config->getResolve( 'package.codedir' );
@@ -335,24 +335,7 @@ sub checkManifest {
                                     myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid mode: " . $appConfigItem->{mode} );
                                 }
                             }
-                            if( $appConfigItem->{retention} ) {
-                                if( ref( $appConfigItem->{retention} )) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retention' must be string" );
-                                }
-                                if( $appConfigItem->{retention} ne 'keep' ) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown retention value: " . $appConfigItem->{retention} );
-                                }
-                                unless( $appConfigItem->{retentionbucket} ) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying retention, also specify retentionbucket" );
-                                }
-                                if( ref( $appConfigItem->{retentionbucket} )) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
-                                }
-                                if( $retentionBuckets{$appConfigItem->{retentionbucket}} ) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
-                                }
-                                $retentionBuckets{$appConfigItem->{retentionbucket}} = 1;
-                            }
+                            _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
                         }
                         ++$appConfigIndex;
                     }
@@ -402,24 +385,8 @@ sub checkManifest {
                             myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has non-unique symbolic database name" );
                             $databaseNames{$appConfigItem->{name}} = 1;
                         }
-                        if( $appConfigItem->{retention} ) {
-                            if( ref( $appConfigItem->{retention} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retention' must be string" );
-                            }
-                            if( $appConfigItem->{retention} ne 'keep' ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown retention value: " . $appConfigItem->{retention} );
-                            }
-                            unless( $appConfigItem->{retentionbucket} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying retention, also specify retentionbucket" );
-                            }
-                            if( ref( $appConfigItem->{retentionbucket} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
-                            }
-                            if( $retentionBuckets{$appConfigItem->{retentionbucket}} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
-                            }
-                            $retentionBuckets{$appConfigItem->{retentionbucket}} = 1;
-                        }
+                        _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
+
                         if( $appConfigItem->{privileges} ) {
                             if( ref( $appConfigItem->{privileges} )) {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
@@ -540,6 +507,43 @@ sub checkManifest {
             }
         }
     }
+}
+
+##
+# Helper method to check retentionpolicy.
+# $packageName: name of the package whose manifest is checked
+# $appConfigItem: the AppConfigItem that may have a retentionpolicy
+# $roleName: name of the currently examined role
+# $appConfigIndex: index if the currently examined AppConfigItem in its role section
+# $retentionBuckets: hash of retentionbuckets specified so far
+sub _checkRetention {
+	my $packageName      = shift;
+	my $appConfigItem    = shift;
+	my $roleName         = shift;
+	my $appConfigIndex   = shift;
+	my $retentionBuckets = shift;
+	
+	if( $appConfigItem->{retentionpolicy} ) {
+		if( ref( $appConfigItem->{retentionpolicy} )) {
+			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
+		}
+		if( $appConfigItem->{retentionpolicy} ne 'keep' ) {
+			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
+		}
+		unless( $appConfigItem->{retentionbucket} ) {
+			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
+		}
+		if( ref( $appConfigItem->{retentionbucket} )) {
+			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
+		}
+		if( $retentionBuckets->{$appConfigItem->{retentionbucket}} ) {
+			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
+		}
+		$retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
+		
+	} elsif( $appConfigItem->{retentionbucket} ) {
+		myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
+	}
 }
 
 ##

@@ -148,17 +148,17 @@ sub new {
                     $installable->config,
                     $appConfig->config );
 
+            my $dir = $config->getResolveOrNull( "appconfig.dir", undef, 1 );
+
             foreach my $roleName ( @{$installable->roleNames} ) {
                 my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
                 $zip->addDirectory( "$appConfigPathInZip/" );
-
-                my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                 my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                 if( $appConfigItems ) {
 
                     foreach my $appConfigItem ( @$appConfigItems ) {
-                        if( !defined( $appConfigItem->{retention} ) || !$appConfigItem->{retention} ) {
+                        if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
                             # for now, we don't care what value this field has as long as it is non-empty
                             next;
                         }
@@ -295,18 +295,18 @@ sub restoreAppConfiguration {
                 $installable->config,
                 $appConfig->config );
 
+        my $dir = $config->getResolveOrNull( "appconfig.dir", undef, 1 );
+
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
             unless( $zip->memberNamed( "$appConfigPathInZip/" )) {
                 next;
             }
 
-            my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-
             my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
             if( $appConfigItems ) {
                 foreach my $appConfigItem ( @$appConfigItems ) {
-                    if( !defined( $appConfigItem->{retention} ) || !$appConfigItem->{retention} ) {
+                    if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
                         # for now, we don't care what value this field has as long as it is non-empty
                         next;
                     }
