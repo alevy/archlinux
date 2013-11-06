@@ -39,8 +39,7 @@
 
     "appconfig" : {
         "apache2" : {
-            "dir"     : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
-            
+            "dir"                   : "${apache2.sitesdir}/${site.siteid}${appconfig.context}",
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
         },
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
