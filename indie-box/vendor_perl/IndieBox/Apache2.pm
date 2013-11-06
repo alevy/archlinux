@@ -39,6 +39,8 @@ my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
 my $phpModulesDir     = '/usr/lib/php/modules';
 my $phpModulesConfDir = '/etc/php/conf.d';
 
+my @minimumApacheModules = qw( alias authz_host deflate dir mime log_config setenvif ); # always need those
+
 ##
 # Ensure that Apache is running.
 sub ensureRunning {
@@ -291,7 +293,7 @@ sub ensureConfigFiles {
     } else {
         warn( 'Config file', $ourConfigFile, 'is missing' );
     }
-    activateApacheModules( 'alias', 'authz_host', 'deflate', 'dir', 'mime', 'log_config' ); # always need those
+    activateApacheModules( @minimumApacheModules );
 
     # Make sure we have default SSL keys and a self-signed cert
 
