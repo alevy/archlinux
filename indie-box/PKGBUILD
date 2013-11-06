@@ -2,7 +2,7 @@
 
 pkgname=indie-box
 pkgver=0.1
-pkgrel=7
+pkgrel=8
 pkgdesc="application management framework"
 arch=('any')
 url="http://indieboxproject.org/"
