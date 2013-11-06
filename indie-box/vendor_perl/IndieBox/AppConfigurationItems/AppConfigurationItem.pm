@@ -243,16 +243,19 @@ sub _restoreRecursive {
 
     $zip->extractTree( $zipName, $fileName );
 
+    my $asOct;
     if( $mode == -1 ) {
-        $mode = "755"; #
-    }
-    IndieBox::Utils::myexec "chmod -R $mode $fileName"; # no -h on Linux
+        $asOct = "755";
+    } else {
+		$asOct = sprintf( "%o", $mode );
+	}
+    IndieBox::Utils::myexec "chmod -R $asOct $fileName"; # no -h on Linux
 
-    if( $uid >= 0 ) {
-        IndieBox::Utils::myexec "chown -R -h $uid $fileName";
+    if( defined( $uid )) {
+        IndieBox::Utils::myexec( 'chown -R -h ' . ( 0 + $uid ) . " $fileName" );
     }
-    if( $gid >= 0 ) {
-        IndieBox::Utils::myexec "chgrp -R -h $gid $fileName";
+    if( defined( $gid )) {
+        IndieBox::Utils::myexec( 'chgrp -R -h ' . ( 0 + $gid ) . " $fileName" );
     }
 
     1;

@@ -453,7 +453,7 @@ sub _checkJson {
         }
         if( $json->{ssl}->{cacrt} && ref( $json->{ssl}->{cacrt} )) {
             fatal( 'Site JSON: ssl section: invalid cacrt' );
-		}
+        }
     }
 
     if( $json->{wellknown} ) {
@@ -504,7 +504,7 @@ sub _checkJson {
         }
     }
     
-    $self->_checkJsonValidKeys( $json );
+    $self->_checkJsonValidKeys( $json, undef );
     
     return 1;
 }
@@ -512,22 +512,34 @@ sub _checkJson {
 ##
 # Recursive check that Site JSON only has valid keys. This catches typos.
 # $json: the JSON, or JSON sub-tree
+# $context: the name of the current section, if any
 sub _checkJsonValidKeys {
-	my $self = shift;
-    my $json = shift;
+    my $self    = shift;
+    my $json    = shift;
+    my $context = shift;
     
-	if( ref( $json ) eq 'HASH' ) {
-        while( my( $key, $value ) = each %$json ) {
-			unless( $key =~ m!^[a-z]+$! ) {
-				fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
-			}
-			$self->_checkJsonValidKeys( $value );
-		}
+    if( ref( $json ) eq 'HASH' ) {
+        if( defined( $context ) && $context eq 'customizationpoints' ) {
+            # This is a package name, which has laxer rules
+            while( my( $key, $value ) = each %$json ) {
+                unless( $key =~ m!^[-_a-z0-9]+$! ) {
+                    fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
+                }
+                $self->_checkJsonValidKeys( $value, $key );
+            }
+        } else {
+            while( my( $key, $value ) = each %$json ) {
+                unless( $key =~ m!^[a-z]+$! ) {
+                    fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
+                }
+                $self->_checkJsonValidKeys( $value, $key );
+            }
+        }
     } elsif( ref( $json ) eq 'ARRAY' ) {
         foreach my $element ( @$json ) {
-			$self->_checkJsonValidKeys( $element );
-		}
-	}
+            $self->_checkJsonValidKeys( $element, undef );
+        }
+    }
 }
 
 1;

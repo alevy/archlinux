@@ -188,7 +188,7 @@ sub restore {
     my $uid = IndieBox::Utils::getUid( $uname );
     my $gid = IndieBox::Utils::getGid( $gname );
 
-    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket", $fullName, $mode, $uname, $gname );
+    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket", $fullName, $mode, $uid, $gid );
 }
 
 1;

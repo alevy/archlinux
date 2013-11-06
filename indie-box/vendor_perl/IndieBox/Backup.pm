@@ -148,11 +148,11 @@ sub new {
                     $installable->config,
                     $appConfig->config );
 
-            my $dir = $config->getResolveOrNull( "appconfig.dir", undef, 1 );
-
             foreach my $roleName ( @{$installable->roleNames} ) {
                 my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
                 $zip->addDirectory( "$appConfigPathInZip/" );
+
+                my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
 
                 my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
                 if( $appConfigItems ) {
@@ -295,8 +295,6 @@ sub restoreAppConfiguration {
                 $installable->config,
                 $appConfig->config );
 
-        my $dir = $config->getResolveOrNull( "appconfig.dir", undef, 1 );
-
         foreach my $roleName ( @{$installable->roleNames} ) {
             my $appConfigPathInZip = "$zipFileAppConfigsEntry/$appConfigId/$packageName/$roleName";
             unless( $zip->memberNamed( "$appConfigPathInZip/" )) {
@@ -305,6 +303,8 @@ sub restoreAppConfiguration {
 
             my $appConfigItems = $installable->appConfigItemsInRole( $roleName );
             if( $appConfigItems ) {
+                my $dir = $config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
+
                 foreach my $appConfigItem ( @$appConfigItems ) {
                     if( !defined( $appConfigItem->{retentionpolicy} ) || !$appConfigItem->{retentionpolicy} ) {
                         # for now, we don't care what value this field has as long as it is non-empty

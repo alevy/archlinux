@@ -562,6 +562,8 @@ if( $cmd eq 'deploy' ) {
     foreach my $siteId ( @siteIds ) {
         my $site         = $sites->{$siteId};
         my $siteInBackup = $sitesInBackup->{$siteId};
+
+        $site->undeploy();
         $siteInBackup->restoreSite( $backup, $site );
     }
 
