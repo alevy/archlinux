@@ -199,7 +199,7 @@ CONTENT
         AllowOverride All
 
         <IfModule php5_module>
-            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/enx
+            php_admin_value open_basedir $siteDocumentRoot:/tmp/:/usr/share/
         </IfModule>
     </Directory>
 CONTENT
