@@ -150,7 +150,7 @@ sub installPackages {
     }
     
     # only install what isn't installed yet
-	my @filteredPackageList = grep { myexec( "pacman -Ql $_ > /dev/null" ) } @packageList;
+    my @filteredPackageList = grep { myexec( "pacman -Ql $_ > /dev/null 2>&1" ) } @packageList;
 
     trace( 'Host::installPackages', @filteredPackageList );
 
