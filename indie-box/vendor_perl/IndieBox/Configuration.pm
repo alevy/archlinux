@@ -190,11 +190,16 @@ sub getResolveOrNull {
 sub keys {
     my $self = shift;
 
-    my @ret = keys %{$self->{flatMap}};
-    foreach my $delegate ( @{$self->{delegates}} ) {
-        push @ret, $delegate->keys();
+    my $uniq = {};
+    foreach my $key ( keys %{$self->{flatMap}} ) {
+        $uniq->{$key} = 1;
     }
-    return @ret;
+    foreach my $delegate ( @{$self->{delegates}} ) {
+        foreach my $key ( $delegate->keys() ) {
+            $uniq->{$key} = 1;
+        }
+    }
+    return keys %$uniq;
 }
 
 ##
