@@ -135,6 +135,14 @@ sub updateCode {
 }
 
 ##
+# Clean package cache
+sub purgeCache {
+    trace( 'Host::purgeCache' );
+
+    myexec( 'pacman -Sc --noconfirm > /dev/null' );
+}
+
+##
 # Install the named packages.
 # $packages: List of packages
 sub installPackages {
@@ -148,7 +156,7 @@ sub installPackages {
     } else {
         fatal( 'Unexpected type:', $packages );
     }
-    
+
     # only install what isn't installed yet
     my @filteredPackageList = grep { myexec( "pacman -Q $_ > /dev/null 2>&1" ) } @packageList;
 

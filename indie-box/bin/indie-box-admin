@@ -372,6 +372,10 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
+    debug( 'Purging cache' );
+
+    IndieBox::Host::purgeCache();
+
 } elsif( $cmd eq 'backup' ) {
     if( @ARGV || $json || $brief || @translates || $file || $in || !$out ) {
         synopsisHelpQuit();
