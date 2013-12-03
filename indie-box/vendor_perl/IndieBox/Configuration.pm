@@ -28,6 +28,37 @@ use IndieBox::Utils;
 use JSON;
 use fields qw( name hierarchicalMap flatMap delegates );
 
+my $knownFunctions = {
+    'escapeSquote'     => sub { $_[0] =~ s/'/\\'/g; },
+    'escapeDquote'     => sub { $_[0] =~ s/"/\\"/g; },
+    'trim'             => sub { $_[0] =~ s/^\s*//g; s/\s*$//g; },
+    'cr2space'         => sub { $_[0] =~ s/\s+/ /g; },
+    'randomHex'        => sub {
+            my $length = $_[0] || 8;
+            my $ret    = '';
+            for( my $i=0 ; $i<$length ; ++$i ) {
+                $ret .= (0..9, "a".."f")[rand 16];
+            }
+            return $ret;
+    },
+    'randomIdentifier' => sub {
+            my $length = $_[0] || 8;
+            my $ret    = '';
+            for( my $i=0 ; $i<$length ; ++$i ) {
+                $ret .= ("a".."z")[rand 26];
+            }
+            return $ret;
+    },
+    'randomPassword' => sub {
+            my $length = $_[0] || 8;
+            my $ret    = '';
+            for( my $i=0 ; $i<$length ; ++$i ) {
+                $ret .= (0..9, "a".."z", "A".."Z")[rand 62];
+            }
+            return $ret;
+    }
+};
+
 ##
 # Constructor.
 # $name: name for this Configuration object. This helps with debugging.
@@ -119,7 +150,13 @@ sub getResolve {
         $func = $1;
         $name = $2;
     }
-    my $ret = $self->get( $name, $default, $remainingDepth-1 );
+    my $ret;
+    if( $name =~ m!^[0-9]+(\.[0-9]*)?$! ) {
+        # is number
+        $ret = $name;
+    } else {
+        $ret = $self->get( $name, $default, $remainingDepth-1 );
+    }
     if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
             $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
@@ -128,7 +165,7 @@ sub getResolve {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( 'Cannot find variable', $name, "\n" . $self->dump() );
+        fatal( 'Cannot find symbol', $name, "\n" . $self->dump() );
     } else {
         $ret = '${' . $name . '}';
     }
@@ -163,7 +200,13 @@ sub getResolveOrNull {
         $func = $1;
         $name = $2;
     }
-    my $ret = $self->get( $name, $default, $remainingDepth-1 );
+    my $ret;
+    if( $name =~ m!^[0-9]+(\.[0-9]*)?$! ) {
+        # is number
+        $ret = $name;
+    } else {
+        $ret = $self->get( $name, $default, $remainingDepth-1 );
+    }
     if( defined( $ret )) {
         if( $remainingDepth > 0 ) {
             $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
@@ -172,7 +215,7 @@ sub getResolveOrNull {
             $ret = _applyFunc( $func, $ret );
         }
     } elsif( !$unresolvedOk ) {
-        fatal( 'Cannot find variable', $name, "\n" . $self->dump() );
+        fatal( 'Cannot find symbol', $name, "\n" . $self->dump() );
     } else {
         $ret = undef;
     }
@@ -283,25 +326,20 @@ sub _flatten {
 
 ##
 # Helper method to apply a named function to a value
-# $func: the named function
+# $funcName: the named function
 # $value: the value to apply the function to
 # return: the value, after having been processed by the function
 sub _applyFunc {
-    my $func  = shift;
-    my $value = shift;
+    my $funcName = shift;
+    my $value    = shift;
 
-    my $ret = $value;
-    if( 'escapeSquote' eq $func ) {
-        $ret =~ s/'/\\'/g;
-    } elsif( 'escapeDquote' eq $func ) {
-        $ret =~ s/"/\\"/g;
-    } elsif( 'trim' eq $func ) {
-        $ret =~ s/^\s*//g;
-        $ret =~ s/\s*$//g;
-    } elsif( 'cr2space' eq $func ) {
-        $ret =~ s/\s+/ /g;
+    my $func = $knownFunctions->{$funcName};
+    my $ret;
+    if( defined( $func )) {
+        $ret = $func->( $value );
     } else {
         error( 'Unknown function', $func, 'in varsubst' );
+        $ret = $value;
     }
     return $ret;
 }
