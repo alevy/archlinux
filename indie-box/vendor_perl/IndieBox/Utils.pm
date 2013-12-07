@@ -478,11 +478,12 @@ sub getGid {
 sub generateRandomIdentifier {
     my $length = shift || 8;
 
-    my $ret = ("a".."z", "A".."Z")[rand 52];
-    $ret .= generateRandomPassword( $length-1 );
+    my $ret    = '';
+    for( my $i=0 ; $i<$length ; ++$i ) {
+        $ret .= ("a".."z")[rand 26];
+    }
     return $ret;
 }
-
 
 ##
 # Generate a random password
@@ -494,6 +495,20 @@ sub generateRandomPassword {
     my $ret = '';
     for( my $i=0 ; $i<$length ; ++$i ) {
         $ret .= ("a".."z", "A".."Z", 0..9)[rand 62];
+    }
+    return $ret;
+}
+
+##
+# Generate a random hex number
+# $length: length of hex number
+# return: hex number
+sub generateRandomHex {
+    my $length = shift || 8;
+
+    my $ret    = '';
+    for( my $i=0 ; $i<$length ; ++$i ) {
+        $ret .= (0..9, "a".."f")[rand 16];
     }
     return $ret;
 }

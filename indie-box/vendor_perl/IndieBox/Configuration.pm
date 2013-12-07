@@ -33,30 +33,9 @@ my $knownFunctions = {
     'escapeDquote'     => sub { $_[0] =~ s/"/\\"/g; },
     'trim'             => sub { $_[0] =~ s/^\s*//g; s/\s*$//g; },
     'cr2space'         => sub { $_[0] =~ s/\s+/ /g; },
-    'randomHex'        => sub {
-            my $length = $_[0] || 8;
-            my $ret    = '';
-            for( my $i=0 ; $i<$length ; ++$i ) {
-                $ret .= (0..9, "a".."f")[rand 16];
-            }
-            return $ret;
-    },
-    'randomIdentifier' => sub {
-            my $length = $_[0] || 8;
-            my $ret    = '';
-            for( my $i=0 ; $i<$length ; ++$i ) {
-                $ret .= ("a".."z")[rand 26];
-            }
-            return $ret;
-    },
-    'randomPassword' => sub {
-            my $length = $_[0] || 8;
-            my $ret    = '';
-            for( my $i=0 ; $i<$length ; ++$i ) {
-                $ret .= (0..9, "a".."z", "A".."Z")[rand 62];
-            }
-            return $ret;
-    }
+    'randomHex'        => &IndieBox::Utils::generateRandomHex,
+    'randomIdentifier' => &IndieBox::Utils::generateRandomIdentifier,
+    'randomPassword'   => &IndieBox::Utils::generateRandomPassword
 };
 
 ##
