@@ -26,6 +26,7 @@ package IndieBox::AppConfigurationItems::DirectoryTree;
 use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
+use File::Find;
 use IndieBox::Logging;
 
 ##
@@ -65,6 +66,14 @@ sub install {
     }
 
     my $source = $self->{json}->{source};
+    my $filepermissions = $config->replaceVariables( $self->{json}->{filepermissions} );
+    my $dirpermissions  = $config->replaceVariables( $self->{json}->{dirpermissions} );
+    my $uname           = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname           = $config->replaceVariables( $self->{json}->{gname} );
+    my $uid             = IndieBox::Utils::getUid( $uname );
+    my $gid             = IndieBox::Utils::getGid( $gname );
+    my $filemode        = ( defined( $filepermissions ) && $filepermissions eq 'preserve' ) ? -1 : $self->permissionToMode( $filepermissions, 0644 );
+    my $dirmode         = ( defined( $dirpermissions  ) && $dirpermissions  eq 'preserve' ) ? -1 : $self->permissionToMode( $dirpermissions, 0755 );
 
     foreach my $name ( @$names ) {
         my $localName  = $name;
@@ -86,6 +95,24 @@ sub install {
         }
 
         IndieBox::Utils::copyRecursively( $fromName, $toName );
+        
+        if( $uid || $gid || ( defined( $filemode ) && $filemode != -1 ) || ( defined( $dirmode ) && $dirmode != -1 )) {
+            find(   sub {
+                        if( $uid || $gid ) {
+                            chown $uid, $gid, $File::Find::name;
+                        }
+                        if( -d $File::Find::name ) {
+                            if( defined( $dirmode ) && $dirmode != -1 ) {
+                                chmod $dirmode, $File::Find::name;
+                            }
+                        } else {
+                            if( defined( $filemode ) && $filemode != -1 ) {
+                                chmod $filemode, $File::Find::name;
+                            }
+                        }
+                    },
+                    $toName );
+        }
     }
 }
 

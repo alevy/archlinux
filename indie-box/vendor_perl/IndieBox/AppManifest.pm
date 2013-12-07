@@ -318,6 +318,9 @@ sub checkManifest {
                                 unless( $config->replaceVariables( $appConfigItem->{uname} ) =~ m!^[-a-z0-9]+$! ) {
                                     myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid uname: " . $appConfigItem->{uname} );
                                 }
+                                unless( $appConfigItem->{gname} ) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'gname' must be given is 'uname' is given." );
+                                }
                             }
                             if( $appConfigItem->{gname} ) {
                                 if( ref( $appConfigItem->{gname} )) {
@@ -326,15 +329,41 @@ sub checkManifest {
                                 unless( $config->replaceVariables( $appConfigItem->{gname} ) =~ m!^[-a-z0-9]+$! ) {
                                     myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid gname: " . $appConfigItem->{gname} );
                                 }
-                            }
-                            if( $appConfigItem->{mode} ) {
-                                if( ref( $appConfigItem->{mode} )) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'mode' must be string (octal)" );
-                                }
-                                unless( $config->replaceVariables( $appConfigItem->{mode} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
-                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid mode: " . $appConfigItem->{mode} );
+                                unless( $appConfigItem->{uname} ) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'uname' must be given is 'gname' is given." );
                                 }
                             }
+                            if( $appConfigItem->{type} eq 'directorytree' ) {
+                                foreach my $f ( 'filepermissions', 'dirpermissions' ) {
+                                    if( defined( $appConfigItem->{$f} )) {
+                                        if( ref( $appConfigItem->{$f} )) {
+                                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field '$f' must be string (octal)" );
+                                        }
+                                        unless( $config->replaceVariables( $appConfigItem->{$f} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
+                                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid $f: " . $appConfigItem->{$f} );
+                                        }
+                                    }
+                                }
+                                if( defined( $appConfigItem->{permissions} )) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use fields 'filepermissions' and 'dirpermissions' instead of 'permissions'." );
+                                }
+                            } else {
+                                if( defined( $appConfigItem->{permissions} )) {
+                                    if( ref( $appConfigItem->{permissions} )) {
+                                        myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'permissions' must be string (octal)" );
+                                    }
+                                    unless( $config->replaceVariables( $appConfigItem->{permissions} ) =~ m!^(preserve|[0-7]{3,4})$! ) {
+                                        myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: invalid permissions: " . $appConfigItem->{permissions} );
+                                    }
+                                }
+                                if( defined( $appConfigItem->{filepermissions} )) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'filepermissions'." );
+                                }
+                                if( defined( $appConfigItem->{dirpermissions} )) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: use field 'permissions' instead of 'dirpermissions'." );
+                                }
+                            }
+                            
                             _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
                         }
                         ++$appConfigIndex;
@@ -483,14 +512,17 @@ sub checkManifest {
             unless( $custPointJson->{type} =~ m/^(string|password)$/ ) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: unknown type" );
             }
-            if( $custPointJson->{required} && !JSON::is_bool( $custPointJson->{required} )) {
+            unless( defined( $custPointJson->{required} ) ) {
+                myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: field 'required' must be given" );
+            }
+            unless( JSON::is_bool( $custPointJson->{required} )) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: field 'required' must be boolean" );
             }
-            if( $custPointJson->{default} ) {
+            if( defined( $custPointJson->{default} )) {
                 unless( ref( $custPointJson->{default} ) eq 'HASH' ) {
                     myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: not a JSON object" );
                 }
-                unless( $custPointJson->{default}->{value} ) {
+                unless( defined( $custPointJson->{default}->{value} )) {
                     myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: no value given" );
                 }
                 if( ref( $custPointJson->{default}->{value} )) {
@@ -504,6 +536,8 @@ sub checkManifest {
                         myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: unknown encoding" );
                     }
                 }
+            } elsif( !$custPointJson->{required} ) {
+                myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: a default value must be given if required=false" );
             }
         }
     }
