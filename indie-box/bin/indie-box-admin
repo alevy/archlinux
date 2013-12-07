@@ -162,6 +162,36 @@ if( $cmd eq 'deploy' ) {
         $site->addDependenciesToPrerequisites( $applicableRoleNames, $prerequisites );
     }
     IndieBox::Host::installPackages( $prerequisites );
+    
+    debug( 'Checking customization points' );
+    
+    foreach my $newSite ( @newSites ) {
+        foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+            my $appConfigCustPoints = $newAppConfig->customizationPoints();
+            
+            foreach my $installable ( $newAppConfig->installables ) {
+                my $packageName           = $installable->packageName;
+                my $installableCustPoints = $installable->customizationPoints;
+                if( $installableCustPoints ) {
+                    while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+                        unless( $custPointDef->{required} ) {
+                            next;
+                        }
+                        if( !defined( $custPointDef->{default} ) || !defined( $custPointDef->{default}->{value} )) {
+                            # make sure the Site JSON file provided one
+                            my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
+                            unless( defined( $value )) {
+                                fatal(   'Site ' . $newSite->siteId
+                                       . ', AppConfiguration ' . $newAppConfig->appConfigId
+                                       . ', package ' . $packageName
+                                       . ', required value not provided for customizationpoint: ' .  $custPointName );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     debug( 'Setting up placeholder sites' );
 
