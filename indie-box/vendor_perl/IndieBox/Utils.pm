@@ -249,8 +249,8 @@ sub saveFile {
     my $uname    = shift;
     my $gname    = shift;
 
-    my $uid = getUid( shift );
-    my $gid = getGid( shift );
+    my $uid = getUid( $uname );
+    my $gid = getGid( $gname );
 
     unless( defined( $mask )) {
         $mask = 0644;
