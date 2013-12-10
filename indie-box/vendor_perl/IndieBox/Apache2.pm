@@ -24,8 +24,10 @@ use warnings;
 package IndieBox::Apache2;
 
 use DBI;
+use Fcntl qw( SEEK_END SEEK_SET );
 use IndieBox::Logging;
 use IndieBox::Utils;
+use Time::HiRes qw( gettimeofday );
 
 my $mainConfigFile   = '/etc/httpd/conf/httpd.conf';
 my $ourConfigFile    = '/etc/httpd/conf/httpd-indie-box.conf';
@@ -38,6 +40,8 @@ my $sitesWellknownDir               = '/srv/http/wellknown';
 my $placeholderSitesDocumentRootDir = '/srv/http/placeholders';
 my $phpModulesDir     = '/usr/lib/php/modules';
 my $phpModulesConfDir = '/etc/php/conf.d';
+
+my $logFile  = '/var/log/httpd/error_log';
 
 my @minimumApacheModules = qw( alias authz_host deflate dir mime log_config setenvif ); # always need those
 
@@ -57,7 +61,7 @@ sub ensureRunning {
 sub reload {
     trace( 'Apache2::reload' );
 
-    IndieBox::Utils::myexec( 'systemctl reload httpd' );
+    _syncApacheCtl( 'reload' );
 
     1;
 }
@@ -67,9 +71,62 @@ sub reload {
 sub restart {
     trace( 'Apache2::restart' );
 
-    IndieBox::Utils::myexec( 'systemctl restart httpd' );
+    _syncApacheCtl( 'restart' );
 
     1;
+}
+
+##
+# Helper method to restart or reload Apache, and wait until it is ready to accept
+# requests again. Because apachectl is asynchronous, this keeps reading the system
+# log until it appears that the operation is complete. For good measure, we wait a
+# little bit longer.
+# Note that open connections will not necessarily be closed forcefully.
+# $command: the Apache systemd command, such as 'restart' or 'reload'
+# $max: maximum seconds to wait until returning from this method
+# $poll: seconds (may be fraction) between subsequent reads of the log
+# return: 0: success, 1: timeout
+sub _syncApacheCtl {
+    my $command = shift;
+    my $max     = shift || 10;
+    my $poll    = shift || 0.1;
+
+    open( FH, '<', $logFile ) || fatal( 'Cannot open', $logFile );
+    my $lastPos = sysseek( FH, 0, SEEK_END );
+    close( FH );
+
+    IndieBox::Utils::myexec( "systemctl $command httpd" );
+    
+    my( $seconds, $microseconds ) = gettimeofday;
+    my $until = $seconds + 0.000001 * $microseconds + $max;
+    
+    while( 1 ) {
+        select( undef, undef, undef, $poll ); # apparently a tricky way of sleeping for $poll seconds that works with fractions        
+
+        open( FH, '<', $logFile ) || fatal( 'Cannot open', $logFile );
+        my $pos = sysseek( FH, 0, SEEK_END );
+        
+        my $written = '';
+        if( $pos != $lastPos ) {
+            sysseek( FH, $lastPos, SEEK_SET );
+            sysread( FH, $written, $pos - $lastPos, 0 );
+        }
+        close( FH );
+        $lastPos = $pos;
+        
+        ( $seconds, $microseconds ) = gettimeofday;
+        my $delta = $seconds + 0.000001 * $microseconds - $until;
+        
+        if( $written =~ /resuming normal operations/ ) {
+            debug( 'Detected Apache restart after ', $delta, 'seconds' );
+            return 0;
+        }
+        
+        if( $delta >= $max ) {
+            warn( 'Apache command', $command, 'not finished within', $max, 'seconds' );
+            return 1;
+        }
+    }
 }
 
 ##
