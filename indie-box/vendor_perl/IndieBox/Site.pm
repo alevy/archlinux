@@ -51,7 +51,8 @@ sub new {
                 "Site=$siteId",
                 {
                     "site.hostname" => $self->hostName(),
-                    "site.siteid"   => $siteId
+                    "site.siteid"   => $siteId,
+                    "site.protocol" => ( $self->hasSsl() ? 'https' : 'http' )
                 },
             IndieBox::Host::config() );
 
