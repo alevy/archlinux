@@ -1,7 +1,7 @@
 # Maintainer: Indie Box Project http://indieboxproject.org/
 
 pkgname=indie-box
-pkgver=0.5
+pkgver=0.6
 pkgrel=1
 pkgdesc="Application management tools"
 arch=('any')
@@ -41,10 +41,14 @@ package() {
     done
 
 # Config files
-    mkdir -p $pkgdir/etc/indie-box/{appconfigpars,sites,ssl}
+    mkdir -p $pkgdir/etc/indie-box/ssl
 
     install -m644 $startdir/etc/indie-box/config.json $pkgdir/etc/indie-box/
     install -m644 $startdir/etc/indie-box/log.conf    $pkgdir/etc/indie-box/
+
+# Site files and AppConfiguration parameter files
+    mkdir -p $pkgdir/var/lib/indie-box/sites
+    mkdir -p $pkgdir/var/lib/indie-box/appconfigpars
 
 # Manifest files
     mkdir -p $pkgdir/var/lib/indie-box/manifests

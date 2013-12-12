@@ -38,7 +38,7 @@ use MIME::Base64;
 
 use fields qw{json site app config};
 
-my $APPCONFIGPARSDIR = '/etc/indie-box/appconfigpars';
+my $APPCONFIGPARSDIR = '/var/lib/indie-box/appconfigpars';
 
 ##
 # Constructor.

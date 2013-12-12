@@ -30,7 +30,7 @@ use IndieBox::Site;
 use IndieBox::Utils qw( readJsonFromFile myexec );
 use Sys::Hostname;
 
-my $SITES_DIR      = '/etc/indie-box/sites';
+my $SITES_DIR      = '/var/lib/indie-box/sites';
 my $HOST_CONF_FILE = '/etc/indie-box/config.json';
 my $hostConf       = undef;
 my $now            = time();
