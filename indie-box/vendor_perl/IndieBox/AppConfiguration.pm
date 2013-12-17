@@ -232,7 +232,7 @@ sub deploy {
             while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
                 my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
 
-                unless( defined( $value )) {
+                unless( defined( $value ) && defined( $value->{value} )) {
                     # use default instead
                     $value = $custPointDef->{default};
                 }
