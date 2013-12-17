@@ -407,7 +407,7 @@ sub checkManifest {
                         if( ref( $appConfigItem->{name} )) {
                             myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
                         }
-                        unless( $appConfigItem->{name} =~ m/^[a-z][a-z0-9]*$/ ) {
+                        unless( $appConfigItem->{name} =~ m/^[a-z][_a-z0-9]*$/ ) {
                             myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid symbolic database name: " . $appConfigItem->{name} );
                         }
                         if( $databaseNames{$appConfigItem->{name}} ) {
@@ -497,7 +497,7 @@ sub checkManifest {
             myFatal( $packageName, "customizationpoints section: not a JSON object" );
         }
         while( my( $custPointName, $custPointJson ) = each %{$json->{customizationpoints}} ) {
-            unless( $custPointName =~ m/^[a-z][a-z0-9]*$/ ) {
+            unless( $custPointName =~ m/^[a-z][_a-z0-9]*$/ ) {
                 myFatal( $packageName, "customizationpoints section: invalid customizationpoint name: $custPointName" );
             }
             unless( ref( $custPointJson ) eq 'HASH' ) {
@@ -509,7 +509,7 @@ sub checkManifest {
             if( ref( $custPointJson->{type} )) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: field 'type' must be string" );
             }
-            unless( $custPointJson->{type} =~ m/^(string|password)$/ ) {
+            unless( $custPointJson->{type} =~ m/^(string|password|boolean)$/ ) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: unknown type" );
             }
             unless( defined( $custPointJson->{required} ) ) {
@@ -525,8 +525,15 @@ sub checkManifest {
                 unless( defined( $custPointJson->{default}->{value} )) {
                     myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: no value given" );
                 }
-                if( ref( $custPointJson->{default}->{value} )) {
-                    myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be string" );
+                if( $custPointJson->{type} =~ m/^(string|password)$/ ) {
+                    if( ref( $custPointJson->{default}->{value} )) {
+                        myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be string" );
+					}
+                } else {
+					# $custPointJson->{type} =~ m/^boolean$/
+                    unless( ref( $custPointJson->{default}->{value} ) =~ m/^JSON.*[Bb]oolean$/ ) {
+                        myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be boolean" );
+					}
                 }
                 if( $custPointJson->{default}->{encoding} ) {
                     if( ref( $custPointJson->{default}->{encoding} )) {

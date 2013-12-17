@@ -425,6 +425,8 @@ sub _checkJson {
     unless( $json ) {
         fatal( 'No Site JSON present' );
     }
+    $self->_checkJsonValidKeys( $json, [] );
+
     unless( $json->{siteid} ) {
         fatal( 'Site JSON: missing siteid' );
     }
@@ -505,8 +507,6 @@ sub _checkJson {
         }
     }
     
-    $self->_checkJsonValidKeys( $json, undef );
-    
     return 1;
 }
 
@@ -520,25 +520,33 @@ sub _checkJsonValidKeys {
     my $context = shift;
     
     if( ref( $json ) eq 'HASH' ) {
-        if( defined( $context ) && $context eq 'customizationpoints' ) {
+        if( @$context >= 2 && $context->[-1] eq 'customizationpoints' ) {
             # This is a package name, which has laxer rules
             while( my( $key, $value ) = each %$json ) {
-                unless( $key =~ m!^[-_a-z0-9]+$! ) {
-                    fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
+                unless( $key =~ m!^[a-z][-_a-z0-9]*$! ) {
+                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
-                $self->_checkJsonValidKeys( $value, $key );
+                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
+            }
+        } elsif( @$context >= 2 && $context->[-2] eq 'customizationpoints' ) {
+            # This is a customization point name, which has laxer rules
+            while( my( $key, $value ) = each %$json ) {
+                unless( $key =~ m!^[a-z][_a-z0-9]*$! ) {
+                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
+                }
+                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }
         } else {
             while( my( $key, $value ) = each %$json ) {
                 unless( $key =~ m!^[a-z]+$! ) {
-                    fatal( 'Site JSON: invalid key in JSON:', "'$key'" );
+                    fatal( 'Site JSON: invalid key in JSON:', "'$key'", 'context:', join( ' / ', @$context ) || '(top)' );
                 }
-                $self->_checkJsonValidKeys( $value, $key );
+                $self->_checkJsonValidKeys( $value, [ @$context, $key ] );
             }
         }
     } elsif( ref( $json ) eq 'ARRAY' ) {
         foreach my $element ( @$json ) {
-            $self->_checkJsonValidKeys( $element, undef );
+            $self->_checkJsonValidKeys( $element, $context );
         }
     }
 }

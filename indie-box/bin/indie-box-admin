@@ -174,12 +174,35 @@ if( $cmd eq 'deploy' ) {
                 my $installableCustPoints = $installable->customizationPoints;
                 if( $installableCustPoints ) {
                     while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+						# check data type
+                        my $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
+						if( defined( $value )) {
+                            if( $custPointDef->{type} =~ m/^(string|password)$/ ) {
+                                if( ref( $value )) {
+                                    fatal(   'Site ' . $newSite->siteId
+                                           . ', AppConfiguration ' . $newAppConfig->appConfigId
+                                           . ', package ' . $packageName
+                                           . ', string value required for customizationpoint: ' .  $custPointName
+                                           . ', is ' . ref( $value ));
+                                }
+                            } else {
+				                # $custPointDef->{type} =~ m/^boolean$/
+                                unless( ref( $value ) =~ m/^JSON.*[Bb]oolean$/ ) {
+                                    fatal(   'Site ' . $newSite->siteId
+                                           . ', AppConfiguration ' . $newAppConfig->appConfigId
+                                           . ', package ' . $packageName
+                                           . ', boolean value required for customizationpoint: ' .  $custPointName
+                                           . ', is ' . ref( $value ));
+                                }
+                            }
+						}
+						
+						# now check that required values are indeed provided
                         unless( $custPointDef->{required} ) {
                             next;
                         }
                         if( !defined( $custPointDef->{default} ) || !defined( $custPointDef->{default}->{value} )) {
                             # make sure the Site JSON file provided one
-                            my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
                             unless( defined( $value )) {
                                 fatal(   'Site ' . $newSite->siteId
                                        . ', AppConfiguration ' . $newAppConfig->appConfigId

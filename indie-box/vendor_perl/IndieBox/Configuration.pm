@@ -137,12 +137,15 @@ sub getResolve {
         $ret = $self->get( $name, $default, $remainingDepth-1 );
     }
     if( defined( $ret )) {
-        if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
-        }
-        if( defined( $func )) {
-            $ret = _applyFunc( $func, $ret );
-        }
+		unless( ref( $ret )) {
+			# only do this for strings
+			if( $remainingDepth > 0 ) {
+				$ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+			}
+			if( defined( $func )) {
+				$ret = _applyFunc( $func, $ret );
+			}
+		}
     } elsif( !$unresolvedOk ) {
         fatal( 'Cannot find symbol', $name, "\n" . $self->dump() );
     } else {
@@ -187,11 +190,14 @@ sub getResolveOrNull {
         $ret = $self->get( $name, $default, $remainingDepth-1 );
     }
     if( defined( $ret )) {
-        if( $remainingDepth > 0 ) {
-            $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
-        }
-        if( defined( $func )) {
-            $ret = _applyFunc( $func, $ret );
+		unless( ref( $ret )) {
+			# only do this for strings
+            if( $remainingDepth > 0 ) {
+                $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+            }
+            if( defined( $func )) {
+                $ret = _applyFunc( $func, $ret );
+            }
         }
     } elsif( !$unresolvedOk ) {
         fatal( 'Cannot find symbol', $name, "\n" . $self->dump() );
@@ -273,7 +279,11 @@ sub dump {
             my $key   = $_;
             my $value = $self->getResolve( $_, undef, 1 );
             if( defined( $value )) {
-                "    $_ => $value\n";
+				if( ref( $value )) {
+                    "    $_ => " . ref( $value ) ."\n";
+				} else {
+                    "    $_ => $value\n";
+                }
             } else {
                 "    $_ => <undef>\n";
             }
