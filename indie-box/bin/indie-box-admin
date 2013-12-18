@@ -131,20 +131,38 @@ if( $cmd eq 'deploy' ) {
     my $oldSites = IndieBox::Host::sites();
     my @newSites = values %$newSitesHash;
 
-    # make sure AppConfigIds are unique
+    # make sure AppConfigIds and SiteIds are unique, and that all Sites are deployable
+    my $haveIdAlready = {};
+    
     foreach my $newSite ( @newSites ) {
+        my $newSiteId = $newSite->siteId;
+        if( $haveIdAlready->{$newSiteId} ) {
+            fatal( 'More than one site or appconfig with id', $newSiteId );
+        }
+        $haveIdAlready->{$newSiteId} = $newSite;
+        
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
+            my $newAppConfigId = $newAppConfig->appConfigId;
+            if( $haveIdAlready->{$newAppConfigId} ) {
+                fatal( 'More than one site or appconfig with id', $newAppConfigId );
+            }
+            $haveIdAlready->{$newSiteId} = $newSite;
+        
             foreach my $oldSite ( values %$oldSites ) {
                 foreach my $oldAppConfig ( @{$oldSite->appConfigs} ) {
-                    if( $newAppConfig->appConfigId eq $oldAppConfig->appConfigId ) {
-                        if( $newSite->siteId ne $oldSite->siteId ) {
-                            fatal(    'Non-unique appconfigid ' . $newAppConfig->appConfigId
-                                    . ' in sites ' . $newSite->siteId . ' and ' . $oldSite->siteId );
+                    if( $newAppConfigId eq $oldAppConfig->appConfigId ) {
+                        if( $newSiteId ne $oldSite->siteId ) {
+                            fatal(    'Non-unique appconfigid ' . $newAppConfigId
+                                    . ' in sites ' . $newSiteId . ' and ' . $oldSite->siteId );
                         }
                     }
                 }
             }
         }
+        $newSite->checkDeployable();
+    }
+    foreach my $oldSite ( values %$oldSites ) {
+        $oldSite->checkUndeployable;
     }
 
     debug( 'Installing prerequisites' );
@@ -162,7 +180,7 @@ if( $cmd eq 'deploy' ) {
         $site->addDependenciesToPrerequisites( $applicableRoleNames, $prerequisites );
     }
     IndieBox::Host::installPackages( $prerequisites );
-    
+
     debug( 'Checking customization points' );
     
     foreach my $newSite ( @newSites ) {
@@ -286,6 +304,7 @@ if( $cmd eq 'deploy' ) {
         } else {
             fatal( "Cannot find site with siteid $siteId. Not undeploying any site." );
         }
+        $site->checkUndeployable;
     }
 
     debug( 'Disabling site(s)' );
@@ -398,6 +417,12 @@ if( $cmd eq 'deploy' ) {
     }
 
     my $oldSites = IndieBox::Host::sites();
+    foreach my $oldSite ( values %$oldSites ) {
+        $oldSite->checkUndeployable();
+        $oldSite->checkDeployable(); # FIXME: this should check against the new version of the code
+                                     # to do that right, we'll have to implement some kind of package rollback
+                                     # this is the best we can do so far
+    }
 
     debug( 'Suspending sites' );
 

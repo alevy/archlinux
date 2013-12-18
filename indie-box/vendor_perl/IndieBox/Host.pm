@@ -36,6 +36,17 @@ my $hostConf       = undef;
 my $now            = time();
 
 ##
+# Ensure that all essential services run on this Host.
+sub ensureEssentialServicesRunning {
+    trace( 'Host::ensureEssentialServicesRunning' );
+
+    IndieBox::Utils::myexec( 'systemctl enable cronie' );
+    IndieBox::Utils::myexec( 'systemctl restart cronie' );
+
+    1;
+}
+
+##
 # Obtain the host Configuration object.
 # return: Configuration object
 sub config {

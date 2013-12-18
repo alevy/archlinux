@@ -261,26 +261,64 @@ sub addDependenciesToPrerequisites {
 }
 
 ##
-# Deploy this site
+# Before deploying, check whether this Site would be deployable
+# If not, this invocation never returns
+sub checkDeployable {
+    my $self = shift;
+
+    debug( 'Site', $self->{json}->{siteid}, '->checkDeployable' );
+
+    $self->_deployOrCheck( 0 );
+}
+
+##
+# Deploy this Site
 sub deploy {
     my $self = shift;
 
     debug( 'Site', $self->{json}->{siteid}, '->deploy' );
 
+    $self->_deployOrCheck( 1 );
+}
+
+##
+# Deploy this Site, or just check whether it is deployable. Both functions
+# share the same code, so the checks get updated at the same time as the
+# actual deployment.
+# $doIt: if 1, deploy; if 0, only check
+sub _deployOrCheck {
+    my $self = shift;
+    my $doIt = shift;
+    
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
-    IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
 
-    IndieBox::Apache2::setupSite( $self );
-
+    if( $doIt ) {
+        IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
+        IndieBox::Apache2::setupSite( $self );
+    }
+    
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->deploy();
+        $appConfig->_deployOrCheck( $doIt );
     }
 
-    IndieBox::Host::siteDeployed( $self );
+    if( $doIt ) {
+        IndieBox::Host::siteDeployed( $self );
+    }
 
     1;
 }
 
+##
+# Prior to undeploying, check whether this site can be undeployed
+# If not, this invocation never returns
+sub checkUndeployable {
+    my $self = shift;
+
+    debug( 'Site', $self->{json}->{siteid}, '->checkUndeployable' );
+
+    $self->_undeployOrCheck( 0 );
+}
+    
 ##
 # Undeploy this site
 sub undeploy {
@@ -288,15 +326,32 @@ sub undeploy {
 
     debug( 'Site', $self->{json}->{siteid}, '->undeploy' );
 
-    foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->undeploy();
-    }
-    IndieBox::Apache2::removeSite( $self );
+    $self->_undeployOrCheck( 1 );
+}
 
-    IndieBox::Host::siteUndeployed( $self );
+##
+# Undeploy this site, or just check whether it is undeployable. Both functions
+# share the same code, so the checks get updated at the same time as the
+# actual undeployment.
+# $doIt: if 1, undeploy; if 0, only check
+sub _undeployOrCheck {
+    my $self = shift;
+    my $doIt = shift;
+
+    foreach my $appConfig ( @{$self->appConfigs} ) {
+        $appConfig->_undeployOrCheck( $doIt );
+    }
+
+    if( $doIt ) {
+        IndieBox::Apache2::removeSite( $self );
+        IndieBox::Host::siteUndeployed( $self );
+    }
 
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
-    IndieBox::Utils::rmdir( $siteDocumentDir );
+
+    if( $doIt ) {
+        IndieBox::Utils::rmdir( $siteDocumentDir );
+    }
 
     1;
 }

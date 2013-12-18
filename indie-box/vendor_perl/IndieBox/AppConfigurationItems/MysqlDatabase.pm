@@ -51,12 +51,14 @@ sub new {
 }
 
 ##
-# Install this item
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub install {
+sub installOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -71,13 +73,18 @@ sub install {
     unless( $dbName ) {
         my $privs  = $self->{json}->{privileges};
 
-        ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-                = IndieBox::ResourceManager::provisionLocalMySqlDatabase(
-                        $self->{appConfig}->appConfigId,
-                        $self->{installable}->packageName,
-                        $name,
-                        $privs );
-
+        if( $doIt ) {
+            ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+                    = IndieBox::ResourceManager::provisionLocalMySqlDatabase(
+                            $self->{appConfig}->appConfigId,
+                            $self->{installable}->packageName,
+                            $name,
+                            $privs );
+        } else {
+            # put it some placeholder values, so the variables resolve
+            ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+                    = ( 'placeholderDbName', 'placeholderDbHost', '3306', 'placeholderUserLid', 'placeholderUserLidCredential', 'simple-password' );
+        }
     }
     # now insert those values into the config object
     $config->put( "appconfig.mysql.dbname.$name",           $dbName );
@@ -87,24 +94,27 @@ sub install {
     $config->put( "appconfig.mysql.dbusercredential.$name", $dbUserLidCredential );
 }
 
-
 ##
-# Uninstall this item
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub uninstall {
+sub uninstallOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
 
     my $name = $self->{json}->{name};
 
-    IndieBox::ResourceManager::unprovisionLocalMySqlDatabase(
-            $self->{appConfig}->appConfigId,
-            $self->{installable}->packageName,
-            $name );
+    if( $doIt ) {
+        IndieBox::ResourceManager::unprovisionLocalMySqlDatabase(
+                $self->{appConfig}->appConfigId,
+                $self->{installable}->packageName,
+                $name );
+    }
 }
 
 ##

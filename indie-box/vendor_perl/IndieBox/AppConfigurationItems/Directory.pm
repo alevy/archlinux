@@ -49,12 +49,14 @@ sub new {
 }
 
 ##
-# Install this item
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub install {
+sub installOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -81,7 +83,7 @@ sub install {
             error( 'Directory exists already:', $fullName );
             # FIXME: chmod, chown
 
-        } else {
+        } elsif( $doIt ) {
             if( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
                 error( 'Directory could not be created:', $fullName );
             }
@@ -90,12 +92,14 @@ sub install {
 }
 
 ##
-# Uninstall this item
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub uninstall {
+sub uninstallOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -113,9 +117,11 @@ sub uninstall {
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
-        IndieBox::Utils::deleteRecursively( $fullName );
-        # Delete recursively, in case there's more stuff in it than we put in.
-        # If that stuff needs preserving, the retentionpolicy should take care of that.
+        if( $doIt ) {
+            IndieBox::Utils::deleteRecursively( $fullName );
+            # Delete recursively, in case there's more stuff in it than we put in.
+            # If that stuff needs preserving, the retentionpolicy should take care of that.
+        }
     }
 }
 

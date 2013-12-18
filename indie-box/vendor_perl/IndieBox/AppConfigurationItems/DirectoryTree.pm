@@ -50,12 +50,14 @@ sub new {
 }
 
 ##
-# Install this item
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub install {
+sub installOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -94,35 +96,39 @@ sub install {
             $toName = "$defaultToDir/$toName";
         }
 
-        IndieBox::Utils::copyRecursively( $fromName, $toName );
-        
-        if( $uid || $gid || ( defined( $filemode ) && $filemode != -1 ) || ( defined( $dirmode ) && $dirmode != -1 )) {
-            find(   sub {
-                        if( $uid || $gid ) {
-                            chown $uid, $gid, $File::Find::name;
-                        }
-                        if( -d $File::Find::name ) {
-                            if( defined( $dirmode ) && $dirmode != -1 ) {
-                                chmod $dirmode, $File::Find::name;
+        if( $doIt ) {
+            IndieBox::Utils::copyRecursively( $fromName, $toName );
+
+            if( $uid || $gid || ( defined( $filemode ) && $filemode != -1 ) || ( defined( $dirmode ) && $dirmode != -1 )) {
+                find(   sub {
+                            if( $uid || $gid ) {
+                                chown $uid, $gid, $File::Find::name;
                             }
-                        } else {
-                            if( defined( $filemode ) && $filemode != -1 ) {
-                                chmod $filemode, $File::Find::name;
+                            if( -d $File::Find::name ) {
+                                if( defined( $dirmode ) && $dirmode != -1 ) {
+                                    chmod $dirmode, $File::Find::name;
+                                }
+                            } else {
+                                if( defined( $filemode ) && $filemode != -1 ) {
+                                    chmod $filemode, $File::Find::name;
+                                }
                             }
-                        }
-                    },
-                    $toName );
+                        },
+                        $toName );
+            }
         }
     }
 }
 
 ##
-# Uninstall this item
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub uninstall {
+sub uninstallOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -140,7 +146,9 @@ sub uninstall {
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
         }
-        IndieBox::Utils::deleteRecursively( $toName );
+        if( $doIt ) {
+            IndieBox::Utils::deleteRecursively( $toName );
+        }
     }
 }
 

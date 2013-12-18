@@ -43,6 +43,7 @@
             "appconfigfragmentfile" : "${apache2.appconfigfragmentdir}/${site.siteid}/${appconfig.appconfigid}.conf",
         },
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
-        "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup"
+        "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup",
+        "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
     }
 }

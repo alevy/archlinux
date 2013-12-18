@@ -50,12 +50,14 @@ sub new {
 }
 
 ##
-# Install this item
+# Install this item, or check that it is installable.
+# $doIt: if 1, install; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub install {
+sub installOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -72,23 +74,27 @@ sub install {
         return;
     }
 
-    my $scriptcontent = slurpFile( $script );
-    my $operation = 'install';
+    if( $doIt ) {
+        my $scriptcontent = slurpFile( $script );
+        my $operation = 'install';
 
-    debug( 'Running eval', $script, $operation );
+        debug( 'Running eval', $script, $operation );
 
-    unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
+        unless( eval $scriptcontent ) {
+            error( 'Running eval', $script, $operation, 'failed:', $@ );
+        }
     }
 }
 
 ##
-# Uninstall this item
+# Uninstall this item, or check that it is uninstallable.
+# $doIt: if 1, uninstall; if 0, only check
 # $defaultFromDir: the directory to which "source" paths are relative to
 # $defaultToDir: the directory to which "destination" paths are relative to
 # $config: the Configuration object that knows about symbolic names and variables
-sub uninstall {
+sub uninstallOrCheck {
     my $self           = shift;
+    my $doIt           = shift;
     my $defaultFromDir = shift;
     my $defaultToDir   = shift;
     my $config         = shift;
@@ -109,13 +115,15 @@ sub uninstall {
         return;
     }
 
-    my $scriptcontent = slurpFile( $script );
-    my $operation = 'uninstall';
+    if( $doIt ) {
+        my $scriptcontent = slurpFile( $script );
+        my $operation = 'uninstall';
 
-    debug( 'Running eval', $script, $operation );
+        debug( 'Running eval', $script, $operation );
 
-    unless( eval $scriptcontent ) {
-        error( 'Running eval', $script, $operation, 'failed:', $@ );
+        unless( eval $scriptcontent ) {
+            error( 'Running eval', $script, $operation, 'failed:', $@ );
+        }
     }
 }
 

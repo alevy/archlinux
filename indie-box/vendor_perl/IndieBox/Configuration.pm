@@ -279,7 +279,15 @@ sub dump {
             my $key   = $_;
             my $value = $self->getResolve( $_, undef, 1 );
             if( defined( $value )) {
-				if( ref( $value )) {
+                my $valueRef = ref( $value );
+
+                if( $valueRef =~ m/^JSON.*[Bb]oolean$/ ) {
+                    if( $value ) {
+                        "    $_ => true\n";
+                    } else {
+                        "    $_ => false\n";
+                    }
+                } elsif( ref( $value )) {
                     "    $_ => " . ref( $value ) ."\n";
 				} else {
                     "    $_ => $value\n";

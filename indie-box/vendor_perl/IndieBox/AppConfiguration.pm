@@ -186,11 +186,34 @@ sub config {
 }
 
 ##
+# Before deploying, check whether this AppConfiguration would be deployable
+# If not, this invocation never returns
+sub checkDeployable {
+    my $self = shift;
+
+    debug( 'AppConfiguration', $self->{json}->{siteid}, '->checkDeployable' );
+
+    $self->_deployOrCheck( 0 );
+}
+
+##
 # Deploy this AppConfiguration.
 sub deploy {
     my $self = shift;
 
     trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->deploy' );
+
+    $self->_deployOrCheck( 1 );
+}
+
+##
+# Deploy this AppConfiguration, or just check whether it is deployable. Both functions
+# share the same code, so the checks get updated at the same time as the
+# actual deployment.
+# $doIt: if 1, deploy; if 0, only check
+sub _deployOrCheck {
+    my $self = shift;
+    my $doIt = shift;
 
     $self->_initialize();
 
@@ -202,13 +225,15 @@ sub deploy {
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
     foreach my $roleName ( @$applicableRoleNames ) {
         my $dir = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-        if( $dir && $dir ne $siteDocumentDir ) {
+        if( $doIt && $dir && $dir ne $siteDocumentDir ) {
             IndieBox::Utils::mkdir( $dir, 0755 );
         }
     }
 
     my $appConfigId = $self->appConfigId;
-    IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
+    if( $doIt ) {
+        IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
+    }
 
     my @installables        = $self->installables();
     my $appConfigCustPoints = $self->customizationPoints();
@@ -225,7 +250,9 @@ sub deploy {
 
         # Customization points for this Installable at this AppConfiguration
 
-        IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
+        if( $doIt ) {
+            IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
+        }
 
         my $installableCustPoints = $installable->customizationPoints;
         if( $installableCustPoints ) {
@@ -242,7 +269,9 @@ sub deploy {
                         $data = decode_base64( $data );
                     }
                     my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
-                    IndieBox::Utils::saveFile( $filename, $data );
+                    if( $doIt ) {
+                        IndieBox::Utils::saveFile( $filename, $data );
+                    }
 
                     $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.filename', $filename );
                     $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.value', $data );
@@ -264,11 +293,11 @@ sub deploy {
                 if( $self->site->hasSsl ) {
 					push @$apache2modules, 'ssl';
 				}
-                if( $apache2modules ) {
+                if( $doIt && $apache2modules ) {
                     IndieBox::Apache2::activateApacheModules( @$apache2modules );
                 }
                 my $phpModules = $installableRoleJson->{phpmodules};
-                if( $phpModules ) {
+                if( $doIt && $phpModules ) {
                     IndieBox::Apache2::activatePhpModules( @$phpModules );
                 }
             }
@@ -283,11 +312,22 @@ sub deploy {
             foreach my $appConfigItem ( @$appConfigItems ) {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
                 if( $item ) {
-                    $item->install( $codeDir, $dir, $config );
+                    $item->installOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
     }
+}
+
+##
+# Before undeploying, check whether this AppConfiguration would be undeployable
+# If not, this invocation never returns
+sub checkUndeployable {
+    my $self = shift;
+
+    debug( 'AppConfiguration', $self->{json}->{siteid}, '->checkUndeployable' );
+
+    $self->_undeployOrCheck( 0 );
 }
 
 ##
@@ -296,6 +336,18 @@ sub undeploy {
     my $self = shift;
 
     trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->undeploy' );
+
+    $self->_undeployOrCheck( 1 );
+}
+
+##
+# Undeploy this AppConfiguration, or just check whether it is undeployable. Both functions
+# share the same code, so the checks get updated at the same time as the
+# actual deployment.
+# $doIt: if 1, undeploy; if 0, only check
+sub _undeployOrCheck {
+    my $self = shift;
+    my $doIt = shift;
 
     $self->_initialize();
 
@@ -308,7 +360,9 @@ sub undeploy {
     my $appConfigId = $self->appConfigId;
 
     # faster to do a simple recursive delete, instead of going point by point
-    IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
+    if( $doIt ) {
+        IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
+    }
 
     my @installables        = $self->installables();
     my $appConfigCustPoints = $self->customizationPoints();
@@ -341,7 +395,7 @@ sub undeploy {
                 my $item = $self->instantiateAppConfigurationItem( $appConfigItem, $installable );
 
                 if( $item ) {
-                    $item->uninstall( $codeDir, $dir, $config );
+                    $item->uninstallOrCheck( $doIt, $codeDir, $dir, $config );
                 }
             }
         }
@@ -350,7 +404,7 @@ sub undeploy {
     my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
     foreach my $roleName ( @$applicableRoleNames ) {
         my $dir = $self->config->getResolveOrNull( "appconfig.$roleName.dir", undef, 1 );
-        if( $dir && $dir ne $siteDocumentDir ) {
+        if( $doIt && $dir && $dir ne $siteDocumentDir ) {
             IndieBox::Utils::rmdir( $dir );
         }
     }
