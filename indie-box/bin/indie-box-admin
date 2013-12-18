@@ -257,7 +257,11 @@ if( $cmd eq 'deploy' ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
             foreach my $appConfig ( @{$site->appConfigs} ) {
-                $appConfig->runUpgrader();
+                if( $oldSite->appConfig( $appConfig->appConfigId() )) {
+                    $appConfig->runUpgrader();
+                } else {
+                    $appConfig->runInstaller();
+                }
             }
         } else {
             foreach my $appConfig ( @{$site->appConfigs} ) {
