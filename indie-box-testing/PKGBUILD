@@ -1,0 +1,31 @@
+# Maintainer: Indie Box Project http://indieboxproject.org/
+
+pkgname=indie-box-testing
+pkgver=0.1
+pkgrel=1
+pkgdesc="Testing tools for Indie Box Project"
+arch=('any')
+url="http://indieboxproject.org/"
+license=('GPL')
+groups=()
+depends=('indie-box')
+backup=()
+source=()
+options=('!strip')
+md5sums=()
+
+package() {
+# Code
+    mkdir -p $pkgdir/usr/bin
+    install -m755 $startdir/bin/indie-box-test $pkgdir/usr/bin/
+
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/{Scaffolds,Suites,Commands}
+    for f in $startdir/vendor_perl/IndieBox/Testing/*.pm; do
+        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/
+    done
+    for p in Scaffolds Suites Commands; do
+        for f in $startdir/vendor_perl/IndieBox/Testing/$p/*.pm; do
+            install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/$p
+        done
+    done
+}

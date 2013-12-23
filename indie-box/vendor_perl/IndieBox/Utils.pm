@@ -541,4 +541,22 @@ sub string2time {
     return $ret;
 }
 
+##
+# Invoke the method with the name held in a variable.
+# $methodName: name of the method
+# @_: arguments to the method
+# return: result of the method
+sub invokeMethod {
+    my $methodName = shift;
+    my @args       = @_;
+
+    if( $methodName =~ m!^(.*)::! ) {
+        my $packageName = $1;
+        eval "require $packageName" || warn( "Cannot read $packageName: $!" );
+    }
+
+    my $ret = &{\&{$methodName}}( @args );
+    return $ret;
+}
+
 1;

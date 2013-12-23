@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+#
+# Central script for Indie Box Project application testing
+#
+# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use IndieBox::Host;
+use IndieBox::Utils;
+
+my $help = 0;
+
+my $parseOk = GetOptions(
+        'help'        => \$help );
+
+my $commands = IndieBox::Host::findPerlShortModuleNamesIn( 'IndieBox::Testing::Commands' );
+
+if( $help ) {
+    synopsisHelpQuit( 1 );
+}
+if( !$parseOk || !@ARGV ) {
+    synopsisHelpQuit();
+}
+
+my $command        = shift @ARGV;
+my $commandPackage = $commands->{$command};
+
+if( $commandPackage ) {
+    my $result = IndieBox::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
+
+    exit $result;
+
+} else {
+    synopsisHelpQuit();
+}
+    
+
+#####
+sub synopsisHelpQuit {
+    my $long = shift;
+
+    if( $long ) {
+        print <<END;
+The central testing script for Indie Box application testing. For more
+information about the Indie Box Project, see http://indieboxproject.org/
+
+It may be invoked in the following ways:
+
+END
+    } else {
+        print "Synopsis:\n";
+    }
+
+    while( my( $command, $package ) = each %$commands ) {
+        my $helpArgs = IndieBox::Utils::invokeMethod( $package . '::helpArguments' );
+
+        print "    $0 $command" . ( $helpArgs ? " $helpArgs" : '' ) . "\n";
+        if( $long ) {
+            my $help = &{\&{$package . '::help'}}(); # invoke help method by name
+            $help =~ s!^!        !g;
+
+            print $help;
+            print "\n";
+        }
+    }
+
+    print "    $0 --help\n";
+    if( $long ) {
+        print <<END;
+        Display help text.
+
+END
+    }
+
+    exit 0;
+}
+
+1;

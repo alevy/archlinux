@@ -31,10 +31,17 @@ our @EXPORT = qw( trace debug warn error fatal );
 my $log;
 
 BEGIN {
-    my $logfile = '/etc/indie-box/log.conf';
+    my $confFile;
+    if( $> ) { # we love perl -- this is non-root
+        $confFile = '/etc/indie-box/log-user.conf';
 
-    if( -r $logfile ) {
-        Log::Log4perl->init( $logfile );
+    } else { # user is root
+        $confFile = '/etc/indie-box/log.conf';
+    }
+
+    if( -r $confFile ) {
+        Log::Log4perl->init( $confFile );
+
     } else {
         my $config = q(
 log4perl.rootLogger=INFO,CONSOLE

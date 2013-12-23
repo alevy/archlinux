@@ -80,6 +80,10 @@ package() {
     mkdir -p $pkgdir/srv/http/sites
     mkdir -p $pkgdir/srv/http/wellknown
 
+# Other config files
+    mkdir -p $pkgdir/etc/php/conf.d
+    install -m644 $startdir/etc/php/conf.d/session.save_path.ini $pkgdir/etc/php/conf.d/
+    
 # Documentation
     mkdir -p $pkgdir/usr/share/doc/indie-box
     install -m644 $startdir/doc/README $pkgdir/usr/share/doc/indie-box

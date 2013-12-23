@@ -335,7 +335,7 @@ sub _applyFunc {
     if( defined( $func )) {
         $ret = $func->( $value );
     } else {
-        error( 'Unknown function', $func, 'in varsubst' );
+        error( 'Unknown function', $funcName, 'in varsubst' );
         $ret = $value;
     }
     return $ret;

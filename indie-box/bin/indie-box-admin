@@ -695,9 +695,9 @@ sub synopsisHelpQuit {
 
     if( $long ) {
         print <<END;
-The central administration script for the Indie Box project. It enables
-(well, it will, once it is completed!) the deployment and undeployment
-of web apps with a single command. For more information about the
+The central administration script for the Indie Box Project. It enables
+the deployment and undeployment of web apps with a single command, as
+well as related administration tasks. For more information about the
 Indie Box Project, see http://indieboxproject.org/
 
 It may be invoked in the following ways:
