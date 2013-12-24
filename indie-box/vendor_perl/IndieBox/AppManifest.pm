@@ -196,19 +196,19 @@ sub checkManifest {
                         }
                         if( $appConfigItem->{type} eq 'perlscript' || $appConfigItem->{type} eq 'sqlscript' ) {
                             unless( $appConfigItem->{source} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: must specify source" );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": must specify source" );
                             }
                             if( ref( $appConfigItem->{source} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": field 'name' must be string" );
                             }
                             unless( validFilename( $codeDir, $appConfigItem->{source} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid name: " . $appConfigItem->{name} );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . " has invalid name: " . $appConfigItem->{name} );
                             }
                             if( $appConfigItem->{name} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: name not permitted for type " . $appConfigItem->{type} );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": name not permitted for type " . $appConfigItem->{type} );
                             }
                             if( $appConfigItem->{names} ) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: names not permitted for type " . $appConfigItem->{type} );
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] of type " . $appConfigItem->{type} . ": names not permitted for type " . $appConfigItem->{type} );
                             }
                         } else {
                             my @names = ();
@@ -509,7 +509,7 @@ sub checkManifest {
             if( ref( $custPointJson->{type} )) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: field 'type' must be string" );
             }
-            unless( $custPointJson->{type} =~ m/^(string|password|boolean)$/ ) {
+            unless( $custPointJson->{type} =~ m/^(string|password|boolean|image)$/ ) {
                 myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: unknown type" );
             }
             unless( defined( $custPointJson->{required} ) ) {
@@ -522,10 +522,16 @@ sub checkManifest {
                 unless( ref( $custPointJson->{default} ) eq 'HASH' ) {
                     myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: not a JSON object" );
                 }
-                unless( defined( $custPointJson->{default}->{value} )) {
-                    myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: no value given" );
+                if( $custPointJson->{required} ) {
+                    unless( defined( $custPointJson->{default}->{value} )) {
+                        myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: no value given" );
+                    }
+                } else {
+                    unless( exists( $custPointJson->{default}->{value} )) {
+                        myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: does not exist" );
+                    }
                 }
-                if( $custPointJson->{type} =~ m/^(string|password)$/ ) {
+                if( $custPointJson->{type} =~ m/^(string|password|image)$/ ) {
                     if( ref( $custPointJson->{default}->{value} )) {
                         myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be string" );
 					}

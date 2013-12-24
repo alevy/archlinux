@@ -195,7 +195,7 @@ if( $cmd eq 'deploy' ) {
 						# check data type
                         my $value = $appConfigCustPoints->{$packageName}->{$custPointName}->{value};
 						if( defined( $value )) {
-                            if( $custPointDef->{type} =~ m/^(string|password)$/ ) {
+                            if( $custPointDef->{type} =~ m/^(string|password|image)$/ ) {
                                 if( ref( $value )) {
                                     fatal(   'Site ' . $newSite->siteId
                                            . ', AppConfiguration ' . $newAppConfig->appConfigId
