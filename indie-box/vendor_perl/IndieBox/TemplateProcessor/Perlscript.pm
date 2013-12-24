@@ -25,6 +25,7 @@ package IndieBox::TemplateProcessor::Perlscript;
 
 use base qw( IndieBox::TemplateProcessor::TemplateProcessor );
 use fields;
+use IndieBox::Logging;
 
 ##
 # Constructor

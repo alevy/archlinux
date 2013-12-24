@@ -29,13 +29,13 @@ use JSON;
 use fields qw( name hierarchicalMap flatMap delegates );
 
 my $knownFunctions = {
-    'escapeSquote'     => sub { $_[0] =~ s/'/\\'/g; },
-    'escapeDquote'     => sub { $_[0] =~ s/"/\\"/g; },
-    'trim'             => sub { $_[0] =~ s/^\s*//g; s/\s*$//g; },
-    'cr2space'         => sub { $_[0] =~ s/\s+/ /g; },
-    'randomHex'        => &IndieBox::Utils::generateRandomHex,
-    'randomIdentifier' => &IndieBox::Utils::generateRandomIdentifier,
-    'randomPassword'   => &IndieBox::Utils::generateRandomPassword
+    'escapeSquote'     => sub { my $s = shift; $s =~ s/'/\\'/g;                  return $s; },
+    'escapeDquote'     => sub { my $s = shift; $s =~ s/"/\\"/g;                  return $s; },
+    'trim'             => sub { my $s = shift; $s =~ s/^\s*//g; $s =~ s/\s*$//g; return $s; },
+    'cr2space'         => sub { my $s = shift; $s =~ s/\s+/ /g;                  return $s; },
+    'randomHex'        => \&IndieBox::Utils::generateRandomHex,
+    'randomIdentifier' => \&IndieBox::Utils::generateRandomIdentifier,
+    'randomPassword'   => \&IndieBox::Utils::generateRandomPassword
 };
 
 ##
@@ -332,8 +332,13 @@ sub _applyFunc {
 
     my $func = $knownFunctions->{$funcName};
     my $ret;
-    if( defined( $func )) {
+    if( ref( $func ) eq 'CODE' ) {
         $ret = $func->( $value );
+
+    } elsif( defined( $func )) {
+        error( 'Not a function', $funcName, 'in varsubst' );
+        $ret = $value;
+        
     } else {
         error( 'Unknown function', $funcName, 'in varsubst' );
         $ret = $value;

@@ -171,11 +171,12 @@ sub config {
     my $self = shift;
 
     unless( $self->{config} ) {
-        my $site = $self->site();
+        my $site        = $self->site();
+        my $appConfigId = $self->appConfigId();
         $self->{config} = new IndieBox::Configuration(
-                    "AppConfiguration=" . $self->appConfigId(),
+                    "AppConfiguration=$appConfigId",
                     {
-                        "appconfig.appconfigid"    => $self->appConfigId(),
+                        "appconfig.appconfigid"    => $appConfigId,
                         "appconfig.context"        => $self->context(),
                         "appconfig.contextorslash" => $self->contextOrSlash(),
                     },
@@ -235,15 +236,14 @@ sub _deployOrCheck {
         IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId" );
     }
 
-    my @installables        = $self->installables();
-    my $appConfigCustPoints = $self->customizationPoints();
+    my @installables = $self->installables();
 
     foreach my $installable ( @installables ) {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
         my $config = new IndieBox::Configuration(
-                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
                 $self->config );
@@ -254,30 +254,7 @@ sub _deployOrCheck {
             IndieBox::Utils::mkdir( "$APPCONFIGPARSDIR/$appConfigId/$packageName" );
         }
 
-        my $installableCustPoints = $installable->customizationPoints;
-        if( $installableCustPoints ) {
-            while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
-                my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
-
-                unless( defined( $value ) && defined( $value->{value} )) {
-                    # use default instead
-                    $value = $custPointDef->{default};
-                }
-                if( defined( $value )) {
-                    my $data = $value->{value};
-                    if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
-                        $data = decode_base64( $data );
-                    }
-                    my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
-                    if( $doIt ) {
-                        IndieBox::Utils::saveFile( $filename, $data );
-                    }
-
-                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.filename', $filename );
-                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.value', $data );
-                }
-            }
-        }
+        $self->_addCustomizationPointValuesToConfig( $config, $installable, $doIt );
 
         # Now for all the roles
         foreach my $roleName ( @$applicableRoleNames ) {
@@ -364,18 +341,19 @@ sub _undeployOrCheck {
         IndieBox::Utils::deleteRecursively( "$APPCONFIGPARSDIR/$appConfigId" );
     }
 
-    my @installables        = $self->installables();
-    my $appConfigCustPoints = $self->customizationPoints();
+    my @installables = $self->installables();
 
     foreach my $installable ( reverse @installables ) {
         my $installableJson = $installable->installableJson;
         my $packageName     = $installable->packageName;
 
         my $config = new IndieBox::Configuration(
-                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
                 $self->config );
+
+        $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
         # Now for all the roles
         foreach my $roleName ( reverse @$applicableRoleNames ) {
@@ -450,16 +428,19 @@ sub _runPostDeploy {
     }
 
     my $applicableRoleNames = IndieBox::Host::applicableRoleNames();
+    my $appConfigId         = $self->appConfigId;
     my @installables        = $self->installables();
 
     foreach my $installable ( @installables ) {
         my $packageName = $installable->packageName;
 
         my $config = new IndieBox::Configuration(
-                "Installable=$packageName,AppConfiguration=" . $self->{json}->{appconfigid},
+                "Installable=$packageName,AppConfiguration=$appConfigId",
                 {},
                 $installable->config,
                 $self->config );
+
+        $self->_addCustomizationPointValuesToConfig( $config, $installable );
 
         foreach my $roleName ( @$applicableRoleNames ) {
             my $itemsJson = $installable->installableJson->{roles}->{$roleName}->{$jsonSection};
@@ -529,6 +510,50 @@ sub _initialize {
     $self->{app} = new IndieBox::App( $self->{json}->{appid} );
 
     return 1;
+}
+
+##
+# Internal helper to add the applicable customization point values to the $config object.
+# This is factored out because it is used in several places.
+# $config: the Configuration object
+# $installable: the installable whose customization points values are to be added
+# $save: if true, save the value to the file as well
+sub _addCustomizationPointValuesToConfig {
+    my $self        = shift;
+    my $config      = shift;
+    my $installable = shift;
+    my $save        = shift || 0;
+    
+    my $installableCustPoints = $installable->customizationPoints;
+    if( $installableCustPoints ) {
+        my $packageName         = $installable->packageName;
+        my $appConfigId         = $self->appConfigId;
+        my $appConfigCustPoints = $self->customizationPoints();
+
+        while( my( $custPointName, $custPointDef ) = each( %$installableCustPoints )) {
+            my $value = $appConfigCustPoints->{$packageName}->{$custPointName};
+
+            unless( defined( $value ) && defined( $value->{value} )) {
+                # use default instead
+                $value = $custPointDef->{default};
+            }
+            if( defined( $value )) {
+                my $data = $value->{value};
+                if( defined( $data )) { # value might be null
+                    if( defined( $value->{encoding} ) && $value->{encoding} eq 'base64' ) {
+                        $data = decode_base64( $data );
+                    }
+                    my $filename = "$APPCONFIGPARSDIR/$appConfigId/$packageName/$custPointName";
+                    if( $save ) {
+                        IndieBox::Utils::saveFile( $filename, $data );
+                    }
+
+                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.filename', $filename );
+                    $config->put( 'appconfig.installable.customizationpoints.' . $custPointName . '.value', $data );
+                }
+            }
+        }
+    }
 }
 
 1;
