@@ -44,7 +44,7 @@ DOC
 TEST: site is again functional and hasn't lost any data after update.
 DOC
         ],
-        [ 'runRedeployUnchangedStep', <<DOC
+        [ 'runRedeployStep', <<DOC
 Redeploy the site without changes. This should not cause any changes.
 DOC
         ],
@@ -56,7 +56,7 @@ DOC
 Backup all data at the site.
 DOC
         ],
-        [ 'runUndeployConfigurationStep', <<DOC
+        [ 'runUndeployStep', <<DOC
 Undeploy the site.
 DOC
         ],
@@ -105,6 +105,54 @@ sub new {
     $self->SUPER::new( $steps );
 
     return $self;
+}
+
+##
+# Invoked after the first deployment
+sub runAfterFirstDeployStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runAfterFirstDeployStep' );
+}
+
+##
+# Invoked after software update
+sub runAfterUpdateStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runAfterUpdateStep' );
+}
+
+##
+# Invoked after a redeployment without configuration change
+sub runAfterRedeployUnchangedStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runAfterRedeployUnchangedStep' );
+}
+
+##
+# Invoked after an undeployment
+sub runAfterUndeployStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runAfterUndeployStep' );
+}
+
+##
+# Invoked after restore
+sub runAfterRestoreStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runAfterUndeployStep' );
+}
+    
+##
+# Invoked after a redeployment with a configuration change
+sub runAfterRedeployAlternateStep {
+    my $self = shift;
+
+    $self->stepNotImplemented( 'runRedeployAlternateStep' );
 }
 
 ##

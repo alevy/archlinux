@@ -66,11 +66,23 @@ sub run {
 }
 
 ##
+# Advance to the next step. This can be overridden to ask for user permission to proceed, for example.
+# $step: the next step
+sub advancingTo {
+    my $self = shift;
+    my $step = shift;
+
+    print "Advancing to: " . $step . "\n";
+
+    return 1;
+}
+
+##
 # Deploy the configuration to be tested.
-sub runDeployConfigurationStep {
+sub runDeployStep {
     my $self = shift;
 
-    print( "TODO: runDeployConfigurationStep\n" );
+    print( "TODO: runDeployStep\n" );
 
     return 1;
 }
@@ -87,10 +99,50 @@ sub runUpdateStep {
 
 ##
 # Undeploy the configuration to be tested.
-sub undeployConfigurationStep {
+sub runUndeployStep {
     my $self = shift;
 
-    print( "TODO: undeployConfigurationStep\n" );
+    print( "TODO: runUndeployStep\n" );
+
+    return 1;
+}
+
+##
+# Redeploy the configuration to be tested.
+sub runRedeployStep {
+    my $self = shift;
+
+    print( "TODO: runRedeployStep\n" );
+
+    return 1;
+}
+
+##
+# Redeploy a different configuration.
+sub runRedeployAlternateStep {
+    my $self = shift;
+
+    print( "TODO: runRedeployAlternateStep\n" );
+
+    return 1;
+}
+    
+##
+# Create a backup.
+sub runBackupStep {
+    my $self = shift;
+
+    print( "TODO: runBackupStep\n" );
+
+    return 1;
+}
+
+##
+# Restore the backup.
+sub runRestoreStep {
+    my $self = shift;
+
+    print( "TODO: runRestoreStep\n" );
 
     return 1;
 }
@@ -103,6 +155,18 @@ sub checkLogs {
     print( "TODO: checkLogs\n" );
 
     return 1;
+}
+
+##
+# Invoked if a method is invoked that should be been overridden by the test suite implementation.
+# $methodName: name of the method that should have been overridden
+sub stepNotImplemented {
+    my $self       = shift;
+    my $methodName = shift;
+
+    error( "Testsuite should be overriding method $methodName" );
+
+    return 1; # still let the test continue
 }
 
 1;

@@ -43,7 +43,7 @@ sub run {
 
     foreach my $testSuiteName ( @args ) {
         my $testSuitePackage = $testSuites->{$testSuiteName};
-        if( !$testSuitePackage && $testSuitePackage !~ m!\.pm$! ) {
+        if( !defined( $testSuitePackage ) || $testSuiteName !~ m!\.pm$! ) {
             $testSuitePackage = $testSuites->{"$testSuiteName.pm"};
         }
         unless( $testSuitePackage ) {
