@@ -552,7 +552,7 @@ sub invokeMethod {
 
     if( $methodName =~ m!^(.*)::! ) {
         my $packageName = $1;
-        eval "require $packageName" || warn( "Cannot read $packageName: $!" );
+        eval "require $packageName" || warn( "Cannot read $packageName: $@" );
     }
 
     my $ret = &{\&{$methodName}}( @args );
