@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available Scaffolds.
+# Command that lists all available test suite templates.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,12 +21,12 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListScaffolds;
+package IndieBox::Testing::Commands::ListTestSuiteTemplates;
 
 use IndieBox::Host;
 use IndieBox::Utils;
 
-my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
+my $testSuiteTemplates = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestSuiteTemplates' );
 
 ##
 # Execute this command.
@@ -35,10 +35,10 @@ my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Te
 sub run {
     my @args = @_;
 
-    while( my( $scaffold, $package ) = each %$scaffolds ) {
+    while( my( $template, $package ) = each %$testSuiteTemplates ) {
         my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
 
-        printf "%-8s- %s\n", $scaffold, $help;
+        printf "%-8s - %s\n", $template, $help;
     }
     1;
 }
@@ -48,7 +48,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available scaffolds.
+Lists all available test suite templates. This can be used to create actual tests for an application.
 END
 }
 

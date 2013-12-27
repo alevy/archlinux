@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available test suites.
+# Command that runs a TestSuite.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,26 +21,44 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListSuites;
+package IndieBox::Testing::Commands::Run;
 
+use Cwd;
 use IndieBox::Host;
+use IndieBox::Logging;
 use IndieBox::Utils;
 
-my $suites = IndieBox::Host::findPerlShortModuleNamesIn( 'IndieBox::Testing::Suites' );
+my $testSuites = IndieBox::Host::findModulesInDirectory( 'IndieBoxTest\.pm', getcwd() );
 
 ##
 # Execute this command.
-# @args: arguments to this command
+# $testSuiteName: name of the test suite to run
 # return: desired exit code
 sub run {
     my @args = @_;
-
-    while( my( $suite, $package ) = each %$suites ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
-
-        printf "%-8s- %s\n", $suite, $help;
+    unless( @args ) {
+        fatal( 'Must provide name of at least one test suite.' );
     }
-    1;
+    my @toRun = ();
+
+    foreach my $testSuiteName ( @args ) {
+        my $testSuitePackage = $testSuites->{$testSuiteName};
+        if( !$testSuitePackage && $testSuitePackage !~ m!\.pm$! ) {
+            $testSuitePackage = $testSuites->{"$testSuiteName.pm"};
+        }
+        unless( $testSuitePackage ) {
+            fatal( 'Unknown test suite', $testSuiteName );
+        }
+
+        my $testSuite = IndieBox::Utils::invokeMethod( $testSuitePackage . '::new', $testSuitePackage );
+
+        push @toRun, $testSuite;
+    }
+    my $ret = 1;
+    foreach my $testSuite ( @toRun ) {
+        $ret &= $testSuite->run();
+    }
+    return $ret;
 }
 
 ##
@@ -48,7 +66,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available test suites.
+Run a test suite
 END
 }
 

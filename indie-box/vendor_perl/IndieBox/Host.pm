@@ -187,7 +187,7 @@ sub installPackages {
 # $parentPackage: name of the parent package, such as IndieBox::AppConfigurationItems
 # $inc: the path to search, or @INC if not given
 # return: hash of file name to package name
-sub findPerlModuleNamesIn {
+sub findPerlModuleNamesInPackage {
     my $parentPackage = shift;
     my $inc           = shift || \@INC;
 
@@ -222,11 +222,11 @@ sub findPerlModuleNamesIn {
 # $parentPackage: name of the parent package, such as IndieBox::AppConfigurationItems
 # $inc: the path to search, or @INC if not given
 # return: hash of short package name to full package name
-sub findPerlShortModuleNamesIn {
+sub findPerlShortModuleNamesInPackage {
     my $parentPackage = shift;
     my $inc           = shift;
 
-    my $full = findPerlModuleNamesIn( $parentPackage, $inc );
+    my $full = findPerlModuleNamesInPackage( $parentPackage, $inc );
     my $ret  = {};
 
     while( my( $fileName, $packageName ) = each %$full ) {
@@ -237,6 +237,36 @@ sub findPerlShortModuleNamesIn {
 
         $ret->{$shortName} = $packageName;
     }
+
+    return $ret;
+}
+
+##
+# Find the package names of all Perl files matching a pattern in a directory.
+# $pattern: the file name pattern, e.g. '\.pm$'
+# $dir: directory to look in
+# return: hash of file name to package name
+sub findModulesInDirectory {
+    my $pattern = shift || '\.pm$';
+    my $dir     = shift;
+
+    my $ret = {};
+    
+    opendir( DIR, $dir ) || error( $! );
+
+    while( my $file = readdir( DIR )) {
+        if( $file =~ m/$pattern/ ) {
+            my $fileName    = "$dir/$file";
+            my $content     = IndieBox::Utils::slurpFile( $fileName );
+
+            if( $content =~ m!package\s+([a-zA-Z0-9:_]+)\s*;! ) {
+                my $packageName = $1;
+
+                $ret->{$file} = $packageName;
+            }
+        }
+    }
+    closedir( DIR );
 
     return $ret;
 }

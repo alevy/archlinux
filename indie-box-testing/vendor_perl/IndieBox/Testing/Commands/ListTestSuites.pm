@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available Scaffolds.
+# Command that lists all available test suites in the current directory.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,12 +21,13 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListScaffolds;
+package IndieBox::Testing::Commands::ListTestSuites;
 
+use Cwd;
 use IndieBox::Host;
 use IndieBox::Utils;
 
-my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
+my $testSuites = IndieBox::Host::findModulesInDirectory( 'IndieBoxTest\.pm', getcwd() );
 
 ##
 # Execute this command.
@@ -35,10 +36,11 @@ my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Te
 sub run {
     my @args = @_;
 
-    while( my( $scaffold, $package ) = each %$scaffolds ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
+    while( my( $fileName, $packageName ) = each %$testSuites ) {
+        
+        my $help = IndieBox::Utils::invokeMethod( $packageName . '::help' );
 
-        printf "%-8s- %s\n", $scaffold, $help;
+        printf "%-8s - %s\n", $fileName, $help;
     }
     1;
 }
@@ -48,7 +50,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available scaffolds.
+Lists all available test suites in this directory.
 END
 }
 

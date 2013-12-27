@@ -19,11 +19,11 @@ package() {
     mkdir -p $pkgdir/usr/bin
     install -m755 $startdir/bin/indie-box-test $pkgdir/usr/bin/
 
-    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/{Scaffolds,Suites,Commands}
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/{Scaffolds,TestSuiteTemplates,Commands}
     for f in $startdir/vendor_perl/IndieBox/Testing/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/
     done
-    for p in Scaffolds Suites Commands; do
+    for p in Scaffolds TestSuiteTemplates Commands; do
         for f in $startdir/vendor_perl/IndieBox/Testing/$p/*.pm; do
             install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Testing/$p
         done

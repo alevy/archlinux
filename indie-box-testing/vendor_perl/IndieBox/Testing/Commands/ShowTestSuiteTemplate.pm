@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available Scaffolds.
+# Command that shows details on a test suite.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,12 +21,10 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListScaffolds;
+package IndieBox::Testing::Commands::ShowTestSuiteTemplate;
 
-use IndieBox::Host;
+use IndieBox::Logging;
 use IndieBox::Utils;
-
-my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
 
 ##
 # Execute this command.
@@ -34,12 +32,31 @@ my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Te
 # return: desired exit code
 sub run {
     my @args = @_;
-
-    while( my( $scaffold, $package ) = each %$scaffolds ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
-
-        printf "%-8s- %s\n", $scaffold, $help;
+    unless( @args eq 1 ) {
+        fatal( 'Must provide name of exactly one test suite template.' );
     }
+
+    my $templateName = shift @args;
+
+    my $templates       = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestSuiteTemplates' );
+    my $templatePackage = $templates->{$templateName};
+
+    unless( $templatePackage ) {
+        fatal( 'Cannot find test suite template named', $templateName );
+    }
+
+    my $steps = IndieBox::Utils::invokeMethod( $templatePackage . '::steps' );
+    
+    print "Test suites using this template will perform the following steps:\n";
+
+    my $i=1;
+    foreach my $step ( @$steps ) {
+        my $text = $step->[1];
+        $text =~ s!^!\n        !g;
+        $text =~ s!^\s+!!;
+        printf( "  %2d: %-32s %s\n", $i++, $step->[0], $text );
+    }
+    
     1;
 }
 
@@ -48,7 +65,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available scaffolds.
+Shows details on a named test suite template.
 END
 }
 
@@ -56,7 +73,12 @@ END
 # Return allowed arguments for this command.
 # return: allowed arguments, as string
 sub helpArguments {
-    return undef;
+    return ( '<test-suite-template-name>' );
 }
 
 1;
+
+
+
+
+
