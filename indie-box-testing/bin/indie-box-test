@@ -23,14 +23,15 @@ use warnings;
 
 use Getopt::Long;
 use IndieBox::Host;
+use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
 
 my $help = 0;
 
 my $parseOk = GetOptions(
-        'help'        => \$help );
+        'help' => \$help );
 
-my $commands = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
+my $commands = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
 
 if( $help ) {
     synopsisHelpQuit( 1 );
@@ -70,15 +71,18 @@ END
 
     foreach my $command ( sort keys %$commands ) {
         my $package  = $commands->{$command};
-        my $helpArgs = IndieBox::Utils::invokeMethod( $package . '::helpArguments' );
+        my $helpArgs = IndieBox::Utils::invokeMethod( $package . '::helpArguments' ) || '';
+        $helpArgs =~ s!^\s+!!;
+        $helpArgs =~ s!\s+$!!;
 
         print "    $0 $command" . ( $helpArgs ? " $helpArgs" : '' ) . "\n";
         if( $long ) {
-            my $help = &{\&{$package . '::help'}}(); # invoke help method by name
-            $help =~ s!^!        !g;
+            my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
+            $help =~ s!^\s+!!;
+            $help =~ s!\s+$!!;
+            $help =~ s!^!        !gm;
 
-            print $help;
-            print "\n";
+            print "$help\n\n";
         }
     }
 

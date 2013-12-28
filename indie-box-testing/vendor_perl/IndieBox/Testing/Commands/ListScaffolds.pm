@@ -26,14 +26,17 @@ package IndieBox::Testing::Commands::ListScaffolds;
 use IndieBox::Host;
 use IndieBox::Utils;
 
-my $scaffolds = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
-
 ##
 # Execute this command.
 # @args: arguments to this command
 # return: desired exit code
 sub run {
     my @args = @_;
+    if( @args ) {
+        fatal( 'No arguments are recognized for this command' );
+    }
+
+    my $scaffolds = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
 
     while( my( $scaffold, $package ) = each %$scaffolds ) {
         my $help = IndieBox::Utils::invokeMethod( $package . '::help' );

@@ -28,8 +28,6 @@ use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
 
-my $testSuites = IndieBox::Host::findModulesInDirectory( 'IndieBoxTest\.pm', getcwd() );
-
 ##
 # Execute this command.
 # $testSuiteName: name of the test suite to run
@@ -39,25 +37,11 @@ sub run {
     unless( @args ) {
         fatal( 'Must provide name of at least one test suite.' );
     }
-    my @toRun = ();
 
-    foreach my $testSuiteName ( @args ) {
-        my $testSuitePackage = $testSuites->{$testSuiteName};
-        if( !defined( $testSuitePackage ) || $testSuiteName !~ m!\.pm$! ) {
-            $testSuitePackage = $testSuites->{"$testSuiteName.pm"};
-        }
-        unless( $testSuitePackage ) {
-            fatal( 'Unknown test suite', $testSuiteName );
-        }
+    my $appTests = IndieBox::Testing::TestingUtils::findModulesInDirectory( getcwd(), 'IndieBoxTest\.pm' );
 
-        my $testSuite = IndieBox::Utils::invokeMethod( $testSuitePackage . '::new', $testSuitePackage );
-
-        push @toRun, $testSuite;
-    }
     my $ret = 1;
-    foreach my $testSuite ( @toRun ) {
-        $ret &= $testSuite->run();
-    }
+
     return $ret;
 }
 
@@ -66,7 +50,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Run a test suite
+Run a test.
 END
 }
 
@@ -74,7 +58,9 @@ END
 # Return allowed arguments for this command.
 # return: allowed arguments, as string
 sub helpArguments {
-    return undef;
+    return <<END;
+[ --scaffold <scaffold> ] [ --testplan <testplan> ] <apptest>... 
+END
 }
 
 1;

@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ShowTestSuiteTemplate;
+package IndieBox::Testing::Commands::ShowTestPlanTemplate;
 
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -33,21 +33,21 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
     unless( @args eq 1 ) {
-        fatal( 'Must provide name of exactly one test suite template.' );
+        fatal( 'Must provide name of exactly one test plan template.' );
     }
 
     my $templateName = shift @args;
 
-    my $templates       = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestSuiteTemplates' );
+    my $templates       = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlanTemplates' );
     my $templatePackage = $templates->{$templateName};
 
     unless( $templatePackage ) {
-        fatal( 'Cannot find test suite template named', $templateName );
+        fatal( 'Cannot find test plan template named', $templateName );
     }
 
     my $steps = IndieBox::Utils::invokeMethod( $templatePackage . '::steps' );
     
-    print "Test suites using this template will perform the following steps:\n";
+    print "Tests using this template will perform the following steps:\n";
 
     my $i=1;
     foreach my $step ( @$steps ) {

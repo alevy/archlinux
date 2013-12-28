@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available test suite templates.
+# Command that lists all available tests in the current directory.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,12 +21,13 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListTestSuiteTemplates;
+package IndieBox::Testing::Commands::ListAppTests;
 
+use Cwd;
+use IndieBox::Logging;
 use IndieBox::Host;
+use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
-
-my $testSuiteTemplates = IndieBox::Host::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestSuiteTemplates' );
 
 ##
 # Execute this command.
@@ -34,11 +35,30 @@ my $testSuiteTemplates = IndieBox::Host::findPerlShortModuleNamesInPackage( 'Ind
 # return: desired exit code
 sub run {
     my @args = @_;
+    if( @args ) {
+        fatal( 'No arguments are recognized for this command' );
+    }
 
-    while( my( $template, $package ) = each %$testSuiteTemplates ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
+    my $appTestCandidates = IndieBox::Testing::TestingUtils::readFilesInDirectory( getcwd(), 'AppTest\.pm$' );
+    my $appTests = {};
+    
+    while( my( $fileName, $content ) = each %$appTestCandidates ) {
+        my $appTest = eval $content;
 
-        printf "%-8s - %s\n", $template, $help;
+        if( defined( $appTest ) && ref( $appTest ) eq 'IndieBox::Testing::AppTest' ) {
+            $appTests->{$fileName} = $appTest;
+
+        } elsif( $@ ) {
+            error( 'Failed to parse', $fileName, ':', $@ );
+            
+        } else {
+            info( 'Skipping', $fileName, '-- not an AppTest' );
+        }
+    }
+    foreach my $fileName ( keys %$appTests ) {
+        my $appTest = $appTests->{$fileName};
+        
+        printf "%-8s - %s\n", $fileName, $appTest->description();
     }
     1;
 }
@@ -48,7 +68,7 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available test suite templates. This can be used to create actual tests for an application.
+Lists the available app tests in this directory.
 END
 }
 

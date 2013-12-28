@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available test suites in the current directory.
+# Command that lists all available test suite templates.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,13 +21,10 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListTestSuites;
+package IndieBox::Testing::Commands::ListTestPlanTemplates;
 
-use Cwd;
 use IndieBox::Host;
 use IndieBox::Utils;
-
-my $testSuites = IndieBox::Host::findModulesInDirectory( 'IndieBoxTest\.pm', getcwd() );
 
 ##
 # Execute this command.
@@ -35,12 +32,16 @@ my $testSuites = IndieBox::Host::findModulesInDirectory( 'IndieBoxTest\.pm', get
 # return: desired exit code
 sub run {
     my @args = @_;
+    if( @args ) {
+        fatal( 'No arguments are recognized for this command' );
+    }
 
-    while( my( $fileName, $packageName ) = each %$testSuites ) {
-        
-        my $help = IndieBox::Utils::invokeMethod( $packageName . '::help' );
+    my $testPlanTemplates = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlanTemplates' );
 
-        printf "%-8s - %s\n", $fileName, $help;
+    while( my( $template, $package ) = each %$testPlanTemplates ) {
+        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
+
+        printf "%-8s - %s\n", $template, $help;
     }
     1;
 }
@@ -50,7 +51,8 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available test suites in this directory.
+Lists all available test plan templates. Together with the states and transitions
+defined for an application, they are used to create actual test plans for an application.
 END
 }
 
