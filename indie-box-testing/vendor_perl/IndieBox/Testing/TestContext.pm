@@ -23,11 +23,10 @@ use warnings;
 
 package IndieBox::Testing::TestContext;
 
-use fields qw( siteJson appConfigJson scaffold appTest testPlan ip );
+use fields qw( siteJson appConfigJson scaffold appTest testPlan ip curl cookieFile );
 use IndieBox::Logging;
 use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
-use WWW::Curl::Easy;
 
 ##
 # Instantiate the TextContext.
@@ -55,6 +54,14 @@ sub new {
     $self->{testPlan}      = $testPlan;
     $self->{ip}            = $ip;
 
+    my $hostName   = $self->hostName;
+    my $cookieFile = File::Temp->new();
+
+    $self->{cookieFile} = $cookieFile->filename;
+    
+    $self->{curl} = "curl -s -v --cookie-jar '$cookieFile' -b '$cookieFile' --resolve '$hostName:80:$ip' --resolve '$hostName:443:$ip'";
+    # -v to get HTTP headers
+
     return $self;
 }
 
@@ -79,7 +86,7 @@ sub context {
 ##
 # Perform an HTTP GET request on the host on which the application is being tested.
 # $relativeUrl: appended to the host's URL
-# return: HTTP response, including all headers
+# return: hash containing content and headers of the HTTP response
 sub httpGetRelativeHost {
     my $self        = shift;
     my $relativeUrl = shift;
@@ -87,31 +94,23 @@ sub httpGetRelativeHost {
     my $url = 'http://' . $self->hostName . $relativeUrl;
 
     debug( 'Accessing url', $url );
+
+    my $cmd = $self->{curl};
+    $cmd .= " '$url'";
     
-    my $response;
-    
-    my $curl = WWW::Curl::Easy->new;
-
-    $curl->setopt( CURLOPT_HEADER,  1 );
-    $curl->setopt( CURLOPT_URL,     $url );
-    # $curl->setopt( CURLOPT_RESOLVE, [ $self->hostName . ':80:' . $self->{ip}, $self->hostName . ':443:' . $self->{ip} ] );
-    # This seems broken in perl-www-curl 4.15
-    $curl->setopt( CURLOPT_WRITEDATA, \$response );
-
-    my $retcode = $curl->perform;
-
-    debug( 'curl produced retcode:', $retcode, 'response:', $response );
-
-    if( $retcode == 0 ) {
-        $self->reportError( 'HTTP request failed:', $curl->strerror( $retcode ), $curl->errbuf );
+    my $stdout;
+    my $stderr;
+    if( IndieBox::Utils::myexec( $cmd, undef, \$stdout, \$stderr )) {
+        $self->reportError( 'HTTP request failed:', $stderr );
     }
-    return $response;
+
+    return { 'content' => $stdout, 'headers' => $stderr };
 }
 
 ##
 # Perform an HTTP GET request on the application being tested, appending to the context URL.
 # $relativeUrl: appended to the application's context URL
-# return: HTTP response, including all headers
+# return: hash containing content and headers of the HTTP response
 sub httpGetRelativeContext {
     my $self        = shift;
     my $relativeUrl = shift;
@@ -123,7 +122,7 @@ sub httpGetRelativeContext {
 # Perform an HTTP POST request on the host on which the application is being tested.
 # $relativeUrl: appended to the host's URL
 # $payload: hash of posted parameters
-# return: HTTP response, including all headers
+# return: hash containing content and headers of the HTTP response
 sub httpPostRelativeHost {
     my $self        = shift;
     my $relativeUrl = shift;
@@ -132,28 +131,22 @@ sub httpPostRelativeHost {
     my $url = 'http://' . $self->hostName . $relativeUrl;
     my $response;
 
+    debug( 'Posting to url', $url );
+
     my $postString = join(
             '&',
             map { IndieBox::Testing::TestingUtils::uri_escape( $_ ) . '=' . IndieBox::Testing::TestingUtils::uri_escape( $postData->{$_} ) } keys %$postData );
     
-    my $curl = WWW::Curl::Easy->new;
-
-    $curl->setopt( CURLOPT_HEADER, 1 );
-    $curl->setopt( CURLOPT_URL, $url );
-    # $curl->setopt( CURLOPT_RESOLVE, [ $self->hostName . ':80:' . $self->{ip}, $self->hostName . ':443:' . $self->{ip} ] );
-    # This seems broken in perl-www-curl 4.15
-    $curl->setopt( CURLOPT_POST, 1 );
-    $curl->setopt( CURLOPT_POSTFIELDS, $postString );
-    $curl->setopt( CURLOPT_POSTFIELDSIZE, length( $postString ));
-
-    $curl->setopt( CURLOPT_WRITEDATA, \$response );
-
-    my $retcode = $curl->perform;
-
-    if( $retcode == 0 ) {
-        $self->reportError( 'HTTP request failed:', $curl->strerror( $retcode ), $curl->errbuf );
+    my $cmd = $self->{curl};
+    $cmd .= " -d '$postString'";
+    $cmd .= " '$url'";
+    
+    my $stdout;
+    my $stderr;
+    if( IndieBox::Utils::myexec( $cmd, undef, \$stdout, \$stderr )) {
+        $self->reportError( 'HTTP request failed:', $stderr );
     }
-    return $response;
+    return { 'content' => $stdout, 'headers' => $stderr };
 }
 
 ##
@@ -161,7 +154,7 @@ sub httpPostRelativeHost {
 # with the provided payload.
 # $relativeUrl: appended to the application's context URL
 # $payload: hash of posted parameters
-# return: HTTP response, including all headers
+# return: hash containing content and headers of the HTTP response
 sub httpPostRelativeContext {
     my $self        = shift;
     my $relativeUrl = shift;
@@ -184,6 +177,8 @@ sub reportError {
 # Destroy this context.
 sub destroy {
     my $self = shift;
+
+    # could be used to delete cookie files, but right now Perl does this itself
 }
 
 1;

@@ -38,7 +38,7 @@ sub setup {
     }
     $self->SUPER::setup();
 
-    debug( 'Setup Here-Scaffold' );
+    info( 'Creating Scaffold Here' );
     
     return $self;
 }
@@ -48,7 +48,7 @@ sub setup {
 sub teardown {
     my $self = shift;
 
-    debug( 'Teardown Here-Scaffold' );
+    info( 'Tearing down Scaffold Here' );
 
     return 1;
 }
@@ -66,7 +66,6 @@ sub invokeOnTarget {
     my $stdout = shift;
     my $stderr = shift;
 
-debug( 'About to invoke on target', $cmd, $stdin );
     IndieBox::Utils::myexec( $cmd, $stdin, $stdout, $stderr );
 }
 

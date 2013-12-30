@@ -51,7 +51,7 @@ sub run {
     my $test     = shift;
     my $scaffold = shift;
 
-    debug( 'Running Default TestPlan' );
+    info( 'Running TestPlan Default' );
 
     my $appConfigJson = $self->_createAppConfiurationJson( $test );
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
@@ -68,7 +68,7 @@ sub run {
 
     # March forward, and create backups
     while( 1 ) {
-        debug( 'About to check StateCheck', $currentState->getName() );
+        info( 'Checking StateCheck', $currentState->getName() );
 
         $ret &= $currentState->check( $c );
 
@@ -81,7 +81,7 @@ sub run {
             last;
         }
     
-        debug( 'About to take StateTransition', $transition->getName() );
+        info( 'Taking StateTransition', $transition->getName() );
 
         $ret &= $transition->execute( $c );
 
@@ -93,7 +93,7 @@ sub run {
         my( $currentState, $currentBackup ) = @$stateBackup;
 
         if( $currentBackup ) {
-            debug( 'Restoring and checking StateCheck', $currentState->getName() );
+            info( 'Restoring and checking StateCheck', $currentState->getName() );
 
             $scaffold->restore( $siteJson, $currentBackup );
             
@@ -109,7 +109,7 @@ sub run {
     if( @statesBackupsReverse > 1 ) {
         my( $currentState, $currentBackup ) = @{$statesBackupsReverse[0]};
         if( $currentBackup ) {
-            debug( 'Restoring and checking (one more time) StateCheck', $currentState->getName() );
+            info( 'Restoring and checking (one more time) StateCheck', $currentState->getName() );
 
             $scaffold->restore( $siteJson, $currentBackup );
             
@@ -132,7 +132,7 @@ sub run {
         }
     }
 
-    debug( 'End running Default TestPlan' );
+    info( 'End running TestPlan Default' );
 
     return $ret;
 }

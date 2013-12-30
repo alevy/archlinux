@@ -51,7 +51,7 @@ sub run {
     my $test     = shift;
     my $scaffold = shift;
 
-    debug( 'Running DeployOnly TestPlan' );
+    info( 'Running TestPlan DeployOnly' );
 
     my $appConfigJson = $self->_createAppConfiurationJson( $test );
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
@@ -64,13 +64,13 @@ sub run {
 
     my $currentState = $test->getVirginStateTest();
 
-    debug( 'About to check StateCheck', $currentState->getName() );
+    info( 'Checking StateCheck', $currentState->getName() );
         
     $ret &= $currentState->check( $c );
 
     $scaffold->undeploy( $siteJson );
     
-    debug( 'End running DeployOnly TestPlan' );
+    info( 'End running TestPlan DeployOnly' );
 
     return $ret;
 }

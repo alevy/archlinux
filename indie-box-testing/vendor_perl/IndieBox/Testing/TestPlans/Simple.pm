@@ -51,7 +51,7 @@ sub run {
     my $test     = shift;
     my $scaffold = shift;
 
-    debug( 'Running Simple TestPlan' );
+    info( 'Running TestPlan Simple' );
 
     my $appConfigJson = $self->_createAppConfiurationJson( $test );
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
@@ -64,7 +64,7 @@ sub run {
 
     my $currentState = $test->getVirginStateTest();
     while( 1 ) {
-        debug( 'About to check StateCheck', $currentState->getName() );
+        info( 'Checking StateCheck', $currentState->getName() );
 
         $ret &= $currentState->check( $c );
 
@@ -74,7 +74,7 @@ sub run {
             last;
         }
     
-        debug( 'About to take StateTransition', $transition->getName() );
+        info( 'Taking StateTransition', $transition->getName() );
 
         $ret &= $transition->execute( $c );
 
@@ -83,7 +83,7 @@ sub run {
 
     $scaffold->undeploy( $siteJson );
     
-    debug( 'End running Simple TestPlan' );
+    info( 'End running TestPlan Simple' );
 
     return $ret;
 }

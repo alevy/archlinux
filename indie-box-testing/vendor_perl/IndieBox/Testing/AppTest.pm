@@ -234,7 +234,7 @@ sub check {
 
     my $ret = 0;
     unless( eval { $ret = &{$self->{function}}( $c ); } ) {
-        error( 'State', $self->{name}, ':', $@ );
+        error( 'StateCheck', $self->{name}, ':', $@ || 'return value 0' );
         $ret = 0;
     }
         
@@ -268,13 +268,15 @@ sub new {
 
 ##
 # Execute the state transition
+# $c: the TestContext
 # return: 1 if check passed
 sub execute {
     my $self = shift;
+    my $c    = shift;
 
     my $ret = 0;
-    unless( eval { $ret = &{$self->{function}}(); } ) {
-        error( 'StateTransition', $self->{name}, ':', $@ );
+    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
+        error( 'StateTransition', $self->{name}, ':', $@ || 'return value 0' );
         $ret = 0;
     }
         
