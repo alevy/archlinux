@@ -24,7 +24,7 @@ use warnings;
 
 package IndieBox::Testing::Scaffolds::Here;
 
-use base qw( IndieBox::Testing::Scaffold );
+use base qw( IndieBox::Testing::AbstractScaffold );
 use fields;
 use IndieBox::Logging;
 
@@ -38,6 +38,8 @@ sub setup {
     }
     $self->SUPER::setup();
 
+    debug( 'Setup Here-Scaffold' );
+    
     return $self;
 }
 
@@ -46,7 +48,35 @@ sub setup {
 sub teardown {
     my $self = shift;
 
-    return 0;
+    debug( 'Teardown Here-Scaffold' );
+
+    return 1;
+}
+
+##
+# Helper method to invoke a command on the target. This must be overridden by subclasses.
+# $cmd: command
+# $stdin: content to pipe into stdin
+# $stdout: content captured from stdout
+# $stderr: content captured from stderr
+sub invokeOnTarget {
+    my $self   = shift;
+    my $cmd    = shift;
+    my $stdin  = shift;
+    my $stdout = shift;
+    my $stderr = shift;
+
+debug( 'About to invoke on target', $cmd, $stdin );
+    IndieBox::Utils::myexec( $cmd, $stdin, $stdout, $stderr );
+}
+
+##
+# Obtain the IP address of the target.  This must be overridden by subclasses.
+# return: target IP
+sub getTargetIp {
+    my $self  = shift;
+
+    return '127.0.0.1';
 }
 
 ##

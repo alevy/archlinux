@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Command that lists all available test suite templates.
+# Command that lists all available test plans.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package IndieBox::Testing::Commands::ListTestPlanTemplates;
+package IndieBox::Testing::Commands::ListTestPlans;
 
 use IndieBox::Host;
 use IndieBox::Utils;
@@ -36,13 +36,9 @@ sub run {
         fatal( 'No arguments are recognized for this command' );
     }
 
-    my $testPlanTemplates = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlanTemplates' );
+    my $testPlans = IndieBox::Testing::TestingUtils::findTestPlans();
+    IndieBox::Testing::TestingUtils::printHashAsColumns( $testPlans, sub { IndieBox::Utils::invokeMethod( shift . '::help' ); } );
 
-    while( my( $template, $package ) = each %$testPlanTemplates ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
-
-        printf "%-8s - %s\n", $template, $help;
-    }
     1;
 }
 
@@ -51,8 +47,8 @@ sub run {
 # return: help text
 sub help {
     return <<END;
-Lists all available test plan templates. Together with the states and transitions
-defined for an application, they are used to create actual test plans for an application.
+Lists all available test plans. For example, some test plans may only
+perform short, brief smoke tests, while others may perform exhaustive tests.
 END
 }
 

@@ -24,20 +24,21 @@ use warnings;
 
 package IndieBox::Testing::AppTest;
 
+use IndieBox::App;
 use IndieBox::Logging;
 
-use fields qw( packageName description statesTransitions );
+use fields qw( packageName app description statesTransitions );
 
 ##
 # Constructor.
 # $packageName: name of the application's package to be tested
 # $description: human-readable description of the test
-# @_: sequence of StateChecks and StateTransitions that constitute the test
+# @_: sequence of CustomizationPointValues, StateChecks and StateTransitions that constitute the test
 sub new {
-    my $self              = shift;
-    my $packageName       = shift;
-    my $description       = shift;
-    my @statesTransitions = @_;
+    my $self         = shift;
+    my $packageName = shift;
+    my $description = shift;
+    my @args        = @_;
 
     unless( $packageName ) {
         fatal( 'AppTest must identify the application package being tested.' );
@@ -45,38 +46,67 @@ sub new {
     if( ref( $packageName )) {
         fatal( 'AppTest package name must be a string.' );
     }
+    my $app = new IndieBox::App( $packageName );
+    unless( $app ) {
+        fatal( 'Cannot load Manifest JSON for app', $app );
+    }
+
     unless( $description ) {
         fatal( 'AppTest must have a description.' );
     }
     if( ref( $description )) {
         fatal( 'AppTest description name must be a string.' );
     }
-    unless( @statesTransitions ) {
-        fatal( 'AppTest must define at least one StateCheck.' );
-    }
-    for( my $i=0 ; $i<@statesTransitions ; ++$i ) {
-        if( $i % 2 ) {
-            unless( ref( $statesTransitions[$i] ) eq 'IndieBox::Testing::StateTransition' ) {
-                fatal( 'Entry', $i, 'in states and transition array must be a StateTransition (StateChecks and StateTransitions must alternate)' );
+    my $custPointValues   = [];
+    my $statesTransitions = [];
+
+    my $i = 0;
+    foreach my $candidate ( @args ) {
+        my $candidateRef = ref( $candidate );
+        if( $candidateRef eq 'IndieBox::Testing::CustomizationPointValues' ) {
+            if( $i == 0 ) {
+                push @$custPointValues, $candidate;
+            } else {
+                fatal( 'CustomizationPointValues must be provided before StateChecks and StateTransitions' );
             }
+            
+        } elsif( $i % 2 ) {
+            unless( $candidateRef eq 'IndieBox::Testing::StateTransition' ) {
+                fatal( 'StateChecks and StateTransitions must alternate: expected StateTransition' );
+            }
+            push @$statesTransitions, $candidate;
+            ++$i;
         } else {
-            unless( ref( $statesTransitions[$i] ) eq 'IndieBox::Testing::StateCheck' ) {
-                fatal( 'Entry', $i, 'in states and transition array must be a StateCheck (StateChecks and StateTransitions must alternate)' );
+            unless( $candidateRef eq 'IndieBox::Testing::StateCheck' ) {
+                fatal( 'StateChecks and StateTransitions must alternate: expected StateCheck' );
             }
+            push @$statesTransitions, $candidate;
+            ++$i;
         }
-    }
-    unless( @statesTransitions % 2 ) {
-        fatal( 'AppTest states and transitions array must end with a StateCheck.' );
+    }    
+    
+    unless( @$statesTransitions % 2 ) {
+        fatal( 'StateChecks and StateTransitions must alternate and end with a StateCheck.' );
     }
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
     $self->{packageName}       = $packageName;
+    $self->{app}               = $app;
     $self->{description}       = $description;
-    $self->{statesTransitions} = \@statesTransitions;
+    $self->{statesTransitions} = $statesTransitions;
 
     return $self;
+}
+
+##
+# Obtain the package name
+# return: the package name
+sub packageName {
+    my $self = shift;
+
+    return $self->{packageName};
 }
 
 ##
@@ -86,6 +116,40 @@ sub description {
     my $self = shift;
 
     return $self->{description};
+}
+
+##
+# Obtain the app that is being tested.
+# return: the app
+sub getApp {
+    my $self = shift;
+
+    return $self->{app};
+}
+
+##
+# Obtain the StateTest for the virgin state
+# return: the StateTest
+sub getVirginStateTest {
+    my $self = shift;
+
+    return $self->{statesTransitions}->[0];
+}
+
+##
+# Obtain the outgoing StateTransition from this State. May return undef.
+# $state the starting state
+# return: the Transition, or undef
+sub getTransitionFrom {
+    my $self  = shift;
+    my $state = shift;
+
+    for( my $i=0 ; $i<@{$self->{statesTransitions}} ; ++$i ) {
+        if( $state == $self->{statesTransitions}->[$i] ) {
+            return ( $self->{statesTransitions}->[$i+1], $self->{statesTransitions}->[$i+2] );
+        }
+    }
+    return undef;
 }
 
 ################################################################################
@@ -111,6 +175,16 @@ sub new {
 
     return $self;
 }
+
+##
+# Obtain the name of the StateCheck or StateTransition.
+# return: the name
+sub getName {
+    my $self = shift;
+
+    return $self->{name};
+}
+
 
 ################################################################################
 
@@ -152,9 +226,19 @@ sub new {
 
 ##
 # Check this state
+# $c: the TestContext
+# return: 1 if check passed
 sub check {
     my $self = shift;
+    my $c    = shift;
 
+    my $ret = 0;
+    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
+        error( 'State', $self->{name}, ':', $@ );
+        $ret = 0;
+    }
+        
+    return $ret;
 }
 
 ################################################################################
@@ -180,6 +264,21 @@ sub new {
     $self->SUPER::new( $name, $function );
 
     return $self;
+}
+
+##
+# Execute the state transition
+# return: 1 if check passed
+sub execute {
+    my $self = shift;
+
+    my $ret = 0;
+    unless( eval { $ret = &{$self->{function}}(); } ) {
+        error( 'StateTransition', $self->{name}, ':', $@ );
+        $ret = 0;
+    }
+        
+    return $ret;
 }
 
 1;

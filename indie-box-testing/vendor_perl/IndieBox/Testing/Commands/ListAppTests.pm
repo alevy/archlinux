@@ -39,27 +39,9 @@ sub run {
         fatal( 'No arguments are recognized for this command' );
     }
 
-    my $appTestCandidates = IndieBox::Testing::TestingUtils::readFilesInDirectory( getcwd(), 'AppTest\.pm$' );
-    my $appTests = {};
-    
-    while( my( $fileName, $content ) = each %$appTestCandidates ) {
-        my $appTest = eval $content;
+    my $appTests = IndieBox::Testing::TestingUtils::findAppTestsInDirectory( getcwd() );
+    IndieBox::Testing::TestingUtils::printHashAsColumns( $appTests, sub { shift->description(); } );
 
-        if( defined( $appTest ) && ref( $appTest ) eq 'IndieBox::Testing::AppTest' ) {
-            $appTests->{$fileName} = $appTest;
-
-        } elsif( $@ ) {
-            error( 'Failed to parse', $fileName, ':', $@ );
-            
-        } else {
-            info( 'Skipping', $fileName, '-- not an AppTest' );
-        }
-    }
-    foreach my $fileName ( keys %$appTests ) {
-        my $appTest = $appTests->{$fileName};
-        
-        printf "%-8s - %s\n", $fileName, $appTest->description();
-    }
     1;
 }
 

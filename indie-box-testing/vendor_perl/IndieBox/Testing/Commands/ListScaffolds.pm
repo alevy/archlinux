@@ -36,13 +36,9 @@ sub run {
         fatal( 'No arguments are recognized for this command' );
     }
 
-    my $scaffolds = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
+    my $scaffolds = IndieBox::Testing::TestingUtils::findScaffolds();
+    IndieBox::Testing::TestingUtils::printHashAsColumns( $scaffolds, sub { IndieBox::Utils::invokeMethod( shift . '::help' ); } );
 
-    while( my( $scaffold, $package ) = each %$scaffolds ) {
-        my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
-
-        printf "%-8s- %s\n", $scaffold, $help;
-    }
     1;
 }
 

@@ -23,6 +23,38 @@ use warnings;
 
 package IndieBox::Testing::TestingUtils;
 
+use Cwd;
+use IndieBox::Logging;
+
+##
+# Helper method to print name-value pairs, with the value optionally processed
+# $hash: hash of first column to second column
+# $f: optional method to invoke on the second column before printing
+
+sub printHashAsColumns {
+    my $hash = shift;
+    my $f    = shift || sub { shift; };
+
+    my $indent = 0;
+    foreach my $name ( keys %$hash ) {
+        my $length = length( $name );
+        if( $length > $indent ) {
+            $indent = $length;
+        }
+    }
+
+    my $s = ' ' x $indent;
+    foreach my $name ( sort keys %$hash ) {
+        my $obj            = $hash->{$name};
+        my $formattedValue = &$f( $obj );
+        $formattedValue =~ s!^\s*!$s!gm;
+        $formattedValue =~ s!^\s+!!;
+        $formattedValue =~ s!\s+$!!;
+
+        printf( '%-' . $indent . "s - %s\n", $name, $formattedValue );
+    }
+}
+
 ##
 # Obtain all Perl module files in a particular parent package.
 # $parentPackage: name of the parent package, such as IndieBox::AppConfigurationItems
@@ -136,6 +168,126 @@ sub readFilesInDirectory {
     closedir( DIR );
 
     return $ret;
+}
+
+##
+# Find all AppTests in a directory.
+# $dir: directory to look in
+# return: hash of file name to AppTest object
+sub findAppTestsInDirectory {
+    my $dir = shift;
+    
+    my $appTestCandidates = readFilesInDirectory( getcwd(), 'AppTest\.pm$' );
+    my $appTests = {};
+    
+    while( my( $fileName, $content ) = each %$appTestCandidates ) {
+        my $appTest = eval $content;
+
+        if( defined( $appTest ) && ref( $appTest ) eq 'IndieBox::Testing::AppTest' ) {
+            $appTests->{$fileName} = $appTest;
+
+        } elsif( $@ ) {
+            error( 'Failed to parse', $fileName, ':', $@ );
+            
+        } else {
+            info( 'Skipping', $fileName, '-- not an AppTest' );
+        }
+    }
+    return $appTests;
+}
+
+##
+# Find available commands.
+# return: hash of command name to full package name
+sub findCommands {
+    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
+
+    return $ret;
+}
+
+##
+# Find available test plans
+# return: hash of test plan name to full package name
+sub findTestPlans {
+    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlans' );
+
+    return $ret;
+}
+
+##
+# Find a named test plan
+# $name: name of the test plan
+# return: test plan template, or undef
+sub findTestPlan {
+    my $name = shift;
+
+    my $plans = findTestPlans();
+    my $ret   = $plans->{$name};
+
+    return $ret;
+}
+
+##
+# Find available test scaffolds.
+# return: hash of scaffold name to full package name
+sub findScaffolds {
+    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
+    return $ret;
+}
+
+##
+# Find a named scaffold
+# $name: name of the scaffold
+# return: scaffold package, or undef
+sub findScaffold {
+    my $name = shift;
+
+    my $scaffolds = findScaffolds();
+    my $ret       = $scaffolds->{$name};
+
+    return $ret;
+}
+
+##
+# Find a named AppTest in a directory.
+# $dir: directory to look in
+# $name: name of the test
+# return: the AppTest object, or undef
+sub findAppTestInDirectory {
+    my $dir  = shift;
+    my $name = shift;
+
+    my $fileName = getcwd() . "/$name";
+    if( !-r $fileName && $fileName !~ m!\.pm$! ) {
+        $fileName = "$fileName.pm";
+    }
+    if( -r $fileName ) {
+        my $content = IndieBox::Utils::slurpFile( $fileName );
+        
+        my $appTest = eval $content;
+
+        if( defined( $appTest ) && ref( $appTest ) eq 'IndieBox::Testing::AppTest' ) {
+            return $appTest;
+
+        } elsif( $@ ) {
+            error( 'Failed to parse', $fileName, ':', $@ );
+            
+        } else {
+            error( 'Not an AppTest:', $fileName );
+        }
+    }        
+    return undef;
+}
+
+##
+# Escape characters in URL. Inspired by http://cpansearch.perl.org/src/GAAS/URI-1.60/URI/Escape.pm,
+# which does not seem to come with Arch.
+sub uri_escape {
+    my $s = shift;
+
+    $s =~ s!([^-A-Za-z0-9\._~])!sprintf("%%%02X",$1)!ge;
+
+    return $s;
 }
 
 1;

@@ -24,6 +24,7 @@ use warnings;
 package IndieBox::Testing::Commands::Run;
 
 use Cwd;
+use Getopt::Long qw( GetOptionsFromArray );
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -34,13 +35,53 @@ use IndieBox::Utils;
 # return: desired exit code
 sub run {
     my @args = @_;
+
+    my $scaffoldName;
+    my $testPlanName;
+    my $parseOk = GetOptionsFromArray(
+            \@args,
+            'scaffold=s' => \$scaffoldName,
+            'testplan=s' => \$testPlanName );
+
     unless( @args ) {
         fatal( 'Must provide name of at least one test suite.' );
     }
 
-    my $appTests = IndieBox::Testing::TestingUtils::findModulesInDirectory( getcwd(), 'IndieBoxTest\.pm' );
+    unless( $scaffoldName ) {
+        $scaffoldName  = 'here';
+    }
+    my $scaffoldPackageName = IndieBox::Testing::TestingUtils::findScaffold( $scaffoldName );
+    unless( $scaffoldPackageName ) {
+        fatal( 'Cannot find scaffold', $scaffoldName );
+    }
 
+    unless( $testPlanName ) {
+        $testPlanName  = 'default';
+    }
+    my $testPlanPackage = IndieBox::Testing::TestingUtils::findTestPlan( $testPlanName );
+    unless( $testPlanPackage ) {
+        fatal( 'Cannot find test plan', $testPlanName );
+    }
+
+    my @appTestsToRun = ();
+    foreach my $appTestName ( @args ) {
+        my $appTestToRun = IndieBox::Testing::TestingUtils::findAppTestInDirectory( getcwd(), $appTestName );
+        unless( $appTestToRun ) {
+            fatal( 'Cannot find app test', $appTestName );
+        }
+        push @appTestsToRun, $appTestToRun;
+    }
+    
     my $ret = 1;
+
+    my $testPlan = IndieBox::Utils::invokeMethod( $testPlanPackage     . '::new',   $testPlanPackage );
+
+    my $scaffold = IndieBox::Utils::invokeMethod( $scaffoldPackageName . '::setup', $scaffoldPackageName );
+    foreach my $appTest ( @appTestsToRun ) {
+        $testPlan->run( $appTest, $scaffold );
+    }
+
+    $scaffold->teardown();
 
     return $ret;
 }

@@ -21,26 +21,21 @@
 use strict;
 use warnings;
 
-use Getopt::Long;
 use IndieBox::Host;
 use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
 
-my $help = 0;
+my $commands = IndieBox::Testing::TestingUtils::findCommands();
 
-my $parseOk = GetOptions(
-        'help' => \$help );
-
-my $commands = IndieBox::Testing::TestingUtils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
-
-if( $help ) {
-    synopsisHelpQuit( 1 );
-}
-if( !$parseOk || !@ARGV ) {
+unless( @ARGV ) {
     synopsisHelpQuit();
 }
 
-my $command        = shift @ARGV;
+my $command = shift @ARGV;
+if( '--help' eq $command || '-h' eq $command ) {
+    synopsisHelpQuit( 1 );
+}
+
 my $commandPackage = $commands->{$command};
 
 if( $commandPackage ) {
@@ -51,7 +46,6 @@ if( $commandPackage ) {
 } else {
     synopsisHelpQuit();
 }
-    
 
 #####
 sub synopsisHelpQuit {
