@@ -27,7 +27,7 @@ use Exporter qw( import );
 use Log::Log4perl qw( :easy );
 use Log::Log4perl::Level;
 
-our @EXPORT = qw( trace debug warn error fatal );
+our @EXPORT = qw( trace debug info warn error fatal );
 my $log;
 
 BEGIN {
