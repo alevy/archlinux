@@ -36,7 +36,7 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
-    my $interactive;
+    my $interactive = 0;
     my $scaffoldName;
     my $testPlanName;
     my $parseOk = GetOptionsFromArray(
@@ -80,10 +80,14 @@ sub run {
 
     my $scaffold = IndieBox::Utils::invokeMethod( $scaffoldPackageName . '::setup', $scaffoldPackageName );
     foreach my $appTest ( @appTestsToRun ) {
-        $testPlan->run( $appTest, $scaffold, $interactive );
+        $ret &= $testPlan->run( $appTest, $scaffold, $interactive );
     }
 
     $scaffold->teardown();
+
+    unless( $ret ) {
+        error( 'Test failed.' );
+    }
 
     return $ret;
 }

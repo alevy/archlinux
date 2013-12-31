@@ -51,7 +51,7 @@ sub askUser {
 
     my $repeat = 0;
     my $abort  = 0;   
-    my $quit   = $successOfLastStep;
+    my $quit   = !$successOfLastStep;
 
     if( $interactive ) {
         while( 1 ) {

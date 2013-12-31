@@ -276,13 +276,20 @@ sub check {
     my $self = shift;
     my $c    = shift;
 
-    my $ret = 0;
-    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
-        error( 'StateCheck', $self->{name}, ':', $@ || 'return value 0' );
+    my $ret    = eval { &{$self->{function}}( $c ); };
+    my $errors = $c->errorsAndClear;
+    my $msg    = 'failed.';
+    
+    if( $errors ) {
         $ret = 0;
+    } elsif( $@ ) {
+        $msg = $@;
+    } else {
+        $msg = 'return value 0.';
     }
-    if( $c->errorsAndClear ) {
-        $ret = 0;
+
+    unless( $ret ) {
+        error( 'StateCheck', $self->{name}, ':', $msg );
     }
         
     return $ret;
@@ -321,15 +328,21 @@ sub execute {
     my $self = shift;
     my $c    = shift;
 
-    my $ret = 0;
-    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
-        error( 'StateTransition', $self->{name}, ':', $@ || 'return value 0' );
+    my $ret    = eval { &{$self->{function}}( $c ); };
+    my $errors = $c->errorsAndClear;
+    my $msg    = 'failed.';
+
+    if( $errors ) {
         $ret = 0;
+    } elsif( $@ ) {
+        $msg = $@;
+    } else {
+        $msg = 'return value 0.';
     }
-    if( $c->errorsAndClear ) {
-        $ret = 0;
+
+    unless( $ret ) {
+        error( 'StateTransition', $self->{name}, ':', $msg );
     }
-        
     return $ret;
 }
 
