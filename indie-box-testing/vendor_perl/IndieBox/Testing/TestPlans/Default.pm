@@ -59,72 +59,149 @@ sub run {
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
 
     my $ret = 1;
-    
-    $ret &= $scaffold->deploy( $siteJson );
+    my $success;
+    my $repeat;
+    my $abort;
+    my $quit;
 
-    my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
+    do {
+        $success = $scaffold->deploy( $siteJson );
 
-    my $currentState = $test->getVirginStateTest();
+        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+    } while( $repeat );
+    $ret &= $success;
 
     my @statesBackupsReverse = ();
 
-    # March forward, and create backups
-    while( 1 ) {
-        info( 'Checking StateCheck', $currentState->getName() );
+    if( !$abort && !$quit ) {
+        my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
 
-        $ret &= $currentState->check( $c );
+        my $currentState = $test->getVirginStateTest();
 
-        my $backup = $scaffold->backup( $siteJson );
-        unshift @statesBackupsReverse, [ $currentState, $backup ]; # insert at the beginning
+        # March forward, and create backups
+        while( 1 ) {
+            info( 'Checking StateCheck', $currentState->getName() );
 
-        my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
+            do {
+                $success = $currentState->check( $c );
 
-        unless( $transition ) {
-            last;
-        }
+                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+            } while( $repeat );
+            $ret &= $success;
+
+            if( $abort || $quit ) {
+                last;
+            }
+
+            my $backup = $scaffold->backup( $siteJson );
+            unshift @statesBackupsReverse, [ $currentState, $backup ]; # insert at the beginning
+
+            my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
+            unless( $transition ) {
+                last;
+            }
     
-        info( 'Taking StateTransition', $transition->getName() );
+            info( 'Taking StateTransition', $transition->getName() );
 
-        $ret &= $transition->execute( $c );
+            do {
+                $success = $transition->execute( $c );
 
-        $currentState = $nextState;
-    }
+                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
 
-    # March backwards, restore from backups
-    foreach my $stateBackup ( @statesBackupsReverse ) {
-        my( $currentState, $currentBackup ) = @$stateBackup;
+            } while( $repeat );
+            $ret &= $success;
 
-        if( $currentBackup ) {
-            info( 'Restoring and checking StateCheck', $currentState->getName() );
+            if( $abort || $quit ) {
+                last;
+            }
 
-            $scaffold->restore( $siteJson, $currentBackup );
-            
-            $ret &= $currentState->check( $c );
-
-        } else {
-            debug( 'Skipping restoring and checking StateCheck', $currentState->getName() );
+            $currentState = $nextState;
         }
-    }
 
-    # And then do the last one again, because it wasn't fair to restore the current
-    # state
-    if( @statesBackupsReverse > 1 ) {
-        my( $currentState, $currentBackup ) = @{$statesBackupsReverse[0]};
-        if( $currentBackup ) {
-            info( 'Restoring and checking (one more time) StateCheck', $currentState->getName() );
+        # March backwards, restore from backups
+        my @statesBackupsReverseMinusOne = @statesBackupsReverse;
+        shift @statesBackupsReverseMinusOne;
+        
+        foreach my $stateBackup ( @statesBackupsReverseMinusOne ) {
+            my( $currentState, $currentBackup ) = @$stateBackup;
 
-            $scaffold->restore( $siteJson, $currentBackup );
-            
-            $ret &= $currentState->check( $c );
+            if( $currentBackup ) {
+                info( 'Restoring state', $currentState->getName() );
 
-        } else {
-            debug( 'Skipping restoring and checking StateCheck', $currentState->getName() );
+                do {
+                    $success = $scaffold->restore( $siteJson, $currentBackup );
+                
+                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+                } while( $repeat );
+                $ret &= $success;
+
+                if( $abort || $quit ) {
+                    last;
+                }
+
+                info( 'Checking StateCheck', $currentState->getName() );
+                do {
+                    $success = $currentState->check( $c );
+
+                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+                } while( $repeat );
+                $ret &= $success;
+
+                if( $abort || $quit ) {
+                    last;
+                }
+
+            } else {
+                debug( 'Skipping restoring and checking StateCheck', $currentState->getName() );
+            }
         }
+
+        # And then do the last one again, because it wasn't fair to restore the current state
+        if( @statesBackupsReverse > 1 ) {
+            my( $currentState, $currentBackup ) = @{$statesBackupsReverse[0]};
+            if( $currentBackup ) {
+                info( 'Restoring (one more time) StateCheck', $currentState->getName() );
+
+                do {
+                    $success = $scaffold->restore( $siteJson, $currentBackup );
+                
+                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+                } while( $repeat );
+                $ret &= $success;
+
+                if( $abort || $quit ) {
+                    last;
+                }
+
+                info( 'Checking StateCheck', $currentState->getName() );
+                do {
+                    $success = $currentState->check( $c );
+
+                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+                } while( $repeat );
+                $ret &= $success;
+
+                if( $abort || $quit ) {
+                    last;
+                }
+
+            } else {
+                debug( 'Skipping restoring and checking StateCheck', $currentState->getName() );
+            }
+        }
+        $c->destroy();
     }
 
-    $scaffold->undeploy( $siteJson );
+    unless( $abort ) {
+        $scaffold->undeploy( $siteJson );
+    }
     
-    $c->destroy();
 
     foreach my $stateBackup ( @statesBackupsReverse ) {
         my( $currentState, $currentBackup ) = @$stateBackup;

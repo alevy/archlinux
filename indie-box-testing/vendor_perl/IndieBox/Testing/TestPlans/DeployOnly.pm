@@ -86,6 +86,8 @@ sub run {
 
         } while( $repeat );
         $ret &= $success;
+
+        $c->destroy();
     }
 
     unless( $abort ) {
