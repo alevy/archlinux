@@ -47,7 +47,8 @@ sub deploy {
     my $self = shift;
     my $site = shift;
 
-    $self->invokeOnTarget( 'indie-box-admin deploy', IndieBox::Utils::writeJsonToString( $site ));
+    my $exit = $self->invokeOnTarget( 'sudo indie-box-admin deploy', IndieBox::Utils::writeJsonToString( $site ));
+    return !$exit;
 }
 
 ##
@@ -57,7 +58,8 @@ sub undeploy {
     my $self = shift;
     my $site = shift;
 
-    $self->invokeOnTarget( 'indie-box-admin undeploy --siteid ' . $site->{siteid} );
+    my $exit = $self->invokeOnTarget( 'sudo indie-box-admin undeploy --siteid ' . $site->{siteid} );
+    return !$exit;
 }
 
 ##
@@ -70,8 +72,12 @@ sub backup {
 
     my $file;
     
-    $self->invokeOnTarget( 'F=$(mktemp indie-box-testing-XXXXX.indie-backup); indie-box-admin backup --siteid ' . $site->{siteid} . ' --out $F; echo $F', undef, \$file );
-    return $file;
+    my $exit = $self->invokeOnTarget( 'F=$(mktemp indie-box-testing-XXXXX.indie-backup); sudo indie-box-admin backup --siteid ' . $site->{siteid} . ' --out $F; echo $F', undef, \$file );
+    if( !$exit ) {
+        return $file;
+    } else {
+        return 0;
+    }
 }
 
 ##
@@ -83,7 +89,8 @@ sub restore {
     my $site       = shift;
     my $identifier = shift;
 
-    $self->invokeOnTarget( 'indie-box-admin restore --siteid ' . $site->{siteid} . ' --in ' . $identifier );
+    my $exit = $self->invokeOnTarget( 'sudo indie-box-admin restore --siteid ' . $site->{siteid} . ' --in ' . $identifier );
+    return !$exit;
 }
 
 ##
@@ -93,7 +100,8 @@ sub destroyBackup {
     my $site       = shift;
     my $identifier = shift;
 
-    $self->invokeOnTarget( 'rm ' . $identifier );
+    my $exit = $self->invokeOnTarget( 'rm ' . $identifier );
+    return !$exit;
 }
 
 ##
@@ -115,6 +123,8 @@ sub invokeOnTarget {
     my $stdin = shift;
 
     error( 'Must override Scaffold::invokeOnTarget' );
+
+    return 0;
 }
 
 ##
@@ -124,6 +134,8 @@ sub getTargetIp {
     my $self  = shift;
 
     error( 'Must override Scaffold::getTargetIp' );
+
+    return undef;
 }
     
 1;

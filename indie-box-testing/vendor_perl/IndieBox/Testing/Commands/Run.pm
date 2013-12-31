@@ -36,12 +36,14 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
+    my $interactive;
     my $scaffoldName;
     my $testPlanName;
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'scaffold=s' => \$scaffoldName,
-            'testplan=s' => \$testPlanName );
+            'interactive' => \$interactive,
+            'scaffold=s'  => \$scaffoldName,
+            'testplan=s'  => \$testPlanName );
 
     unless( @args ) {
         fatal( 'Must provide name of at least one test suite.' );
@@ -78,7 +80,7 @@ sub run {
 
     my $scaffold = IndieBox::Utils::invokeMethod( $scaffoldPackageName . '::setup', $scaffoldPackageName );
     foreach my $appTest ( @appTestsToRun ) {
-        $testPlan->run( $appTest, $scaffold );
+        $testPlan->run( $appTest, $scaffold, $interactive );
     }
 
     $scaffold->teardown();
@@ -100,7 +102,7 @@ END
 # return: allowed arguments, as string
 sub helpArguments {
     return <<END;
-[ --scaffold <scaffold> ] [ --testplan <testplan> ] <apptest>... 
+[ --interactive ] [ --scaffold <scaffold> ] [ --testplan <testplan> ] <apptest>... 
 END
 }
 

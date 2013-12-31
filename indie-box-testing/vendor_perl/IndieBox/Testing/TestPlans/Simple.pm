@@ -46,10 +46,12 @@ sub new {
 # Run this TestPlan
 # $test: the AppTest to run
 # $scaffold: the Scaffold to use
+# $interactive: if 1, ask the user what to do after each error
 sub run {
-    my $self     = shift;
-    my $test     = shift;
-    my $scaffold = shift;
+    my $self        = shift;
+    my $test        = shift;
+    my $scaffold    = shift;
+    my $interactive = shift;
 
     info( 'Running TestPlan Simple' );
 
@@ -57,31 +59,64 @@ sub run {
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
 
     my $ret = 1;
+    my $repeat;
+    my $abort;
+    my $quit;
+
+    do {
+        my $success = $scaffold->deploy( $siteJson );
+        $ret &= $success;
+
+        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+    } while( $repeat );
+
+    if( !$abort && !$quit ) {
+        my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
+
+        my $currentState = $test->getVirginStateTest();
+        while( 1 ) {
+            info( 'Checking StateCheck', $currentState->getName() );
+
+            do {
+                my $success = $currentState->check( $c );
+                $ret &= $success;
+
+                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+            } while( $repeat );
+
+            if( $abort || $quit ) {
+                last;
+            }
+
+            my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
+
+            unless( $transition ) {
+                last;
+            }
     
-    $ret &= $scaffold->deploy( $siteJson );
+            info( 'Taking StateTransition', $transition->getName() );
 
-    my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
+            do {
+                my $success = $transition->execute( $c );
+                $ret &= $success;
 
-    my $currentState = $test->getVirginStateTest();
-    while( 1 ) {
-        info( 'Checking StateCheck', $currentState->getName() );
+                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
 
-        $ret &= $currentState->check( $c );
+            } while( $repeat );
 
-        my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
+            if( $abort || $quit ) {
+                last;
+            }
 
-        unless( $transition ) {
-            last;
+            $currentState = $nextState;
         }
-    
-        info( 'Taking StateTransition', $transition->getName() );
-
-        $ret &= $transition->execute( $c );
-
-        $currentState = $nextState;
     }
 
-    $scaffold->undeploy( $siteJson );
+    unless( $abort ) {
+        $scaffold->undeploy( $siteJson );
+    }
     
     info( 'End running TestPlan Simple' );
 

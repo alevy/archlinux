@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# Factors out operations common to many kinds of TestPlans.
+# Factors out operations common to many kinds of TestPlans that use a single site.
 #
 # Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
 #
@@ -23,6 +23,7 @@ use warnings;
 
 package IndieBox::Testing::AbstractSingleSiteTestPlan;
 
+use base qw( IndieBox::Testing::AbstractTestPlan );
 use fields qw( siteId appConfigId hostName );
 use IndieBox::Logging;
 
@@ -34,6 +35,7 @@ sub new {
     unless( ref $self ) {
         $self = fields::new( $self );
     }
+    $self->SUPER::new();
 
     my $hostName = ref $self;
     $hostName =~ s!^.*::!!;
@@ -100,12 +102,23 @@ sub _createAppConfiurationJson {
     unless( defined( $context )) {
         $context = $app->defaultContext();
     }
-    
+
     my $appconfig = {
         'context'     => $context,
         'appconfigid' => $self->{appConfigId},
         'appid'       => $test->{packageName}
     };
+
+    my $custPointValues = $test->getCustomizationPointValues();
+    if( $custPointValues ) {
+        my $jsonHash = {};
+        $appconfig->{customizationpoints}->{$app->packageName()} = $jsonHash;
+
+        my $hash = $custPointValues->asHash();
+        while( my( $name, $value ) = each %$hash ) {
+            $jsonHash->{$name}->{value} = $value;
+        }
+    }
     return $appconfig;
 }
 
@@ -124,6 +137,7 @@ sub _createSiteJson {
         'hostname'   => $self->{hostName},
         'appconfigs' => [ $appConfigJson ]
     };
+
     return $site;
 }
 

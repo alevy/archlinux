@@ -46,10 +46,12 @@ sub new {
 # Run this TestPlan
 # $test: the AppTest to run
 # $scaffold: the Scaffold to use
+# $interactive: if 1, ask the user what to do after each error
 sub run {
-    my $self     = shift;
-    my $test     = shift;
-    my $scaffold = shift;
+    my $self        = shift;
+    my $test        = shift;
+    my $scaffold    = shift;
+    my $interactive = shift;
 
     info( 'Running TestPlan DeployOnly' );
 
@@ -57,18 +59,38 @@ sub run {
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
 
     my $ret = 1;
-    
-    $ret &= $scaffold->deploy( $siteJson );
+    my $success;
+    my $repeat;
+    my $abort;
+    my $quit;
 
-    my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
+    do {
+        $success = $scaffold->deploy( $siteJson );
 
-    my $currentState = $test->getVirginStateTest();
+        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
 
-    info( 'Checking StateCheck', $currentState->getName() );
-        
-    $ret &= $currentState->check( $c );
+    } while( $repeat );
+    $ret &= $success;
 
-    $scaffold->undeploy( $siteJson );
+    if( !$abort && !$quit ) {
+        my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
+
+        my $currentState = $test->getVirginStateTest();
+
+        info( 'Checking StateCheck', $currentState->getName() );
+
+        do {
+            $success = $currentState->check( $c );
+
+            ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+
+        } while( $repeat );
+        $ret &= $success;
+    }
+
+    unless( $abort ) {
+        $scaffold->undeploy( $siteJson );
+    }
     
     info( 'End running TestPlan DeployOnly' );
 

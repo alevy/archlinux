@@ -27,7 +27,7 @@ package IndieBox::Testing::AppTest;
 use IndieBox::App;
 use IndieBox::Logging;
 
-use fields qw( packageName app description statesTransitions );
+use fields qw( packageName app description customizationPointValues statesTransitions );
 
 ##
 # Constructor.
@@ -57,7 +57,7 @@ sub new {
     if( ref( $description )) {
         fatal( 'AppTest description name must be a string.' );
     }
-    my $custPointValues   = [];
+    my $custPointValues   = undef;
     my $statesTransitions = [];
 
     my $i = 0;
@@ -65,7 +65,11 @@ sub new {
         my $candidateRef = ref( $candidate );
         if( $candidateRef eq 'IndieBox::Testing::CustomizationPointValues' ) {
             if( $i == 0 ) {
-                push @$custPointValues, $candidate;
+                if( !$custPointValues ) {
+                    $custPointValues = $candidate;
+                } else {
+                    fatal( 'Must provide CustomizationPointValues only once' );
+                }
             } else {
                 fatal( 'CustomizationPointValues must be provided before StateChecks and StateTransitions' );
             }
@@ -92,10 +96,11 @@ sub new {
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->{packageName}       = $packageName;
-    $self->{app}               = $app;
-    $self->{description}       = $description;
-    $self->{statesTransitions} = $statesTransitions;
+    $self->{packageName}              = $packageName;
+    $self->{app}                      = $app;
+    $self->{description}              = $description;
+    $self->{customizationPointValues} = $custPointValues;
+    $self->{statesTransitions}        = $statesTransitions;
 
     return $self;
 }
@@ -128,6 +133,15 @@ sub getApp {
 }
 
 ##
+# Obtain the customization point values as a hash, if any
+# return: hash, or undef
+sub getCustomizationPointValues {
+    my $self = shift;
+
+    return $self->{customizationPointValues};
+}
+
+##
 # Obtain the StateTest for the virgin state
 # return: the StateTest
 sub getVirginStateTest {
@@ -150,6 +164,36 @@ sub getTransitionFrom {
         }
     }
     return undef;
+}
+
+################################################################################
+
+package IndieBox::Testing::CustomizationPointValues;
+
+use fields qw( hash );
+
+##
+# Constructor
+# %values: name-value pairs
+sub new {
+    my $self   = shift;
+    my %values = @_;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+    $self->{hash} = \%values;
+
+    return $self;
+}
+
+##
+# Return as a hash
+# return: hash
+sub asHash {
+    my $self = shift;
+
+    return $self->{hash};
 }
 
 ################################################################################
@@ -237,6 +281,9 @@ sub check {
         error( 'StateCheck', $self->{name}, ':', $@ || 'return value 0' );
         $ret = 0;
     }
+    if( $c->errorsAndClear ) {
+        $ret = 0;
+    }
         
     return $ret;
 }
@@ -277,6 +324,9 @@ sub execute {
     my $ret = 0;
     unless( eval { $ret = &{$self->{function}}( $c ); } ) {
         error( 'StateTransition', $self->{name}, ':', $@ || 'return value 0' );
+        $ret = 0;
+    }
+    if( $c->errorsAndClear ) {
         $ret = 0;
     }
         

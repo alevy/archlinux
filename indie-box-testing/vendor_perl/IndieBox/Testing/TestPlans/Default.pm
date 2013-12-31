@@ -46,10 +46,12 @@ sub new {
 # Run this TestPlan
 # $test: the AppTest to run
 # $scaffold: the Scaffold to use
+# $interactive: if 1, ask the user what to do after each error
 sub run {
-    my $self     = shift;
-    my $test     = shift;
-    my $scaffold = shift;
+    my $self        = shift;
+    my $test        = shift;
+    my $scaffold    = shift;
+    my $interactive = shift;
 
     info( 'Running TestPlan Default' );
 

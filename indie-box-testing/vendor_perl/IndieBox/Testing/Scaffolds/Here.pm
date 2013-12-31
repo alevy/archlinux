@@ -66,7 +66,7 @@ sub invokeOnTarget {
     my $stdout = shift;
     my $stderr = shift;
 
-    IndieBox::Utils::myexec( $cmd, $stdin, $stdout, $stderr );
+    return IndieBox::Utils::myexec( $cmd, $stdin, $stdout, $stderr );
 }
 
 ##

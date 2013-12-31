@@ -23,7 +23,7 @@ use warnings;
 
 package IndieBox::Testing::TestContext;
 
-use fields qw( siteJson appConfigJson scaffold appTest testPlan ip curl cookieFile );
+use fields qw( siteJson appConfigJson scaffold appTest testPlan ip curl cookieFile errors );
 use IndieBox::Logging;
 use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
@@ -53,6 +53,7 @@ sub new {
     $self->{appTest}       = $appTest;
     $self->{testPlan}      = $testPlan;
     $self->{ip}            = $ip;
+    $self->{errors}        = [];
 
     my $hostName   = $self->hostName;
     my $cookieFile = File::Temp->new();
@@ -104,7 +105,9 @@ sub httpGetRelativeHost {
         $self->reportError( 'HTTP request failed:', $stderr );
     }
 
-    return { 'content' => $stdout, 'headers' => $stderr };
+    return { 'content' => $stdout,
+             'headers' => $stderr,
+             'url'     => $url };
 }
 
 ##
@@ -121,24 +124,24 @@ sub httpGetRelativeContext {
 ##
 # Perform an HTTP POST request on the host on which the application is being tested.
 # $relativeUrl: appended to the host's URL
-# $payload: hash of posted parameters
+# $postPars: hash of posted parameters
 # return: hash containing content and headers of the HTTP response
 sub httpPostRelativeHost {
     my $self        = shift;
     my $relativeUrl = shift;
-    my $postData    = shift;
+    my $postPars    = shift;
 
     my $url = 'http://' . $self->hostName . $relativeUrl;
     my $response;
 
     debug( 'Posting to url', $url );
 
-    my $postString = join(
+    my $postData = join(
             '&',
-            map { IndieBox::Testing::TestingUtils::uri_escape( $_ ) . '=' . IndieBox::Testing::TestingUtils::uri_escape( $postData->{$_} ) } keys %$postData );
+            map { IndieBox::Testing::TestingUtils::uri_escape( $_ ) . '=' . IndieBox::Testing::TestingUtils::uri_escape( $postPars->{$_} ) } keys %$postPars );
     
     my $cmd = $self->{curl};
-    $cmd .= " -d '$postString'";
+    $cmd .= " -d '$postData'";
     $cmd .= " '$url'";
     
     my $stdout;
@@ -146,7 +149,11 @@ sub httpPostRelativeHost {
     if( IndieBox::Utils::myexec( $cmd, undef, \$stdout, \$stderr )) {
         $self->reportError( 'HTTP request failed:', $stderr );
     }
-    return { 'content' => $stdout, 'headers' => $stderr };
+    return { 'content'     => $stdout,
+             'headers'     => $stderr,
+             'url'         => $url,
+             'postpars'    => $postPars,
+             'postcontent' => $postData };
 }
 
 ##
@@ -171,6 +178,20 @@ sub reportError {
     my @args = @_;
 
     error( 'TestContext reports error:', @_ );
+
+    push @{$self->{errors}}, join( ' ', @_ );
+}
+
+##
+# Obtain reported errors and clear the buffer
+# return: array of errors; may be empty
+sub errorsAndClear {
+    my $self = shift;
+
+    my @ret = @{$self->{errors}};
+    $self->{errors} = [];
+
+    return @ret;
 }
 
 ##
