@@ -262,7 +262,12 @@ sub saveFile {
         return 0;
     }
 
-    print F $content;
+    if( defined( $content )) {
+        print F $content;
+    } else {
+        # This is usually a programming error
+        IndieBox::Logging::warn( 'Undefined content when attempting to save file', $filename );
+    }
     close F;
 
     chmod $mask, $filename;

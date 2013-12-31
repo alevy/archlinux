@@ -261,6 +261,8 @@ sub replaceVariables {
     } elsif( $value ) {
         $ret = $value;
         $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolveOrNull( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+    } elsif( defined( $value )) {
+        $ret = ''; # otherwise some files will have undef content
     } else {
         $ret = undef;
     }
