@@ -41,7 +41,7 @@ my $commandPackage = $commands->{$command};
 if( $commandPackage ) {
     my $result = IndieBox::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
 
-    exit $result;
+    exit !$result;
 
 } else {
     synopsisHelpQuit();
