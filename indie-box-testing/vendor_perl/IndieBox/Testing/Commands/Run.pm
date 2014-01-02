@@ -44,7 +44,9 @@ sub run {
             'interactive' => \$interactive,
             'scaffold=s'  => \$scaffoldName,
             'testplan=s'  => \$testPlanName );
-
+    unless( $parseOk ) {
+        fatal( 'Invalid command-line arguments' );
+    }
     unless( @args ) {
         fatal( 'Must provide name of at least one test suite.' );
     }

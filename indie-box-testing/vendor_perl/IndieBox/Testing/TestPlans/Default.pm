@@ -67,7 +67,7 @@ sub run {
     do {
         $success = $scaffold->deploy( $siteJson );
 
-        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+        ( $repeat, $abort, $quit ) = $self->askUser( 'Performed deployment', $interactive, $success, $ret );
 
     } while( $repeat );
     $ret &= $success;
@@ -80,13 +80,14 @@ sub run {
         my $currentState = $test->getVirginStateTest();
 
         # March forward, and create backups
-        while( 1 ) {
+        my $done = 0;
+        while( !$done ) {
             info( 'Checking StateCheck', $currentState->getName() );
 
             do {
                 $success = $currentState->check( $c );
 
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateCheck ' . $currentState->getName(), $interactive, $success, $ret );
 
             } while( $repeat );
             $ret &= $success;
@@ -99,25 +100,28 @@ sub run {
             unshift @statesBackupsReverse, [ $currentState, $backup ]; # insert at the beginning
 
             my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
-            unless( $transition ) {
-                last;
+            if( $transition ) {
+
+                info( 'Taking StateTransition', $transition->getName() );
+
+                do {
+                    $success = $transition->execute( $c );
+
+                    ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateTransition ' . $transition->getName(), $interactive, $success, $ret );
+
+                } while( $repeat );
+                $ret &= $success;
+
+                if( $abort || $quit ) {
+                    $done = 1;
+                }
+            } else {
+                $done = 1;
             }
-    
-            info( 'Taking StateTransition', $transition->getName() );
 
-            do {
-                $success = $transition->execute( $c );
-
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
-
-            } while( $repeat );
-            $ret &= $success;
-
-            if( $abort || $quit ) {
-                last;
+            if( !$done ) {
+                $currentState = $nextState;
             }
-
-            $currentState = $nextState;
         }
 
         # March backwards, restore from backups
@@ -133,7 +137,7 @@ sub run {
                 do {
                     $success = $scaffold->restore( $siteJson, $currentBackup );
                 
-                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                    ( $repeat, $abort, $quit ) = $self->askUser( 'Restored state ' . $currentState->getName(), $interactive, $success, $ret );
 
                 } while( $repeat );
                 $ret &= $success;
@@ -146,7 +150,7 @@ sub run {
                 do {
                     $success = $currentState->check( $c );
 
-                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                    ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateCheck ' . $currentState->getName(), $interactive, $success, $ret );
 
                 } while( $repeat );
                 $ret &= $success;
@@ -169,26 +173,20 @@ sub run {
                 do {
                     $success = $scaffold->restore( $siteJson, $currentBackup );
                 
-                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                    ( $repeat, $abort, $quit ) = $self->askUser( 'Restoired state ' . $currentState->getName(), $interactive, $success, $ret );
 
                 } while( $repeat );
                 $ret &= $success;
 
-                if( $abort || $quit ) {
-                    last;
-                }
+                if( !$abort && !$quit ) {
+                    info( 'Checking StateCheck', $currentState->getName() );
+                    do {
+                        $success = $currentState->check( $c );
 
-                info( 'Checking StateCheck', $currentState->getName() );
-                do {
-                    $success = $currentState->check( $c );
+                        ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateCheck ' . $currentState->getName(), $interactive, $success, $ret );
 
-                    ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
-
-                } while( $repeat );
-                $ret &= $success;
-
-                if( $abort || $quit ) {
-                    last;
+                    } while( $repeat );
+                    $ret &= $success;
                 }
 
             } else {

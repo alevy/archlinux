@@ -261,6 +261,8 @@ sub check {
     my $self = shift;
     my $c    = shift;
 
+    $c->clearHttpSession(); # always before a new StateCheck
+                        
     my $ret    = eval { &{$self->{function}}( $c ); };
     my $errors = $c->errorsAndClear;
     my $msg    = 'failed.';
@@ -327,6 +329,8 @@ sub new {
 sub execute {
     my $self = shift;
     my $c    = shift;
+
+    $c->clearHttpSession(); # always before a new StateTransition
 
     my $ret    = eval { &{$self->{function}}( $c ); };
     my $errors = $c->errorsAndClear;

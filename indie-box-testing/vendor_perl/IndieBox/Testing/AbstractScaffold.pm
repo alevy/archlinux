@@ -63,6 +63,15 @@ sub undeploy {
 }
 
 ##
+# Update all code on the target.
+sub update {
+    my $self = shift;
+
+    my $exit = $self->invokeOnTarget( 'sudo indie-box-admin update' );
+    return !$exit;
+}
+
+##
 # Backup a site.
 # $site: site JSON
 # return: identifier of the backup, e.g. filename

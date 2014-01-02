@@ -67,7 +67,7 @@ sub run {
     do {
         $success = $scaffold->deploy( $siteJson );
 
-        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+        ( $repeat, $abort, $quit ) = $self->askUser( 'Performed deploy', $interactive, $success, $ret );
 
     } while( $repeat );
     $ret &= $success;
@@ -82,7 +82,7 @@ sub run {
             do {
                 $success = $currentState->check( $c );
 
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateCheck ' . $currentState->getName(), $interactive, $success, $ret );
 
             } while( $repeat );
             $ret &= $success;
@@ -101,7 +101,7 @@ sub run {
             do {
                 $success = $transition->execute( $c );
 
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateTransition ' . $transition->getName(), $interactive, $success, $ret );
 
             } while( $repeat );
             $ret &= $success;
