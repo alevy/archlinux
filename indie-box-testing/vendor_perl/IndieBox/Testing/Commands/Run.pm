@@ -37,11 +37,13 @@ sub run {
     my @args = @_;
 
     my $interactive = 0;
+    my $verbose = 0;
     my $scaffoldName;
     my $testPlanName;
     my $parseOk = GetOptionsFromArray(
             \@args,
             'interactive' => \$interactive,
+            'verbose'     => \$verbose,
             'scaffold=s'  => \$scaffoldName,
             'testplan=s'  => \$testPlanName );
     unless( $parseOk ) {
@@ -49,6 +51,10 @@ sub run {
     }
     unless( @args ) {
         fatal( 'Must provide name of at least one test suite.' );
+    }
+
+    if( $verbose ) {
+        IndieBox::Logging::setVerbose();
     }
 
     unless( $scaffoldName ) {
@@ -82,14 +88,20 @@ sub run {
 
     my $scaffold = IndieBox::Utils::invokeMethod( $scaffoldPackageName . '::setup', $scaffoldPackageName );
     foreach my $appTest ( @appTestsToRun ) {
-        $ret &= $testPlan->run( $appTest, $scaffold, $interactive );
+        if( $verbose || @appTestsToRun > 1 ) {
+            print "Running AppTest " . $appTest->name . "\n";
+        }
+        my $status = $testPlan->run( $appTest, $scaffold, $interactive );
+        $ret &= $status;
+
+        unless( $ret ) {
+            error( 'Test', $appTest->name, 'failed.' );
+        } elsif( $verbose ) {
+            print "Test passed.\n";
+        }
     }
 
     $scaffold->teardown();
-
-    unless( $ret ) {
-        error( 'Test failed.' );
-    }
 
     return $ret;
 }

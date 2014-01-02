@@ -110,6 +110,15 @@ sub new {
 }
 
 ##
+# Obtain the name of the text
+# return: name
+sub name {
+    my $self = shift;
+
+    return $self->{name};
+}
+
+##
 # Obtain the package name
 # return: the package name
 sub packageName {

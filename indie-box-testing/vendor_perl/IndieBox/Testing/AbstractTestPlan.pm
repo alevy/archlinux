@@ -62,7 +62,7 @@ sub askUser {
         } else {
             $fullQuestion = 'Last step ' . ( $successOfLastStep ? 'succeeded' : 'failed' ) . '.';
         }
-        $fullQuestion .= " C(ontinue)/R(epeat)/A(bort)/Q(uit)?\n";
+        $fullQuestion .= " C(ontinue)/R(epeat)/A(bort)/Q(uit)? ";
         
         while( 1 ) {
             print STDERR $fullQuestion;
