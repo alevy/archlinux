@@ -160,9 +160,11 @@ if( $cmd eq 'deploy' ) {
             }
         }
         $newSite->checkDeployable();
-    }
-    foreach my $oldSite ( values %$oldSites ) {
-        $oldSite->checkUndeployable;
+
+        my $oldSite = $oldSites->{$newSiteId};
+        if( defined( $oldSite )) {
+            $oldSite->checkUndeployable;
+        }
     }
 
     debug( 'Installing prerequisites' );
@@ -454,6 +456,14 @@ if( $cmd eq 'deploy' ) {
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
 
+    debug( 'Running upgraders' );
+
+    foreach my $site ( values %$oldSites ) {
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            $appConfig->runUpgrader();
+        }
+    }
+
     debug( 'Purging cache' );
 
     IndieBox::Host::purgeCache();
@@ -660,13 +670,21 @@ if( $cmd eq 'deploy' ) {
         $site->restoreAppConfiguration( $backup, $site, $appConfigId );
     }
 
-    trace( 'Resuming sites' );
+    debug( 'Resuming sites' );
 
     my $resumeTriggers = {};
     foreach my $site ( values %$sitesToResume ) {
         $site->resume( $resumeTriggers );
     }
     IndieBox::Host::executeTriggers( $resumeTriggers );
+
+    debug( 'Running upgraders' );
+
+    foreach my $site ( values %$sitesToResume ) {
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            $appConfig->runUpgrader();
+        }
+    }
 
 } else {
     synopsisHelpQuit();

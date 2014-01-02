@@ -277,7 +277,7 @@ sub restoreAppConfiguration {
     my $site      = shift;
     my $appConfig = shift;
 
-    trace( 'Backup::restoreAppConfiguration' );
+    debug( 'Backup::restoreAppConfiguration', $site->siteId, $appConfig->appConfigId );
 
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;

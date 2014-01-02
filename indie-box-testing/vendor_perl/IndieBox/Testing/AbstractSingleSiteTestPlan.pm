@@ -24,7 +24,7 @@ use warnings;
 package IndieBox::Testing::AbstractSingleSiteTestPlan;
 
 use base qw( IndieBox::Testing::AbstractTestPlan );
-use fields qw( siteId appConfigId hostName );
+use fields qw( siteId appConfigId );
 use IndieBox::Logging;
 
 ##
@@ -37,14 +37,9 @@ sub new {
     }
     $self->SUPER::new();
 
-    my $hostName = ref $self;
-    $hostName =~ s!^.*::!!;
-    $hostName = 'testhost-' . lc( $hostName ) . IndieBox::Utils::generateRandomHex( 8 );
-    
-    # generate random identifiers and hostnames, so multiple tests can run at the same time
+    # generate random identifiers, so multiple tests can run at the same time
     $self->{siteId}      = 's' . IndieBox::Utils::generateRandomHex( 32 );
     $self->{appConfigId} = 'a' . IndieBox::Utils::generateRandomHex( 32 );
-    $self->{hostName}    = $hostName;
 
     return $self;
 }
@@ -56,15 +51,6 @@ sub siteId {
     my $self = shift;
 
     return $self->{siteId};
-}
-
-##
-# Obtain the hostname of the site currently being tested.
-# return: the hostname
-sub hostName {
-    my $self = shift;
-
-    return $self->{hostName};
 }
 
 ##
@@ -114,8 +100,7 @@ sub _createAppConfiurationJson {
         my $jsonHash = {};
         $appconfig->{customizationpoints}->{$app->packageName()} = $jsonHash;
 
-        my $hash = $custPointValues->asHash();
-        while( my( $name, $value ) = each %$hash ) {
+        while( my( $name, $value ) = each %$custPointValues ) {
             $jsonHash->{$name}->{value} = $value;
         }
     }
@@ -132,9 +117,16 @@ sub _createSiteJson {
     my $test          = shift;
     my $appConfigJson = shift;
 
+    my $hostname = $test->hostname();
+    unless( $hostname ) {
+        $hostname = ref $self;
+        $hostname =~ s!^.*::!!;
+        $hostname = 'testhost-' . lc( $hostname ) . IndieBox::Utils::generateRandomHex( 8 );    
+    }
+
     my $site = {
         'siteid'     => $self->{siteId},
-        'hostname'   => $self->{hostName},
+        'hostname'   => $hostname,
         'appconfigs' => [ $appConfigJson ]
     };
 

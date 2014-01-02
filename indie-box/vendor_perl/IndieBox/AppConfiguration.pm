@@ -421,7 +421,7 @@ sub _runPostDeploy {
     my $jsonSection = shift;
     my $methodName  = shift;
 
-    trace( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
+    debug( 'AppConfiguration', $self->{json}->{appconfigid}, '->_runPostDeploy', $methodName );
 
     unless( $self->{site} ) {
         fatal( 'Cannot _runPostDeploy AppConfiguration without site' );

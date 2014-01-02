@@ -55,13 +55,7 @@ sub new {
     $self->{ip}            = $ip;
     $self->{errors}        = [];
 
-    my $hostName   = $self->hostName;
-    my $cookieFile = File::Temp->new();
-
-    $self->{cookieFile} = $cookieFile->filename;
-    
-    $self->{curl} = "curl -s -v --cookie-jar '$cookieFile' -b '$cookieFile' --resolve '$hostName:80:$ip' --resolve '$hostName:443:$ip'";
-    # -v to get HTTP headers
+    $self->clearHttpSession();
 
     return $self;
 }
@@ -82,6 +76,21 @@ sub context {
     my $self = shift;
 
     return $self->{appConfigJson}->{context};
+}
+
+##
+# Clear all HTTP session information.
+sub clearHttpSession {
+    my $self = shift;
+
+    my $hostName   = $self->hostName;
+    my $ip         = $self->{ip};
+    my $cookieFile = File::Temp->new();
+
+    $self->{cookieFile} = $cookieFile->filename;
+    
+    $self->{curl} = "curl -s -v --cookie-jar '$cookieFile' -b '$cookieFile' --resolve '$hostName:80:$ip' --resolve '$hostName:443:$ip'";
+    # -v to get HTTP headers
 }
 
 ##

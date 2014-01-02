@@ -27,21 +27,26 @@ package IndieBox::Testing::AppTest;
 use IndieBox::App;
 use IndieBox::Logging;
 
-use fields qw( packageName app description customizationPointValues statesTransitions );
+use fields qw( name description packageName app hostname customizationPointValues statesTransitions );
 
 ##
 # Constructor.
 # $packageName: name of the application's package to be tested
 # $description: human-readable description of the test
-# @_: sequence of CustomizationPointValues, StateChecks and StateTransitions that constitute the test
+# @_: parameters
 sub new {
-    my $self         = shift;
-    my $packageName = shift;
-    my $description = shift;
-    my @args        = @_;
+    my $self = shift;
+    my %pars = @_;
+    
+    my $description       = $pars{description};
+    my $packageName       = $pars{appToTest};
+    my $name              = $pars{name} || ( 'Testing app ' . $packageName );
+    my $custPointValues   = $pars{customizationPointValues};
+    my $statesTransitions = $pars{checks};
+    my $hostname          = $pars{hostname};
 
     unless( $packageName ) {
-        fatal( 'AppTest must identify the application package being tested.' );
+        fatal( 'AppTest must identify the application package being tested. Use parameter named "appToTest".' );
     }
     if( ref( $packageName )) {
         fatal( 'AppTest package name must be a string.' );
@@ -51,58 +56,66 @@ sub new {
         fatal( 'Cannot load Manifest JSON for app', $app );
     }
 
-    unless( $description ) {
-        fatal( 'AppTest must have a description.' );
+    if( ref( $name )) {
+        fatal( 'AppTest name name must be a string.' );
     }
     if( ref( $description )) {
         fatal( 'AppTest description name must be a string.' );
     }
-    my $custPointValues   = undef;
-    my $statesTransitions = [];
+    if( $custPointValues ) {
+        if( ref( $custPointValues ) ne 'HASH' ) {
+            fatal( 'CustomizationPointValues must be a hash' );
+        }
+        while( my( $name, $value ) = each %$custPointValues ) {
+            if( ref( $name ) || ref( $value )) {
+                fatal( 'CustomizationPointValues must be a hash with simple name-value pairs in it.' );
+            }
+        }
+    }
+    if( !$statesTransitions || !@$statesTransitions ) {
+        fatal( 'AppTest must provide at least a StateCheck for the virgin state' );
+    }
 
     my $i = 0;
-    foreach my $candidate ( @args ) {
+    foreach my $candidate ( @$statesTransitions ) {
         my $candidateRef = ref( $candidate );
-        if( $candidateRef eq 'IndieBox::Testing::CustomizationPointValues' ) {
-            if( $i == 0 ) {
-                if( !$custPointValues ) {
-                    $custPointValues = $candidate;
-                } else {
-                    fatal( 'Must provide CustomizationPointValues only once' );
-                }
-            } else {
-                fatal( 'CustomizationPointValues must be provided before StateChecks and StateTransitions' );
-            }
-            
-        } elsif( $i % 2 ) {
+        if( $i % 2 ) {
             unless( $candidateRef eq 'IndieBox::Testing::StateTransition' ) {
-                fatal( 'StateChecks and StateTransitions must alternate: expected StateTransition' );
+                fatal( 'Array of StateChecks and StateTransitions must alternate: expected StateTransition' );
             }
-            push @$statesTransitions, $candidate;
-            ++$i;
         } else {
             unless( $candidateRef eq 'IndieBox::Testing::StateCheck' ) {
-                fatal( 'StateChecks and StateTransitions must alternate: expected StateCheck' );
+                fatal( 'Array of StateChecks and StateTransitions must alternate: expected StateCheck' );
             }
-            push @$statesTransitions, $candidate;
-            ++$i;
         }
+        ++$i;
     }    
     
     unless( @$statesTransitions % 2 ) {
-        fatal( 'StateChecks and StateTransitions must alternate and end with a StateCheck.' );
+        fatal( 'Array of StateChecks and StateTransitions must alternate and end with a StateCheck.' );
     }
 
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
+    $self->{name}                     = $name;
+    $self->{description}              = $description;
     $self->{packageName}              = $packageName;
     $self->{app}                      = $app;
-    $self->{description}              = $description;
+    $self->{hostname}                 = $hostname;
     $self->{customizationPointValues} = $custPointValues;
     $self->{statesTransitions}        = $statesTransitions;
 
     return $self;
+}
+
+##
+# Obtain the name of the text
+# return: name
+sub name {
+    my $self = shift;
+
+    return $self->{name};
 }
 
 ##
@@ -130,6 +143,15 @@ sub getApp {
     my $self = shift;
 
     return $self->{app};
+}
+
+##
+# Obtain the desired hostname at which to test.
+# return: hostname
+sub hostname {
+    my $self = shift;
+
+    return $self->{hostname};
 }
 
 ##
@@ -164,36 +186,6 @@ sub getTransitionFrom {
         }
     }
     return undef;
-}
-
-################################################################################
-
-package IndieBox::Testing::CustomizationPointValues;
-
-use fields qw( hash );
-
-##
-# Constructor
-# %values: name-value pairs
-sub new {
-    my $self   = shift;
-    my %values = @_;
-
-    unless( ref $self ) {
-        $self = fields::new( $self );
-    }
-    $self->{hash} = \%values;
-
-    return $self;
-}
-
-##
-# Return as a hash
-# return: hash
-sub asHash {
-    my $self = shift;
-
-    return $self->{hash};
 }
 
 ################################################################################
@@ -240,12 +232,14 @@ use IndieBox::Logging;
 
 ##
 # Instantiate the StateCheck.
-# $name: name of the state
-# $function: subroutine to check this state
+# $pars{name}: name of the state
+# $pars{function}: subroutine to check this state
 sub new {
-    my $self     = shift;
-    my $name     = shift;
-    my $function = shift;
+    my $self = shift;
+    my %pars = @_;
+
+    my $name     = $pars{name};
+    my $function = $pars{check};
 
     unless( $name ) {
         fatal( 'All StateChecks must have a name.' );
@@ -276,13 +270,22 @@ sub check {
     my $self = shift;
     my $c    = shift;
 
-    my $ret = 0;
-    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
-        error( 'StateCheck', $self->{name}, ':', $@ || 'return value 0' );
+    $c->clearHttpSession(); # always before a new StateCheck
+                        
+    my $ret    = eval { &{$self->{function}}( $c ); };
+    my $errors = $c->errorsAndClear;
+    my $msg    = 'failed.';
+    
+    if( $errors ) {
         $ret = 0;
+    } elsif( $@ ) {
+        $msg = $@;
+    } else {
+        $msg = 'return value 0.';
     }
-    if( $c->errorsAndClear ) {
-        $ret = 0;
+
+    unless( $ret ) {
+        error( 'StateCheck', $self->{name}, ':', $msg );
     }
         
     return $ret;
@@ -298,12 +301,27 @@ use IndieBox::Logging;
 
 ##
 # Instantiate the StateTransition.
-# $name: name of the transition
-# $function: subroutine to move to the next state
+# $pars{name}: name of the state
+# $pars{function}: subroutine to check this state
 sub new {
     my $self     = shift;
-    my $name     = shift;
-    my $function = shift;
+    my %pars = @_;
+
+    my $name     = $pars{name};
+    my $function = $pars{transition};
+
+    unless( $name ) {
+        fatal( 'All StateTransitions must have a name.' );
+    }
+    if( ref( $name )) {
+        fatal( 'A StateTransition\'s name must be a string.' );
+    }
+    unless( $function ) {
+        fatal( 'All StateTransitions must have a transition function.' );
+    }
+    unless( ref( $function ) eq 'CODE' ) {
+        fatal( 'A StateTransition\'s transition function must be a Perl subroutine.' );
+    }
 
     unless( ref $self ) {
         $self = fields::new( $self );
@@ -321,15 +339,23 @@ sub execute {
     my $self = shift;
     my $c    = shift;
 
-    my $ret = 0;
-    unless( eval { $ret = &{$self->{function}}( $c ); } ) {
-        error( 'StateTransition', $self->{name}, ':', $@ || 'return value 0' );
+    $c->clearHttpSession(); # always before a new StateTransition
+
+    my $ret    = eval { &{$self->{function}}( $c ); };
+    my $errors = $c->errorsAndClear;
+    my $msg    = 'failed.';
+
+    if( $errors ) {
         $ret = 0;
+    } elsif( $@ ) {
+        $msg = $@;
+    } else {
+        $msg = 'return value 0.';
     }
-    if( $c->errorsAndClear ) {
-        $ret = 0;
+
+    unless( $ret ) {
+        error( 'StateTransition', $self->{name}, ':', $msg );
     }
-        
     return $ret;
 }
 

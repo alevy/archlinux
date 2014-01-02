@@ -40,22 +40,32 @@ sub new {
 
 ##
 # If interactive, ask the user what to do next. If non-interactive, proceed.
+# $question: the question to ask
 # $interactive: if false, continue and do not ask
 # $successOfLastStep: did the most recent step succeed?
 # $successOfPlanSoFar: if true, all steps have been successful so far
 sub askUser {
     my $self               = shift;
+    my $question           = shift;
     my $interactive        = shift;
     my $successOfLastStep  = shift;
     my $successOfPlanSoFar = shift;
 
     my $repeat = 0;
     my $abort  = 0;   
-    my $quit   = $successOfLastStep;
+    my $quit   = !$successOfLastStep;
 
     if( $interactive ) {
+        my $fullQuestion;
+        if( $question ) {
+            $fullQuestion = $question . ' (' . ( $successOfLastStep ? 'success' : 'failure' ) . ').';
+        } else {
+            $fullQuestion = 'Last step ' . ( $successOfLastStep ? 'succeeded' : 'failed' ) . '.';
+        }
+        $fullQuestion .= " C(ontinue)/R(epeat)/A(bort)/Q(uit)? ";
+        
         while( 1 ) {
-            print STDERR 'Last step ' . ( $successOfLastStep ? 'succeeded' : 'failed' ) . ". C(ontinue)/R(epeat)/A(bort)/Q(uit)?\n";
+            print STDERR $fullQuestion;
 
             my $userinput = <STDIN>;
             if( $userinput =~ /^\s*c\s*$/i ) {

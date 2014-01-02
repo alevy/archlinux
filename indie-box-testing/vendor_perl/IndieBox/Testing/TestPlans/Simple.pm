@@ -59,17 +59,18 @@ sub run {
     my $siteJson      = $self->_createSiteJson( $test, $appConfigJson );
 
     my $ret = 1;
+    my $success;
     my $repeat;
     my $abort;
     my $quit;
 
     do {
-        my $success = $scaffold->deploy( $siteJson );
-        $ret &= $success;
+        $success = $scaffold->deploy( $siteJson );
 
-        ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+        ( $repeat, $abort, $quit ) = $self->askUser( 'Performed deploy', $interactive, $success, $ret );
 
     } while( $repeat );
+    $ret &= $success;
 
     if( !$abort && !$quit ) {
         my $c = new IndieBox::Testing::TestContext( $siteJson, $appConfigJson, $scaffold, $test, $self, $scaffold->getTargetIp() );
@@ -79,19 +80,18 @@ sub run {
             info( 'Checking StateCheck', $currentState->getName() );
 
             do {
-                my $success = $currentState->check( $c );
-                $ret &= $success;
+                $success = $currentState->check( $c );
 
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateCheck ' . $currentState->getName(), $interactive, $success, $ret );
 
             } while( $repeat );
+            $ret &= $success;
 
             if( $abort || $quit ) {
                 last;
             }
 
             my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );
-
             unless( $transition ) {
                 last;
             }
@@ -99,12 +99,12 @@ sub run {
             info( 'Taking StateTransition', $transition->getName() );
 
             do {
-                my $success = $transition->execute( $c );
-                $ret &= $success;
+                $success = $transition->execute( $c );
 
-                ( $repeat, $abort, $quit ) = $self->askUser( $interactive, $success, $ret );
+                ( $repeat, $abort, $quit ) = $self->askUser( 'Performed StateTransition ' . $transition->getName(), $interactive, $success, $ret );
 
             } while( $repeat );
+            $ret &= $success;
 
             if( $abort || $quit ) {
                 last;
@@ -112,6 +112,7 @@ sub run {
 
             $currentState = $nextState;
         }
+        $c->destroy();
     }
 
     unless( $abort ) {
