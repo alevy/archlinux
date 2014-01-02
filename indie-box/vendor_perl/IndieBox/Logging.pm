@@ -50,6 +50,7 @@ log4perl.appender.CONSOLE=Log::Log4perl::Appender::Screen
 log4perl.appender.CONSOLE.stderr=1
 log4perl.appender.CONSOLE.layout=PatternLayout
 log4perl.appender.CONSOLE.layout.ConversionPattern=%-5p: %m%n
+log4perl.appender.CONSOLE.Threshold=WARN
 );
         Log::Log4perl->init( \$config );
     }
@@ -68,6 +69,16 @@ sub setQuiet {
     }
 }
 
+##
+# Verbose output
+sub setVerbose {
+    my $consoleAppender = Log::Log4perl->appenders()->{'CONSOLE'};
+
+    if( $consoleAppender ) {
+        $consoleAppender->threshold( $INFO );
+    }
+}
+    
 ##
 # Emit a trace message.
 # @msg: the message or message components

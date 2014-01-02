@@ -79,12 +79,13 @@ sub installOrCheck {
         unless( $fullName =~ m#^/# ) {
             $fullName = "$defaultToDir/$fullName";
         }
-        if( -e $fullName ) {
-            error( 'Directory exists already:', $fullName );
-            # FIXME: chmod, chown
 
-        } elsif( $doIt ) {
-            if( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
+        if( $doIt ) {
+            if( -e $fullName ) {
+                error( 'Directory exists already:', $fullName );
+                # FIXME: chmod, chown
+
+            } elsif( IndieBox::Utils::mkdir( $fullName, $mode, $uname, $gname ) != 1 ) {
                 error( 'Directory could not be created:', $fullName );
             }
         }

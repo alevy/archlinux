@@ -195,7 +195,7 @@ sub findRootUserPass {
     if( $user && $pass ) {
         return( $user, $pass );
     } else {
-        error( 'findRootUserPass did not find root user/pass' );
+        error( 'Cannot find root credentials to access MySQL database. Perhaps you need to run as root?' );
         return undef;
     }
 }
