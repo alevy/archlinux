@@ -165,7 +165,7 @@ sub run {
         }
 
         # And then do the last one again, because it wasn't fair to restore the current state
-        if( @statesBackupsReverse > 1 ) {
+        if( @statesBackupsReverse > 1 && !$abort && !$quit ) {
             my( $currentState, $currentBackup ) = @{$statesBackupsReverse[0]};
             if( $currentBackup ) {
                 info( 'Restoring (one more time) StateCheck', $currentState->getName() );
@@ -173,7 +173,7 @@ sub run {
                 do {
                     $success = $scaffold->restore( $siteJson, $currentBackup );
                 
-                    ( $repeat, $abort, $quit ) = $self->askUser( 'Restoired state ' . $currentState->getName(), $interactive, $success, $ret );
+                    ( $repeat, $abort, $quit ) = $self->askUser( 'Restored state ' . $currentState->getName(), $interactive, $success, $ret );
 
                 } while( $repeat );
                 $ret &= $success;
