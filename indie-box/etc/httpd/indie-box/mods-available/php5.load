@@ -2,6 +2,7 @@ LoadModule php5_module modules/libphp5.so
 
 php_value post_max_size 10M
 php_value upload_max_filesize 10M
+php_value date.timezone UTC
 
 # AddType x-httpd-php .php .php5
 # AddHandler application/x-httpd-php .php
