@@ -159,7 +159,6 @@ if( $cmd eq 'deploy' ) {
                 }
             }
         }
-        $newSite->checkDeployable();
 
         my $oldSite = $oldSites->{$newSiteId};
         if( defined( $oldSite )) {
@@ -234,6 +233,11 @@ if( $cmd eq 'deploy' ) {
                 }
             }
         }
+    }
+
+    # Now that we have prerequisites, we can check whether the site is deployable
+    foreach my $newSite ( @newSites ) {
+        $newSite->checkDeployable();
     }
 
     debug( 'Setting up placeholder sites' );
