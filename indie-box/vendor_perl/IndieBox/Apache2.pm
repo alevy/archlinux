@@ -223,19 +223,21 @@ CONTENT
         $sslCert      = $site->sslCert;
         $sslCertChain = $site->sslCertChain;
         $sslCaCert    = $site->sslCaCert;
+
+        my $group = $site->config->getResolve( 'apache2.gname' );
         
         if( $sslKey ) {
-            IndieBox::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', 'www-data' ); # avoid overwrite by www-data
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.key",      $sslKey,       0440, 'root', $group ); # avoid overwrite by apache
         }
         if( $sslCert ) {
-            IndieBox::Utils::saveFile( "$sslDir/$siteId.crt",      $sslCert,      0440, 'root', 'www-data' );
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.crt",      $sslCert,      0440, 'root', $group );
         }
         if( $sslCertChain ) {
-            IndieBox::Utils::saveFile( "$sslDir/$siteId.crtchain", $sslCertChain, 0440, 'root', 'www-data' );
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.crtchain", $sslCertChain, 0440, 'root', $group );
         }
 
         if( $sslCaCert ) {
-            IndieBox::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', 'www-data' );
+            IndieBox::Utils::saveFile( "$sslDir/$siteId.cacrt", $sslCaCert, 0040, 'root', $group );
         }
 
 
