@@ -152,4 +152,76 @@ sub uninstallOrCheck {
     }
 }
 
+##
+# Back this item up.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+# $filesToDelete: array of filenames of temporary files that need to be deleted after backup
+sub backup {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+    my $filesToDelete    = shift;
+
+    my $names = $self->{json}->{names};
+    unless( $names ) {
+        $names = [ $self->{json}->{name} ];
+    }
+    if( @$names != 1 ) {
+        fatal( 'Cannot backup item with more than one name:', join( @$names ));
+    }
+
+    my $fullName = $config->replaceVariables( $names->[0] );
+    unless( $fullName =~ m#^/# ) {
+        $fullName = "$dir/$fullName";
+    }
+
+    my $bucket = $self->{json}->{retentionbucket};
+
+    $self->_addRecursive( $zip, $fullName, "$contextPathInZip/$bucket" );
+}
+
+##
+# Default implementation to restore this item from backup.
+# $dir: the directory in which the app was installed
+# $config: the Configuration object that knows about symbolic names and variables
+# $zip: the ZIP object
+# $contextPathInZip: the directory, in the ZIP file, into which this item will be backed up
+sub restore {
+    my $self             = shift;
+    my $dir              = shift;
+    my $config           = shift;
+    my $zip              = shift;
+    my $contextPathInZip = shift;
+
+    my $names = $self->{json}->{names};
+    unless( $names ) {
+        $names = [ $self->{json}->{name} ];
+    }
+    if( @$names != 1 ) {
+        fatal( 'Cannot restore item with more than one name:', join( @$names ));
+    }
+
+    my $fullName = $config->replaceVariables( $names->[0] );
+    unless( $fullName =~ m#^/# ) {
+        $fullName = "$dir/$fullName";
+    }
+
+    my $bucket = $self->{json}->{retentionbucket};
+
+    my $permissions = $config->replaceVariables( $self->{json}->{permissions} );
+    my $uname       = $config->replaceVariables( $self->{json}->{uname} );
+    my $gname       = $config->replaceVariables( $self->{json}->{gname} );
+    my $mode        = $self->permissionToMode( $permissions, 0755 );
+
+    my $uid = IndieBox::Utils::getUid( $uname );
+    my $gid = IndieBox::Utils::getGid( $gname );
+
+    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket", $fullName, $mode, $uid, $gid );
+}
+
 1;
