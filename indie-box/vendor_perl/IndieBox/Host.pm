@@ -75,6 +75,23 @@ sub sites {
 }
 
 ##
+# Find a particular Site currently installed on this host.
+# $siteId: the Site identifier
+# return: the Site
+sub findSiteById {
+    my $siteId = shift;
+
+    my $jsonFile = "$SITES_DIR/$siteId.json";
+    if( -r $jsonFile ) {
+        my $siteJson = readJsonFromFile( $jsonFile );
+        my $site     = new IndieBox::Site( $siteJson );
+
+        return $site;
+    }
+    return undef;
+}
+
+##
 # A site has been deployed.
 # $site: the newly deployed or updated site
 sub siteDeployed {

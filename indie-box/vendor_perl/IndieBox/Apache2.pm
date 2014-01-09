@@ -159,6 +159,9 @@ sub setupPlaceholderSite {
 
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
+
+    AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
+    AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
 </VirtualHost>
 CONTENT
 
@@ -254,6 +257,8 @@ CONTENT
     DocumentRoot "$siteDocumentRoot"
     Options -Indexes
 
+    SetEnv SiteId "$siteId"
+
     <Directory "$siteDocumentRoot">
         AllowOverride All
 
@@ -286,9 +291,11 @@ CONTENT
 		}
 	}
 
+    my $hasDefault = 0;
 	foreach my $appConfig ( @{$site->appConfigs} ) {
+        my $context = $appConfig->context();
 		if( $appConfig->isDefault ) {
-			my $context = $appConfig->context();
+            $hasDefault = 1;
 			if( $context ) {
 				$siteFileContent .= <<CONTENT;
 
@@ -296,8 +303,21 @@ CONTENT
 CONTENT
 				last;
 			}
-		}
+		} elsif( defined( $context ) && !$context ) {
+            # runs at root of site
+            $hasDefault = 1;
+        }
 	}
+    unless( $hasDefault ) {
+        $siteFileContent .= <<CONTENT;
+
+    ScriptAliasMatch ^/\$ /usr/share/indie-box/cgi-bin/show-apps.pl
+    ScriptAliasMatch ^/_appicons/(indie-[-a-z0-9]+|default)/([0-9]+x[0-9]+\.png|license.txt)\$ /usr/share/indie-box/cgi-bin/render-appicon.pl
+
+    AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
+    AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
+CONTENT
+    }
 
     $siteFileContent .= <<CONTENT;
 

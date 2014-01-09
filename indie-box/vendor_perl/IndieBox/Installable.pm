@@ -72,6 +72,15 @@ sub packageName {
 }
 
 ##
+# Determine the name
+# return: the name
+sub name {
+    my $self = shift;
+
+    return $self->{json}->{info}->{name};
+}
+
+##
 # Obtain this Installable's JSON
 # return: JSON
 sub installableJson {
