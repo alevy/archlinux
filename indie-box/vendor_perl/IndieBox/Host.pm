@@ -41,7 +41,6 @@ sub ensureEssentialServicesRunning {
     trace( 'Host::ensureEssentialServicesRunning' );
 
     my @services = qw( cronie ntpd );
-
     foreach my $service ( @services ) {
         IndieBox::Utils::myexec( 'systemctl enable ' . $service );
         IndieBox::Utils::myexec( 'systemctl restart ' . $service );
