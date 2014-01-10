@@ -40,8 +40,12 @@ my $now            = time();
 sub ensureEssentialServicesRunning {
     trace( 'Host::ensureEssentialServicesRunning' );
 
-    IndieBox::Utils::myexec( 'systemctl enable cronie' );
-    IndieBox::Utils::myexec( 'systemctl restart cronie' );
+    my @services = qw( cronie ntp );
+
+    foreach my $service ( @services ) {
+        IndieBox::Utils::myexec( 'systemctl enable ' . $service );
+        IndieBox::Utils::myexec( 'systemctl restart ' . $service );
+    }
 
     1;
 }

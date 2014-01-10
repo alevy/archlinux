@@ -312,7 +312,7 @@ CONTENT
         $siteFileContent .= <<CONTENT;
 
     ScriptAliasMatch ^/\$ /usr/share/indie-box/cgi-bin/show-apps.pl
-    ScriptAliasMatch ^/_appicons/(indie-[-a-z0-9]+|default)/([0-9]+x[0-9]+\.png|license.txt)\$ /usr/share/indie-box/cgi-bin/render-appicon.pl
+    ScriptAliasMatch ^/_appicons/([-a-z0-9])/([0-9]+x[0-9]+\.png|license.txt)\$ /usr/share/indie-box/cgi-bin/render-appicon.pl
 
     AliasMatch ^/_common/css/([-a-z0-9]*\.css)\$ /srv/http/_common/css/\$1
     AliasMatch ^/_common/images/([-a-z0-9]*\.png)\$ /srv/http/_common/images/\$1
