@@ -206,7 +206,12 @@ sub _addRecursive {
     my $fileName = shift;
     my $zipName  = shift;
 
-    if( -f $fileName ) {
+    if( -l $fileName ) {
+		my $member = $zip->addString( readlink $fileName, $zipName );
+		$member->{'externalFileAttributes'} = 0xA1FF0000;
+		# This comes from the source code of Archive::Zip; there doesn't seem to be an API
+
+    } elsif( -f $fileName ) {
         $zip->addFile( $fileName, $zipName );
 
     } elsif( -d $fileName ) {
