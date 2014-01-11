@@ -220,7 +220,7 @@ sub _addRecursive {
         my @children = grep { !/^\.{1,2}$/ } <$fileName/*>;
         foreach my $child ( @children ) {
             my $relative = $child;
-            $relative =~ s!^$fileName/!!;
+            $relative = substr( $relative, length( $fileName ) + 1 );
 
             $self->_addRecursive( $zip, $child, "$zipName/$relative" );
         }
