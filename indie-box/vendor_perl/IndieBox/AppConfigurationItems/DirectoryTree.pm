@@ -221,7 +221,9 @@ sub restore {
     my $uid = IndieBox::Utils::getUid( $uname );
     my $gid = IndieBox::Utils::getGid( $gname );
 
-    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket", $fullName, $mode, $uid, $gid );
+    # Contrary to the docs, Archive::Zip seems to restore ../foobar if
+    # argument ../foo is given, so we need to append a slash
+    $self->_restoreRecursive( $zip, "$contextPathInZip/$bucket/", "$fullName/", $mode, $uid, $gid );
 }
 
 1;
