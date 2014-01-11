@@ -29,7 +29,8 @@ my $u = $q->url( -absolute => 1 );
 my $filename;
 my $mime;
 
-if( $u =~ m!/_appicons/(indie-[-a-z0-9]+|default)/([0-9]+x[0-9]+|license)\.(png|txt)$! ) {
+# This regex must be consistent with the one in the Apache config file
+if( $u =~ m!/_appicons/([-a-z0-9]+)/([0-9]+x[0-9]+|license)\.(png|txt)$! ) {
     $filename = "/srv/http/_appicons/$1/$2.$3";
     my $ext   = $3;
 
