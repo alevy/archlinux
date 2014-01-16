@@ -38,8 +38,8 @@ sub new {
     $self->SUPER::new();
 
     # generate random identifiers, so multiple tests can run at the same time
-    $self->{siteId}      = 's' . IndieBox::Utils::generateRandomHex( 32 );
-    $self->{appConfigId} = 'a' . IndieBox::Utils::generateRandomHex( 32 );
+    $self->{siteId}      = 's' . IndieBox::Utils::randomHex( 32 );
+    $self->{appConfigId} = 'a' . IndieBox::Utils::randomHex( 32 );
 
     return $self;
 }
@@ -121,7 +121,7 @@ sub _createSiteJson {
     unless( $hostname ) {
         $hostname = ref $self;
         $hostname =~ s!^.*::!!;
-        $hostname = 'testhost-' . lc( $hostname ) . IndieBox::Utils::generateRandomHex( 8 );    
+        $hostname = 'testhost-' . lc( $hostname ) . IndieBox::Utils::randomHex( 8 );    
     }
 
     my $site = {

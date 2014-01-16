@@ -149,11 +149,11 @@ sub provisionLocalMySqlDatabase {
 
     trace( 'provisionLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $privileges );
 
-    my $dbName              = IndieBox::Utils::generateRandomIdentifier( 16 ); # unlikely to collide
+    my $dbName              = IndieBox::Utils::randomIdentifier( 16 ); # unlikely to collide
     my $dbHost              = 'localhost';
     my $dbPort              = 3306;
-    my $dbUserLid           = IndieBox::Utils::generateRandomPassword( 16 );
-    my $dbUserLidCredential = IndieBox::Utils::generateRandomPassword( 16 );
+    my $dbUserLid           = IndieBox::Utils::randomPassword( 16 );
+    my $dbUserLidCredential = IndieBox::Utils::randomPassword( 16 );
     my $dbUserLidCredType   = 'simple-password';
 
     my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );

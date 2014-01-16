@@ -46,7 +46,7 @@ sub ensureRootPassword {
 
         if( defined( $dbh )) {
             # can connect to database without a password
-            my $password = IndieBox::Utils::generateRandomPassword( 16 );
+            my $password = IndieBox::Utils::randomPassword( 16 );
 
             my $cnf = <<END;
 [client]

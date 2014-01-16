@@ -2,7 +2,7 @@
 #
 # Represents a Site for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -137,34 +137,36 @@ sub writeJsonToString {
 # $json: the JSON that may contain @-values
 # $dir: the directory to which relative paths are relative to
 sub insertSlurpedFiles {
-	my $json = shift;
-	my $dir  = shift;
-	my $ret;
-	
-	if( ref( $json ) eq 'ARRAY' ) {
-		$ret = [];
-		foreach my $item ( @$json ) {
-			push @$ret, insertSlurpedFiles( $item, $dir );
-		}
-		
-	} elsif( ref( $json ) eq 'HASH' ) {
-		$ret = {};
-		while( my( $name, $value ) = each %$json ) {
-			$ret->{$name} = insertSlurpedFiles( $value, $dir );
-		}
-		
-	} elsif( ref( $json ) ) {
-		$ret = $json;
-		
-	} else {
-		# string
-		if( $json =~ m!^\@(.*)$! ) {
-			$ret = slurpFile( "$dir/$1" );
-		} else {
-			$ret = $json;
-		}
-	}
-    return $ret;	
+    my $json = shift;
+    my $dir  = shift;
+    my $ret;
+    
+    if( ref( $json ) eq 'ARRAY' ) {
+        $ret = [];
+        foreach my $item ( @$json ) {
+            push @$ret, insertSlurpedFiles( $item, $dir );
+        }
+        
+    } elsif( ref( $json ) eq 'HASH' ) {
+        $ret = {};
+        while( my( $name, $value ) = each %$json ) {
+            $ret->{$name} = insertSlurpedFiles( $value, $dir );
+        }
+        
+    } elsif( ref( $json ) ) {
+        $ret = $json;
+        
+    } else {
+        # string
+        if( $json =~ m!^\@(/.*)$! ) {
+            $ret = slurpFile( $1 );
+        } elsif( $json =~ m!^\@(.*)$! ) {
+            $ret = slurpFile( "$dir/$1" );
+        } else {
+            $ret = $json;
+        }
+    }
+    return $ret;    
 }
 
 ##
@@ -480,7 +482,7 @@ sub getGid {
 # Generate a random identifier
 # $length: length of identifier
 # return: identifier
-sub generateRandomIdentifier {
+sub randomIdentifier {
     my $length = shift || 8;
 
     my $ret    = '';
@@ -494,7 +496,7 @@ sub generateRandomIdentifier {
 # Generate a random password
 # $length: length of password
 # return: password
-sub generateRandomPassword {
+sub randomPassword {
     my $length = shift || 8;
 
     my $ret = '';
@@ -508,7 +510,7 @@ sub generateRandomPassword {
 # Generate a random hex number
 # $length: length of hex number
 # return: hex number
-sub generateRandomHex {
+sub randomHex {
     my $length = shift || 8;
 
     my $ret    = '';
@@ -516,6 +518,55 @@ sub generateRandomHex {
         $ret .= (0..9, "a".."f")[rand 16];
     }
     return $ret;
+}
+
+##
+# Escape a single quote in a string
+# $raw: string to be escaped
+# return: escaped string
+sub escapeSquote {
+    my $raw = shift;
+    
+    $raw =~ s/'/\\'/g;
+    
+    return $raw;
+}
+
+##
+# Escape a double quote in a string
+# $raw: string to be escaped
+# return: escaped string
+sub escapeDquote {
+    my $raw = shift;
+    
+    $raw =~ s/"/\\"/g;
+    
+    return $raw;
+}
+
+##
+# Trim whitespace from the start and end of a string
+# $raw: string to be trimmed
+# return: trimmed string
+sub trim {
+    my $raw = shift;
+    
+    $raw =~ s/^\s*//g;
+    $raw =~ s/\s*$//g;
+    
+    return $raw;
+}
+
+##
+# Convert line feeds into a space.
+# $raw: string to be converted
+# return: converted string
+sub cr2space {
+    my $raw = shift;
+    
+    $raw =~ s/\s+/ /g;
+    
+    return $raw;
 }
 
 ##

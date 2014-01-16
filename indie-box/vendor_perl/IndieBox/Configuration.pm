@@ -29,13 +29,13 @@ use JSON;
 use fields qw( name hierarchicalMap flatMap delegates );
 
 my $knownFunctions = {
-    'escapeSquote'     => sub { my $s = shift; $s =~ s/'/\\'/g;                  return $s; },
-    'escapeDquote'     => sub { my $s = shift; $s =~ s/"/\\"/g;                  return $s; },
-    'trim'             => sub { my $s = shift; $s =~ s/^\s*//g; $s =~ s/\s*$//g; return $s; },
-    'cr2space'         => sub { my $s = shift; $s =~ s/\s+/ /g;                  return $s; },
-    'randomHex'        => \&IndieBox::Utils::generateRandomHex,
-    'randomIdentifier' => \&IndieBox::Utils::generateRandomIdentifier,
-    'randomPassword'   => \&IndieBox::Utils::generateRandomPassword
+    'escapeSquote'     => \&IndieBox::Utils::escapeSquote,
+    'escapeDquote'     => \&IndieBox::Utils::escapeDquote,
+    'trim'             => \&IndieBox::Utils::trim,
+    'cr2space'         => \&IndieBox::Utils::cr2space,
+    'randomHex'        => \&IndieBox::Utils::randomHex,
+    'randomIdentifier' => \&IndieBox::Utils::randomIdentifier,
+    'randomPassword'   => \&IndieBox::Utils::randomPassword
 };
 
 ##
@@ -137,15 +137,15 @@ sub getResolve {
         $ret = $self->get( $name, $default, $remainingDepth-1 );
     }
     if( defined( $ret )) {
-		unless( ref( $ret )) {
-			# only do this for strings
-			if( $remainingDepth > 0 ) {
-				$ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
-			}
-			if( defined( $func )) {
-				$ret = _applyFunc( $func, $ret );
-			}
-		}
+        unless( ref( $ret )) {
+            # only do this for strings
+            if( $remainingDepth > 0 ) {
+                $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
+            }
+            if( defined( $func )) {
+                $ret = _applyFunc( $func, $ret );
+            }
+        }
     } elsif( !$unresolvedOk ) {
         fatal( 'Cannot find symbol', $name, "\n" . $self->dump() );
     } else {
@@ -190,8 +190,8 @@ sub getResolveOrNull {
         $ret = $self->get( $name, $default, $remainingDepth-1 );
     }
     if( defined( $ret )) {
-		unless( ref( $ret )) {
-			# only do this for strings
+        unless( ref( $ret )) {
+            # only do this for strings
             if( $remainingDepth > 0 ) {
                 $ret =~ s/(?<!\\)\$\{\s*([^\}\s]+(\s+[^\}\s]+)*)\s*\}/$self->getResolve( $1, undef, $unresolvedOk, $remainingDepth-1 )/ge;
             }
@@ -291,7 +291,7 @@ sub dump {
                     }
                 } elsif( ref( $value )) {
                     "    $_ => " . ref( $value ) ."\n";
-				} else {
+                } else {
                     "    $_ => $value\n";
                 }
             } else {
