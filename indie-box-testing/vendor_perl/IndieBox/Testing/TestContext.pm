@@ -2,7 +2,7 @@
 #
 # Passed to an AppTest. Holds the run-time information the test needs to function.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -71,11 +71,21 @@ sub hostName {
 
 ##
 # Determine the context path of the application being tested
-# return: context
+# return: context, e.g. /foo
 sub context {
     my $self = shift;
 
     return $self->{appConfigJson}->{context};
+}
+
+##
+# Determine the fill context path of the application being tested
+# return: full context, e.g. http://example.com/foo
+sub fullContext {
+    my $self = shift;
+
+    my $url = 'http://' . $self->hostName . $self->context();
+    return $url;
 }
 
 ##

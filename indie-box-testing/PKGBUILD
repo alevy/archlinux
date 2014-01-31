@@ -1,7 +1,7 @@
 # Maintainer: Indie Box Project http://indieboxproject.org/
 
 pkgname=indie-box-testing
-pkgver=0.2
+pkgver=0.3
 pkgrel=1
 pkgdesc="Testing tools for Indie Box Project"
 arch=('any')

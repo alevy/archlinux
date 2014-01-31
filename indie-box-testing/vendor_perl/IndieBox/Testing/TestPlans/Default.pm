@@ -2,7 +2,7 @@
 #
 # Default test plan: walks through the states and transitions, and attempts to restore.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@ sub run {
     my $repeat;
     my $abort;
     my $quit;
+    my $deployed = 1;
 
     do {
         $success = $scaffold->deploy( $siteJson );
@@ -70,7 +71,8 @@ sub run {
         ( $repeat, $abort, $quit ) = $self->askUser( 'Performed deployment', $interactive, $success, $ret );
 
     } while( $repeat );
-    $ret &= $success;
+    $ret      &= $success;
+    $deployed =  $success;
 
     my @statesBackupsReverse = ();
 
@@ -196,7 +198,7 @@ sub run {
         $c->destroy();
     }
 
-    unless( $abort ) {
+    if( $deployed && !$abort ) {
         $scaffold->undeploy( $siteJson );
     }
     

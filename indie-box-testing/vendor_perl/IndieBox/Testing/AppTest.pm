@@ -3,7 +3,7 @@
 # Provides the StateCheck and StateTransition abstractions for writing
 # Indie Box tests.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -349,7 +349,8 @@ sub execute {
         $ret = 0;
     } elsif( $@ ) {
         $msg = $@;
-    } else {
+        $ret = 0;
+    } elsif( !$ret ) {
         $msg = 'return value 0.';
     }
 
