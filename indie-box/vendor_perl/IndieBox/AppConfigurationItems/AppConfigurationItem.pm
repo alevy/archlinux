@@ -207,9 +207,9 @@ sub _addRecursive {
     my $zipName  = shift;
 
     if( -l $fileName ) {
-		my $member = $zip->addString( readlink $fileName, $zipName );
-		$member->{'externalFileAttributes'} = 0xA1FF0000;
-		# This comes from the source code of Archive::Zip; there doesn't seem to be an API
+        my $member = $zip->addString( readlink $fileName, $zipName );
+        $member->{'externalFileAttributes'} = 0xA1FF0000;
+        # This comes from the source code of Archive::Zip; there doesn't seem to be an API
 
     } elsif( -f $fileName ) {
         $zip->addFile( $fileName, $zipName );
@@ -226,7 +226,7 @@ sub _addRecursive {
         }
 
     } else {
-        warn( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
+        IndieBox::Logging::warn( 'Not a file or directory. Backup skipping:', $fileName, 'not a file or directory.' );
     }
 
     1;
@@ -252,8 +252,8 @@ sub _restoreRecursive {
     if( $mode == -1 ) {
         $asOct = "755";
     } else {
-		$asOct = sprintf( "%o", $mode );
-	}
+        $asOct = sprintf( "%o", $mode );
+    }
     IndieBox::Utils::myexec "chmod -R $asOct $fileName"; # no -h on Linux
 
     if( defined( $uid )) {

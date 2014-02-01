@@ -123,7 +123,7 @@ sub _syncApacheCtl {
         }
         
         if( $delta >= $max ) {
-            warn( 'Apache command', $command, 'not finished within', $max, 'seconds' );
+            IndieBox::Logging::warn( 'Apache command', $command, 'not finished within', $max, 'seconds' );
             return 1;
         }
     }
@@ -211,7 +211,7 @@ CONTENT
     my $sslCaCert;
     
     if( $site->hasSsl ) {
-	    $siteAtPort = 443;
+        $siteAtPort = 443;
         $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:80>
@@ -244,11 +244,11 @@ CONTENT
         }
 
 
-	} else {
-		# No SSL
-	    $siteAtPort = 80;
-	}
-	
+    } else {
+        # No SSL
+        $siteAtPort = 80;
+    }
+    
     $siteFileContent .= <<CONTENT;
 
 <VirtualHost *:$siteAtPort>
@@ -288,26 +288,26 @@ CONTENT
     # the CA certs explaining where our clients got their certs from
     SSLCACertificateFile $sslDir/$siteId.cacrt
 CONTENT
-		}
-	}
+        }
+    }
 
     my $hasDefault = 0;
-	foreach my $appConfig ( @{$site->appConfigs} ) {
+    foreach my $appConfig ( @{$site->appConfigs} ) {
         my $context = $appConfig->context();
-		if( $appConfig->isDefault ) {
+        if( $appConfig->isDefault ) {
             $hasDefault = 1;
-			if( $context ) {
-				$siteFileContent .= <<CONTENT;
+            if( $context ) {
+                $siteFileContent .= <<CONTENT;
 
     RedirectMatch seeother ^/\$ $context/
 CONTENT
-				last;
-			}
-		} elsif( defined( $context ) && !$context ) {
+                last;
+            }
+        } elsif( defined( $context ) && !$context ) {
             # runs at root of site
             $hasDefault = 1;
         }
-	}
+    }
     unless( $hasDefault ) {
         $siteFileContent .= <<CONTENT;
 
@@ -370,7 +370,7 @@ sub ensureConfigFiles {
     if( -e $ourConfigFile ) {
         IndieBox::Utils::myexec( "cp -f '$ourConfigFile' '$mainConfigFile'" );
     } else {
-        warn( 'Config file', $ourConfigFile, 'is missing' );
+        IndieBox::Logging::warn( 'Config file', $ourConfigFile, 'is missing' );
     }
     activateApacheModules( @minimumApacheModules );
 
@@ -412,7 +412,7 @@ sub activateApacheModules {
             next;
         }
         unless( -e "$modsAvailableDir/$module.load" ) {
-            warn( 'Cannot find Apache2 module, not activating:', $module );
+            IndieBox::Logging::warn( 'Cannot find Apache2 module, not activating:', $module );
             next;
         }
         debug( 'Activating Apache2 module:', $module );
@@ -435,7 +435,7 @@ sub activatePhpModules {
             next;
         }
         unless( -e "$phpModulesDir/$module.so" ) {
-            warn( 'Cannot find PHP module, not activating:', $module );
+            IndieBox::Logging::warn( 'Cannot find PHP module, not activating:', $module );
             next;
         }
         debug( 'Activating PHP module:', $module );

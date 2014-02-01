@@ -152,7 +152,7 @@ sub executeTriggers {
         } elsif( 'httpd-restart' eq $trigger ) {
             IndieBox::Apache2::restart();
         } else {
-            warn( 'Unknown trigger:', $trigger );
+            IndieBox::Logging::warn( 'Unknown trigger:', $trigger );
         }
     }
 }

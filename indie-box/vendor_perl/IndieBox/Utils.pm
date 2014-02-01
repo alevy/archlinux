@@ -326,7 +326,7 @@ sub mkdir {
     }
 
     if( -d $filename ) {
-        warn( 'Directory exists already', $filename );
+        IndieBox::Logging::warn( 'Directory exists already', $filename );
         return 1;
     }
     if( -e $filename ) {
@@ -395,7 +395,7 @@ sub rmdir {
             error( "Cannot delete directory. File exists but isn't a directory", $d );
             $ret = 0;
         } else {
-            warn( 'Cannot delete directory, does not exist', $d );
+            IndieBox::Logging::warn( 'Cannot delete directory, does not exist', $d );
             next;
         }
     }
@@ -608,7 +608,7 @@ sub invokeMethod {
 
     if( $methodName =~ m!^(.*)::! ) {
         my $packageName = $1;
-        eval "require $packageName" || warn( "Cannot read $packageName: $@" );
+        eval "require $packageName" || IndieBox::Logging::warn( "Cannot read $packageName: $@" );
     }
 
     my $ret = &{\&{$methodName}}( @args );
