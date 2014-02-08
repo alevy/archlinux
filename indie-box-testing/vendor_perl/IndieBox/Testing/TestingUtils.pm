@@ -25,6 +25,7 @@ package IndieBox::Testing::TestingUtils;
 
 use Cwd;
 use IndieBox::Logging;
+use IndieBox::Utils;
 
 ##
 # Helper method to print name-value pairs, with the value optionally processed
@@ -56,128 +57,13 @@ sub printHashAsColumns {
 }
 
 ##
-# Obtain all Perl module files in a particular parent package.
-# $parentPackage: name of the parent package, such as IndieBox::AppConfigurationItems
-# $inc: the path to search, or @INC if not given
-# return: hash of file name to package name
-sub findPerlModuleNamesInPackage {
-    my $parentPackage = shift;
-    my $inc           = shift || \@INC;
-
-    my $parentDir = $parentPackage;
-    $parentDir =~ s!::!/!g;
-
-    my $ret = {};
-    
-    foreach my $inc2 ( @$inc ) {
-        my $parentDir2 = "$inc2/$parentDir";
-
-        if( -d $parentDir2 ) {
-            opendir( DIR, $parentDir2 ) || error( $! );
-
-            while( my $file = readdir( DIR )) {
-               if( $file =~ m/^(.*)\.pm$/ ) {
-                   my $fileName    = "$parentDir2/$file";
-                   my $packageName = "$parentPackage::$1";
-
-                   $ret->{$fileName} = $packageName;
-               }
-            }
-
-            closedir(DIR);
-        }
-    }
-    return $ret;
-}
-
-##
-# Find the short, lowercase names of all Perl module files in a particular package.
-# $parentPackage: name of the parent package, such as IndieBox::AppConfigurationItems
-# $inc: the path to search, or @INC if not given
-# return: hash of short package name to full package name
-sub findPerlShortModuleNamesInPackage {
-    my $parentPackage = shift;
-    my $inc           = shift;
-
-    my $full = findPerlModuleNamesInPackage( $parentPackage, $inc );
-    my $ret  = {};
-
-    while( my( $fileName, $packageName ) = each %$full ) {
-        my $shortName = $packageName;
-        $shortName =~ s!^.*::!!;
-        $shortName =~ s!([A-Z])!-lc($1)!ge;
-        $shortName =~ s!^-!!;
-
-        $ret->{$shortName} = $packageName;
-    }
-
-    return $ret;
-}
-
-##
-# Find the package names of all Perl files matching a pattern in a directory.
-# $dir: directory to look in
-# $pattern: the file name pattern, e.g. '\.pm$'
-# return: hash of file name to package name
-sub findModulesInDirectory {
-    my $dir     = shift;
-    my $pattern = shift || '\.pm$';
-
-    my $ret = {};
-    
-    opendir( DIR, $dir ) || error( $! );
-
-    while( my $file = readdir( DIR )) {
-        if( $file =~ m/$pattern/ ) {
-            my $fileName    = "$dir/$file";
-            my $content     = IndieBox::Utils::slurpFile( $fileName );
-
-            if( $content =~ m!package\s+([a-zA-Z0-9:_]+)\s*;! ) {
-                my $packageName = $1;
-
-                $ret->{$file} = $packageName;
-            }
-        }
-    }
-    closedir( DIR );
-
-    return $ret;
-}
-
-##
-# Read all files matching a pattern in a directory.
-# $pattern: the file name pattern, e.g. '\.pm$'
-# $dir: directory to look in
-# return: hash of file name to file content
-sub readFilesInDirectory {
-    my $dir     = shift;
-    my $pattern = shift || '\.pm$';
-
-    my $ret = {};
-    
-    opendir( DIR, $dir ) || error( $! );
-
-    while( my $file = readdir( DIR )) {
-        if( $file =~ m/$pattern/ ) {
-            my $fileName    = "$dir/$file";
-            my $content     = IndieBox::Utils::slurpFile( $fileName );
-
-            $ret->{$file} = $content;
-        }
-    }
-    closedir( DIR );
-
-    return $ret;
-}
-
-##
 # Find all AppTests in a directory.
 # $dir: directory to look in
 # return: hash of file name to AppTest object
 sub findAppTestsInDirectory {
     my $dir = shift;
     
-    my $appTestCandidates = readFilesInDirectory( getcwd(), 'AppTest\.pm$' );
+    my $appTestCandidates = IndieBox::Utils::readFilesInDirectory( getcwd(), 'AppTest\.pm$' );
     my $appTests = {};
     
     while( my( $fileName, $content ) = each %$appTestCandidates ) {
@@ -200,7 +86,7 @@ sub findAppTestsInDirectory {
 # Find available commands.
 # return: hash of command name to full package name
 sub findCommands {
-    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
+    my $ret = IndieBox::Utils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Commands' );
 
     return $ret;
 }
@@ -209,7 +95,7 @@ sub findCommands {
 # Find available test plans
 # return: hash of test plan name to full package name
 sub findTestPlans {
-    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlans' );
+    my $ret = IndieBox::Utils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::TestPlans' );
 
     return $ret;
 }
@@ -231,7 +117,7 @@ sub findTestPlan {
 # Find available test scaffolds.
 # return: hash of scaffold name to full package name
 sub findScaffolds {
-    my $ret = findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
+    my $ret = IndieBox::Utils::findPerlShortModuleNamesInPackage( 'IndieBox::Testing::Scaffolds' );
     return $ret;
 }
 
@@ -277,17 +163,6 @@ sub findAppTestInDirectory {
         }
     }        
     return undef;
-}
-
-##
-# Escape characters in URL. Inspired by http://cpansearch.perl.org/src/GAAS/URI-1.60/URI/Escape.pm,
-# which does not seem to come with Arch.
-sub uri_escape {
-    my $s = shift;
-
-    $s =~ s!([^-A-Za-z0-9\._~])!sprintf("%%%02X",ord($1))!ge;
-
-    return $s;
 }
 
 1;

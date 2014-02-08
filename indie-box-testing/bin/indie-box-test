@@ -21,7 +21,6 @@
 use strict;
 use warnings;
 
-use IndieBox::Host;
 use IndieBox::Testing::TestingUtils;
 use IndieBox::Utils;
 

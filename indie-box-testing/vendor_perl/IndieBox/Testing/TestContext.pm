@@ -157,7 +157,7 @@ sub httpPostRelativeHost {
 
     my $postData = join(
             '&',
-            map { IndieBox::Testing::TestingUtils::uri_escape( $_ ) . '=' . IndieBox::Testing::TestingUtils::uri_escape( $postPars->{$_} ) } keys %$postPars );
+            map { IndieBox::Utils::uri_escape( $_ ) . '=' . IndieBox::Utils::uri_escape( $postPars->{$_} ) } keys %$postPars );
     
     my $cmd = $self->{curl};
     $cmd .= " -d '$postData'";
