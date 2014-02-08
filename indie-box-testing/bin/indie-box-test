@@ -29,15 +29,23 @@ my $commands = IndieBox::Testing::TestingUtils::findCommands();
 unless( @ARGV ) {
     synopsisHelpQuit();
 }
-
 my $command = shift @ARGV;
 if( '--help' eq $command || '-h' eq $command ) {
     synopsisHelpQuit( 1 );
 }
 
 my $commandPackage = $commands->{$command};
-
 if( $commandPackage ) {
+    foreach my $arg ( @ARGV ) {
+        if( '--help' eq $arg || '-h' eq $arg ) {
+            if( $commandPackage ) {
+                synopsisHelpQuit( 1, $command );
+            } else {
+                synopsisHelpQuit( 1 );
+            }
+        }
+    }
+    
     my $result = IndieBox::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
 
     exit !$result;
@@ -47,47 +55,67 @@ if( $commandPackage ) {
 }
 
 #####
+# Print synopsis or help
+# $long: if true, print long help
+# $helpFor: if given, only provide help on this command
 sub synopsisHelpQuit {
-    my $long = shift;
+    my $long    = shift;
+    my $helpFor = shift;
 
-    if( $long ) {
-        print <<END;
+    unless( $helpFor ) {
+        if( $long ) {
+            print <<END;
 The central testing script for Indie Box application testing. For more
 information about the Indie Box Project, see http://indieboxproject.org/
 
 It may be invoked in the following ways:
 
 END
-    } else {
-        print "Synopsis:\n";
-    }
-
-    foreach my $command ( sort keys %$commands ) {
-        my $package  = $commands->{$command};
-        my $helpArgs = IndieBox::Utils::invokeMethod( $package . '::helpArguments' ) || '';
-        $helpArgs =~ s!^\s+!!;
-        $helpArgs =~ s!\s+$!!;
-
-        print "    $0 $command" . ( $helpArgs ? " $helpArgs" : '' ) . "\n";
-        if( $long ) {
-            my $help = IndieBox::Utils::invokeMethod( $package . '::help' );
-            $help =~ s!^\s+!!;
-            $help =~ s!\s+$!!;
-            $help =~ s!^!        !gm;
-
-            print "$help\n\n";
+        } else {
+            print "Synopsis:\n";
         }
     }
 
-    print "    $0 --help\n";
-    if( $long ) {
-        print <<END;
+    foreach my $command ( sort keys %$commands ) {
+        if( !$helpFor || $command eq $helpFor ) {
+            my $package      = $commands->{$command};
+            my $synopsisHelp = IndieBox::Utils::invokeMethod( $package . '::synopsisHelp' ) || '';
+            
+            while( my( $synopsis, $help ) = each %$synopsisHelp ) {
+                $synopsis =~ s!^\s+!!;
+                $synopsis =~ s!\s+$!!;
+
+                print "    $0 $command" . ( $synopsis ? " $synopsis" : '' ) . "\n";
+                if( $long || $helpFor ) {
+                    $help =~ s!^\s+!!gm;
+                    $help =~ s!\s+$!!gm;
+                    $help =~ s!^!        !gm;
+
+                    print "$help\n\n";
+                }
+            }
+        }
+    }
+
+    unless( $helpFor ) {
+        print "    $0 --help\n";
+        if( $long ) {
+            print <<END;
         Display help text.
 
 END
+        }
+        print "    $0 <command> [<args>...] --help\n";
+        if( $long ) {
+            print <<END;
+        Display help text for this command.
+
+END
+        }
     }
 
     exit 0;
 }
+
 
 1;

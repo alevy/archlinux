@@ -2,7 +2,7 @@
 #
 # Command that runs a TestSuite.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -108,20 +108,21 @@ sub run {
 
 ##
 # Return help text for this command.
-# return: help text
-sub help {
-    return <<END;
-Run a test.
-END
+# return: hash of synopsis to help text
+sub synopsisHelp {
+    return {
+        <<SSS => <<HHH
+    [--interactive] [--verbose] [--scaffold <scaffold>] [--testplan <testplan>] <apptest>...
+SSS
+    Run the test apptest.
+    --interactive: stop at important points and wait for user input
+    --verbose: print more information about how the test progresses
+    <scaffold>: use this named scaffold instead of the default
+    <testplan>: use this named testplan instead of the default
+HHH
+    };
 }
 
-##
-# Return allowed arguments for this command.
-# return: allowed arguments, as string
-sub helpArguments {
-    return <<END;
-[ --interactive ] [ --scaffold <scaffold> ] [ --testplan <testplan> ] <apptest>... 
-END
-}
+
 
 1;

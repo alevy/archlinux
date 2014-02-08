@@ -33,8 +33,8 @@ my $command = shift @ARGV;
 if( '--help' eq $command || '-h' eq $command ) {
     synopsisHelpQuit( 1 );
 }
-my $commandPackage = $commands->{$command};
 
+my $commandPackage = $commands->{$command};
 if( $commandPackage ) {
     foreach my $arg ( @ARGV ) {
         if( '--help' eq $arg || '-h' eq $arg ) {

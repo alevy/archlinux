@@ -2,7 +2,7 @@
 #
 # Command that lists all available tests in the current directory.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,18 +47,13 @@ sub run {
 
 ##
 # Return help text for this command.
-# return: help text
-sub help {
-    return <<END;
-Lists the available app tests in this directory.
-END
-}
-
-##
-# Return allowed arguments for this command.
-# return: allowed arguments, as string
-sub helpArguments {
-    return undef;
+# return: hash of synopsis to help text
+sub synopsisHelp {
+    return {
+        '' => <<HHH
+    Lists the available app tests in this directory.
+HHH
+    };
 }
 
 1;

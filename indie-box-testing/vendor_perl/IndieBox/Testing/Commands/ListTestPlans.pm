@@ -44,19 +44,14 @@ sub run {
 
 ##
 # Return help text for this command.
-# return: help text
-sub help {
-    return <<END;
-Lists all available test plans. For example, some test plans may only
-perform short, brief smoke tests, while others may perform exhaustive tests.
-END
-}
-
-##
-# Return allowed arguments for this command.
-# return: allowed arguments, as string
-sub helpArguments {
-    return undef;
+# return: hash of synopsis to help text
+sub synopsisHelp {
+    return {
+        '' => <<HHH
+    Lists all available test plans. For example, some test plans may only
+    perform short, brief smoke tests, while others may perform exhaustive tests.
+HHH
+    };
 }
 
 1;
