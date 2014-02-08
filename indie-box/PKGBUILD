@@ -2,7 +2,7 @@
 
 pkgname=indie-box
 pkgver=0.21
-pkgrel=1
+pkgrel=2
 pkgdesc="Application management tools"
 arch=('any')
 url="http://indieboxproject.org/"
@@ -29,12 +29,16 @@ package() {
     install -m755 $startdir/bin/indie-box-admin $pkgdir/usr/bin/
 
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Commands
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor
     for f in $startdir/vendor_perl/IndieBox/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/
     done
     for f in $startdir/vendor_perl/IndieBox/AppConfigurationItems/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems/
+    done
+    for f in $startdir/vendor_perl/IndieBox/Commands/*.pm; do
+        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Commands/
     done
     for f in $startdir/vendor_perl/IndieBox/TemplateProcessor/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor/

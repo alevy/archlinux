@@ -2,7 +2,7 @@
 #
 # Represents a Site for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ package IndieBox::Site;
 
 use IndieBox::Apache2;
 use IndieBox::AppConfiguration;
+use IndieBox::Backup;
 use IndieBox::Logging;
 use IndieBox::Utils;
 use JSON;

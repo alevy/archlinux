@@ -93,12 +93,16 @@ sub installOrCheck {
             $toName = "$defaultToDir/$toName";
         }
         if( -r $fromName ) {
-            unless( -e $toName ) {
-                if( $doIt ) {
+            if( $doIt ) {
+                unless( -e $toName ) {
+                    # These names sound a little funny for symlinks. Think "copy" instead of "link"
+                    # and they make sense. We keep the names for consistency with other items.
+                    # $fromName: the destination of the link
+                    # $toName: the source of the link
                     IndieBox::Utils::symlink( $fromName, $toName, $mode, $uname, $gname );
+                } else {
+                    error( 'Cannot create symlink:', $toName );
                 }
-            } else {
-                error( 'Cannot create symlink:', $toName );
             }
 
         } else {
@@ -125,15 +129,22 @@ sub uninstallOrCheck {
         $names = [ $self->{json}->{name} ];
     }
 
-    foreach my $name ( reverse @$names ) {
+    my $source = $self->{json}->{source};
+
+    foreach my $name ( @$names ) {
         my $toName = $name;
         $toName = $config->replaceVariables( $toName );
 
         unless( $toName =~ m#^/# ) {
             $toName = "$defaultToDir/$toName";
         }
+
         if( $doIt ) {
-            IndieBox::Utils::deleteFile( $toName );
+            if( -e $toName ) {
+                IndieBox::Utils::deleteFile( $toName );
+            } else {
+                error( 'File does not exist:', $toName );
+            }
         }
     }
 }

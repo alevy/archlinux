@@ -160,17 +160,29 @@ sub executeTriggers {
 ##
 # Update all the code currently installed on this host.
 sub updateCode {
+    my $quiet = shift;
+
     trace( 'Host::updateCode' );
 
-    myexec( 'pacman -Syu --noconfirm' );
+    my $cmd = 'pacman -Syu --noconfirm';
+    if( $quiet ) {
+        $cmd .= ' > /dev/null';
+    }
+    myexec( $cmd );
 }
 
 ##
 # Clean package cache
 sub purgeCache {
+    my $quiet = shift;
+
     trace( 'Host::purgeCache' );
 
-    myexec( 'pacman -Sc --noconfirm > /dev/null' );
+    my $cmd = 'pacman -Sc --noconfirm';
+    if( $quiet ) {
+        $cmd .= ' > /dev/null';
+    }
+    myexec( $cmd );
 }
 
 ##
