@@ -25,7 +25,7 @@ package IndieBox::Site;
 
 use IndieBox::Apache2;
 use IndieBox::AppConfiguration;
-use IndieBox::Backup;
+use IndieBox::BackupManagers::ZipFileBackup;
 use IndieBox::Logging;
 use IndieBox::Utils;
 use JSON;
@@ -419,7 +419,7 @@ sub backup {
         $filename = $self->{config}->getResolve( 'site.backupfile' );
     }
 
-    my $backup = new IndieBox::Backup( [ $self->siteId ], undef, $filename );
+    my $backup = new IndieBox::BackupManagers::ZipFileBackup( [ $self->siteId ], undef, $filename );
     return $backup;
 }
 

@@ -107,7 +107,7 @@ sub run {
 
     debug( 'Creating and exporting backup' );
 
-    my $backup = new IndieBox::Backup( \@siteIds, \@appConfigIds, $out );
+    my $backup = new IndieBox::BackupManagers::ZipFileBackup( \@siteIds, \@appConfigIds, $out );
 
     debug( 'Resuming sites' );
 
