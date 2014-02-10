@@ -68,7 +68,8 @@ sub run {
         }
     }
 
-    my $backup             = newFromArchive IndieBox::BackupManagers::ZipFileBackup( $in );
+    my $backupManager      = new IndieBox::BackupManagers::ZipFileBackupManager();
+    my $backup             = $backupManager->newFromArchive( $in );
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
     my $sites              = IndieBox::Host::sites();
