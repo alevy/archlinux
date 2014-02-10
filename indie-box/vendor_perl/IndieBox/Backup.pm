@@ -270,14 +270,14 @@ sub fileName {
 
 ##
 # Restore a single AppConfiguration from Backup
-# $site: the Site of the AppConfiguration
+# $siteId: the SiteId of the AppConfiguration
 # $appConfig: the AppConfiguration to restore
 sub restoreAppConfiguration {
     my $self      = shift;
-    my $site      = shift;
+    my $siteId    = shift;
     my $appConfig = shift;
 
-    debug( 'Backup::restoreAppConfiguration', $site->siteId, $appConfig->appConfigId );
+    debug( 'Backup::restoreAppConfiguration', $siteId, $appConfig->appConfigId );
 
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;

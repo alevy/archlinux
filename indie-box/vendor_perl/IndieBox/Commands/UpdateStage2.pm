@@ -1,9 +1,7 @@
 #!/usr/bin/perl
 #
-# Update all code on this device. This command will perform all steps
-# until the actual installation of a new code version, and then
-# pass on to UpdateStage2 to complete with the update code instead of
-# the old code.
+# This command is not directly invoked by the user, but by Update.pm
+# to re-install sites with the new code, instead of the old code.
 #
 # Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
@@ -24,7 +22,7 @@
 use strict;
 use warnings;
 
-package IndieBox::Commands::Update;
+package IndieBox::Commands::UpdateStage2;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
@@ -74,24 +72,40 @@ sub run {
     debug( 'Updating code' );
 
     IndieBox::Host::updateCode( $quiet );
+    foreach my $site ( values %$oldSites ) {
+        $site->restoreSite( $adminBackups->{$site->siteId}, $site );
+    }
 
-    # Will look into the know spot and restore from there
-    exec( "indie-box-admin update-stage-2" ) || fatal( "Failed to run indie-box-admin update-stage-2" );
+    debug( 'Resuming sites' );
+
+    my $resumeTriggers = {};
+    foreach my $site ( values %$oldSites ) {
+        $site->resume( $resumeTriggers ); # remove "upgrade in progress page"
+    }
+    IndieBox::Host::executeTriggers( $resumeTriggers );
+
+    debug( 'Running upgraders' );
+
+    foreach my $site ( values %$oldSites ) {
+        foreach my $appConfig ( @{$site->appConfigs} ) {
+            $appConfig->runUpgrader();
+        }
+    }
+
+    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+
+    debug( 'Purging cache' );
+
+    IndieBox::Host::purgeCache( $quiet );
+    
+    return 1;
 }
 
 ##
 # Return help text for this command.
 # return: hash of synopsis to help text
 sub synopsisHelp {
-    return {
-        <<SSS => <<HHH
-    [--quiet]
-SSS
-    Update all code installed on this device. This will perform
-    package updates, configuration updates, database migrations
-    et al as needed.
-HHH
-    };
+    return undef; # user is not supposed to invoke this
 }
 
 1;

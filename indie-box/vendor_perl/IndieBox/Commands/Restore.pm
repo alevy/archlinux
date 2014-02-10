@@ -173,7 +173,7 @@ sub run {
 
     foreach my $appConfigId ( @appConfigIds ) {
         my $site = $sitesOfAppConfigs->{$appConfigId};
-        $site->restoreAppConfiguration( $backup, $site, $appConfigId );
+        $site->restoreAppConfiguration( $backup, $site->siteId, $site->appConfig( $appConfigId ));
     }
 
     debug( 'Resuming sites' );

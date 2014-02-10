@@ -54,7 +54,6 @@ if( $commandPackage ) {
     my $result = IndieBox::Utils::invokeMethod( $commandPackage . '::run', @ARGV );
 
     exit !$result;
-
 } else {
     synopsisHelpQuit();
 }
@@ -87,18 +86,20 @@ END
         if( !$helpFor || $command eq $helpFor ) {
             my $package      = $commands->{$command};
             my $synopsisHelp = IndieBox::Utils::invokeMethod( $package . '::synopsisHelp' ) || '';
-            
-            while( my( $synopsis, $help ) = each %$synopsisHelp ) {
-                $synopsis =~ s!^\s+!!;
-                $synopsis =~ s!\s+$!!;
 
-                print "    $0 $command" . ( $synopsis ? " $synopsis" : '' ) . "\n";
-                if( $long || $helpFor ) {
-                    $help =~ s!^\s+!!gm;
-                    $help =~ s!\s+$!!gm;
-                    $help =~ s!^!        !gm;
+            if( $synopsisHelp ) { # skip commands that don't have this
+                while( my( $synopsis, $help ) = each %$synopsisHelp ) {
+                    $synopsis =~ s!^\s+!!;
+                    $synopsis =~ s!\s+$!!;
 
-                    print "$help\n\n";
+                    print "    $0 $command" . ( $synopsis ? " $synopsis" : '' ) . "\n";
+                    if( $long || $helpFor ) {
+                        $help =~ s!^\s+!!gm;
+                        $help =~ s!\s+$!!gm;
+                        $help =~ s!^!        !gm;
+
+                        print "$help\n\n";
+                    }
                 }
             }
         }

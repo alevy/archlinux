@@ -443,7 +443,7 @@ sub restoreSite {
         $appConfig->deploy();
     }
     foreach my $appConfig ( @{$self->appConfigs} ) {
-        $backup->restoreAppConfiguration( $oldSite, $appConfig );
+        $backup->restoreAppConfiguration( $oldSite->siteId, $appConfig );
     }
 
     IndieBox::Host::siteDeployed( $self );
@@ -466,7 +466,7 @@ sub restoreAppConfiguration {
 
     my $appConfig = $oldSite->appConfig( $appConfigId );
     $appConfig->deploy();
-    $backup->restoreAppConfiguration( $self, $oldSite, $appConfig );
+    $backup->restoreAppConfiguration( $self, $oldSite->siteId, $appConfig );
 
     IndieBox::Host::siteDeployed( $self );
 }
