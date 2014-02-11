@@ -27,6 +27,7 @@ use Cwd;
 use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
 use IndieBox::AdminUtils;
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -233,13 +234,17 @@ sub run {
 
     debug( 'Backing up, undeploying and redeploying' );
 
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
+
     my $adminBackups = {};
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
-            my $backup = $oldSite->backup();
+            my $backup = $backupManager->backupSite( $oldSite );
             $oldSite->undeploy();
-            $site->restoreSite( $backup, $oldSite );
+            
+            $site->deploy();
+            $backup->restoreSite( $site );
             $adminBackups->{$site->siteId} = $backup;
         } else {
             $site->deploy();

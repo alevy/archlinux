@@ -25,6 +25,7 @@ package IndieBox::Commands::Update;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -61,10 +62,12 @@ sub run {
     IndieBox::Host::executeTriggers( $suspendTriggers );
 
     debug( 'Backing up and undeploying' );
+    
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
 
     my $adminBackups = {};
     foreach my $site ( values %$oldSites ) {
-        $adminBackups->{$site->siteId} = $site->backup();
+        $adminBackups->{$site->siteId} = $backupManager->backupSite( $site );
         $site->undeploy();
     }
 
@@ -72,7 +75,11 @@ sub run {
 
     IndieBox::Host::updateCode( $quiet );
     foreach my $site ( values %$oldSites ) {
-        $site->restoreSite( $adminBackups->{$site->siteId}, $site );
+        $site->deploy();
+        
+        $adminBackups->{$site->siteId}->restoreSite( $site );
+
+        IndieBox::Host::siteDeployed( $site );
     }
 
     debug( 'Resuming sites' );

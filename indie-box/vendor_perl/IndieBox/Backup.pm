@@ -269,6 +269,23 @@ sub fileName {
 }
 
 ##
+# Restore a site from a backup
+# $site: the Site to restore
+# $backup: the Backup from where to restore
+sub restoreSite {
+    my $self    = shift;
+    my $site    = shift;
+
+    debug( 'ZipFileBackup->restoreSite( ', $site->siteId );
+
+    foreach my $appConfig ( @{$site->appConfigs} ) {
+        $self->restoreAppConfiguration( $site, $appConfig );
+    }
+
+    1;
+}
+
+##
 # Restore a single AppConfiguration from Backup
 # $site: the Site of the AppConfiguration
 # $appConfig: the AppConfiguration to restore
@@ -278,6 +295,8 @@ sub restoreAppConfiguration {
     my $appConfig = shift;
 
     debug( 'Backup::restoreAppConfiguration', $site->siteId, $appConfig->appConfigId );
+
+    $appConfig->deploy();
 
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;
