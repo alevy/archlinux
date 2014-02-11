@@ -24,6 +24,7 @@ use warnings;
 package IndieBox::BackupManagers::ZipFileBackupManager;
 
 use fields qw( directory );
+
 use IndieBox::BackupManagers::ZipFileBackup;
 
 ##
@@ -69,7 +70,7 @@ sub backupSite {
     
     return $self->backup( [ $site->siteId ], undef, $outFile );
 }
-    
+
 ##
 # Read a Backup
 # $archive: the archive file name
