@@ -276,7 +276,7 @@ sub restoreSite {
     my $self    = shift;
     my $site    = shift;
 
-    debug( 'ZipFileBackup->restoreSite( ', $site->siteId );
+    debug( 'ZipFileBackup->restoreSite', $site->siteId );
 
     foreach my $appConfig ( @{$site->appConfigs} ) {
         $self->restoreAppConfiguration( $site, $appConfig );
@@ -295,8 +295,6 @@ sub restoreAppConfiguration {
     my $appConfig = shift;
 
     debug( 'Backup::restoreAppConfiguration', $site->siteId, $appConfig->appConfigId );
-
-    $appConfig->deploy();
 
     my $zip         = $self->{zip};
     my $appConfigId = $appConfig->appConfigId;

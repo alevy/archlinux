@@ -4,10 +4,7 @@
     },
 
     "host" : {
-        "tmpdir"    : "/tmp",
-        "backupdir" : "/var/lib/indie-box/backups",
-
-        "adminbackuplifetime" : -1
+        "tmpdir" : "/tmp"        
     },
 
     "package" : {
@@ -33,8 +30,7 @@
 
             "htdigestauthuserfile" : "${apache2.sitefragmentdir}/${site.siteid}.htdigest",
             "authgroupfile"        : "${apache2.sitefragmentdir}/${site.siteid}.groups",
-        },
-        "backupfile" : "${host.backupdir}/${site.siteid}.${now.tstamp}.indie-backup"
+        }
     },
 
     "appconfig" : {
@@ -45,5 +41,17 @@
         "datadir"    : "${package.datadir}/${appconfig.appconfigid}",
         "backupfile" : "${host.backupdir}/${appconfig.appconfigid}.${now.tstamp}.indie-backup",
         "cronjobfile" : "/etc/cron.d/50-${appconfig.appconfigid}"
+    },
+    
+    "zipfilebackupmanager" : {
+        "backupsuffix" : ".indie-backup",
+
+        "adminbackupdir"      : "/var/lib/indie-box/backups/admin",
+        "adminsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
+        "adminbackuplifetime" : 604800,
+        
+        "testbackupdir"      : "/var/lib/indie-box/backups/test",
+        "testsitebackupfile" : "${zipfilebackupmanager.adminbackupdir}/${site.siteid}.${now.tstamp}${zipfilebackupmanager.backupsuffix}",
+        "testbackuplifetime" : 86400
     }
 }

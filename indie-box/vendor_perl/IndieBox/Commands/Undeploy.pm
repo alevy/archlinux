@@ -75,12 +75,12 @@ sub run {
 
     my $adminBackups = {};
     foreach my $oldSite ( values %$oldSites ) {
-        my $backup  = $backupManager->backupSite( $oldSite );
+        my $backup  = $backupManager->adminBackupSite( $oldSite );
         $oldSite->undeploy();
         $adminBackups->{$oldSite->siteId} = $backup;
     }
-    
-    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+
+    $backupManager->purgeAdminBackups();
     
     return 1;
 }

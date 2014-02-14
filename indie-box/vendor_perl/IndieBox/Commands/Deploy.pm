@@ -240,7 +240,7 @@ sub run {
     foreach my $site ( @newSites ) {
         my $oldSite = $oldSites->{$site->siteId};
         if( $oldSite ) {
-            my $backup = $backupManager->backupSite( $oldSite );
+            my $backup = $backupManager->adminBackupSite( $oldSite );
             $oldSite->undeploy();
             
             $site->deploy();
@@ -277,8 +277,8 @@ sub run {
             }
         }
     }
-    
-    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+
+    $backupManager->purgeAdminBackups();
 
     return 1;
 }

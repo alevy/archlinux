@@ -23,22 +23,20 @@ use warnings;
 
 package IndieBox::BackupManagers::ZipFileBackupManager;
 
-use fields qw( directory );
+use fields;
 
 use IndieBox::BackupManagers::ZipFileBackup;
+use IndieBox::Logging;
 
 ##
 # Constructor
 # $dir: the directory in which to make new backups
 sub new {
     my $self = shift;
-    my $dir  = shift;
     
     unless( ref( $self )) {
         $self = fields::new( $self );
     }
-    $self->{directory} = $dir;
-
     return $self;
 }
 
@@ -60,14 +58,42 @@ sub backup {
 ##
 # Convenience method to create a Backup containing exactly one site.
 # $site: the Site to be backed up
-# $outFile: the file to save the backup to, if any
+# $outFile: the file to save the backup to
 # return: the Backup object
-# 
 sub backupSite {
     my $self    = shift;
     my $site    = shift;
     my $outFile = shift;
     
+    return $self->backup( [ $site->siteId ], undef, $outFile );
+}
+
+##
+# Convenience method to create an administrative Backup containing exactly one site.
+# $site: the Site to be backed up
+# return: the Backup object
+sub adminBackupSite {
+    my $self    = shift;
+    my $site    = shift;
+    
+    my $config  = $site->config;
+    my $outFile = $config->getResolve( 'zipfilebackupmanager.adminsitebackupfile' );
+
+    return $self->backup( [ $site->siteId ], undef, $outFile );
+}
+
+##
+# Convenience method to create a Backup containing exactly one site.
+# $site: the Site to be backed up
+# $outFile: the file to save the backup to, if any
+# return: the Backup object
+sub testBackupSite {
+    my $self    = shift;
+    my $site    = shift;
+    
+    my $config  = $site->config;
+    my $outFile = $config->getResolve( 'zipfilebackupmanager.testsitebackupfile' );
+
     return $self->backup( [ $site->siteId ], undef, $outFile );
 }
 
@@ -79,6 +105,48 @@ sub newFromArchive {
     my $archive = shift;
     
     return IndieBox::BackupManagers::ZipFileBackup->newFromArchive( $archive );
+}
+
+##
+# Purge administrative backups on this device.
+sub purgeAdminBackups {
+
+    return _purgeBackupsIn(
+            IndieBox::Host::config()->getResolve( 'zipfilebackupmanager.adminbackupdir' ),
+            IndieBox::Host::config()->getResolve( 'zipfilebackupmanager.adminbackuplifetime' ));
+}
+
+##
+# Purge testing backups on this device.
+sub purgeTestBackups {
+
+    return _purgeBackupsIn(
+            IndieBox::Host::config()->getResolve( 'zipfilebackupmanager.testbackupdir' ),
+            IndieBox::Host::config()->getResolve( 'zipfilebackupmanager.testbackuplifetime' ));
+}
+
+##
+# Purge backups located in the given directory that are older than the given seconds.
+sub _purgeBackupsIn {
+    my $dir     = shift;
+    my $seconds = shift;
+    my $suffix  = shift || IndieBox::Host::config()->getResolve( 'zipfilebackupmanager.backupsuffix' );
+    
+    unless( $dir && $seconds ) {
+        return 0;
+    }
+    
+    trace( '_purgeBackupsIn', $dir, $seconds, $suffix );
+
+    my $cutoff = time() - $seconds;
+    my @files = <$dir*$suffix>;
+    foreach my $file ( @files ) {
+        my $backup = IndieBox::BackupManagers::ZipFileBackup->newFromArchive( $file );
+        if( $backup->startTime() < $cutoff ) {
+            IndieBox::Utils::deleteFile( $file );
+        }
+    }
+    return 1;
 }
 
 1;

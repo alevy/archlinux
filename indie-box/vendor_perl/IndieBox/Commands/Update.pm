@@ -67,7 +67,7 @@ sub run {
 
     my $adminBackups = {};
     foreach my $site ( values %$oldSites ) {
-        $adminBackups->{$site->siteId} = $backupManager->backupSite( $site );
+        $adminBackups->{$site->siteId} = $backupManager->adminBackupSite( $site );
         $site->undeploy();
     }
 
@@ -98,7 +98,7 @@ sub run {
         }
     }
 
-    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+    $backupManager->purgeAdminBackups();
 
     debug( 'Purging cache' );
 

@@ -98,7 +98,7 @@ sub run {
                 last;
             }
 
-            my $backup = $scaffold->backup( $siteJson );
+            my $backup = $scaffold->testBackup( $siteJson );
             unshift @statesBackupsReverse, [ $currentState, $backup ]; # insert at the beginning
 
             my( $transition, $nextState ) = $test->getTransitionFrom( $currentState );

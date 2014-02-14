@@ -36,27 +36,4 @@ sub findCommands {
     return $ret;
 }
 
-##
-# Purge backups on this device.
-# $backups: array of Backup object
-sub purgeBackups {
-    my $backups = shift;
-
-    debug( 'Purging backups' );
-
-    my $backupLifetime = IndieBox::Host::config()->getResolve( 'host.adminbackuplifetime', -1 );
-    if( $backupLifetime >= 0 ) {
-        my $cutoff = time() - $backupLifetime;
-        foreach my $backup ( $backups ) {
-            if( $backup->startTime() < $cutoff ) {
-                my $fileName = $backup->fileName();
-                if( $fileName && -e $fileName ) {
-                    IndieBox::Utils::deleteFile( $fileName );
-                }
-            }
-        }
-    }
-    return 1;
-}
-
 1;
