@@ -25,7 +25,6 @@ package IndieBox::Site;
 
 use IndieBox::Apache2;
 use IndieBox::AppConfiguration;
-use IndieBox::BackupManagers::ZipFileBackup;
 use IndieBox::Logging;
 use IndieBox::Utils;
 use JSON;
