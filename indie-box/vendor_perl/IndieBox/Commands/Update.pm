@@ -27,10 +27,22 @@ use warnings;
 package IndieBox::Commands::Update;
 
 use Cwd;
+use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
+
+# Do not change the following filenames and paths unless you also update
+# UpdateStage2 so it can still find the old location and restore.
+# They aren't in config.json so that nobody is tempted to change them accidentally
+# Do not write them into /tmp or such, because we still want to be able to do
+# UpdateStage2 even after reboot
+
+our $updateStatusDir = '/var/lib/indie-box/backups/admin';
+our $updateStatusPrefix = 'update.';
+our $updateStatusSuffix = '.status';
 
 ##
 # Execute this command.
@@ -45,6 +57,18 @@ sub run {
 
     if( !$parseOk || @args ) {
         fatal( 'Invalid command-line arguments' );
+    }
+
+    my $ts         = IndieBox::Host::config->get( 'now.tstamp' );
+    my $statusFile = "$updateStatusDir/$updateStatusPrefix$ts$updateStatusSuffix";
+    if( -e $statusFile ) {
+        if( ! -w $statusFile ) {
+            fatal( 'Cannot write to status file', $statusFile, ', not updating' );
+        }
+    } else {
+        if( ! -e dirname( $statusFile )) {
+            fatal( 'Cannot create status file', $statusFile, ', not updating' );
+        }
     }
 
     my $oldSites = IndieBox::Host::sites();
@@ -64,19 +88,33 @@ sub run {
     IndieBox::Host::executeTriggers( $suspendTriggers );
 
     debug( 'Backing up and undeploying' );
+    
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
 
     my $adminBackups = {};
     foreach my $site ( values %$oldSites ) {
-        $adminBackups->{$site->siteId} = $site->backup();
+        $adminBackups->{$site->siteId} = $backupManager->adminBackupSite( $site );
         $site->undeploy();
     }
+
+    debug( 'Preserving current configuration' );
+    
+    my $statusJson = {};
+    while( my( $siteId, $backup ) = each %$adminBackups ) {
+        $statusJson->{sites}->{$siteId} = { 'backupfile' => $backup->fileName };
+    }
+
+    IndieBox::Utils::writeJsonToFile( $statusFile, $statusJson, '0600' );
 
     debug( 'Updating code' );
 
     IndieBox::Host::updateCode( $quiet );
 
     # Will look into the know spot and restore from there
-    exec( "indie-box-admin update-stage-2" ) || fatal( "Failed to run indie-box-admin update-stage-2" );
+    
+    debug( 'Handing over to stage-2' );
+
+    exec( "indie-box-admin update-stage2" ) || fatal( "Failed to run indie-box-admin update-stage-2" );
 }
 
 ##

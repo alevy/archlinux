@@ -25,6 +25,7 @@ package IndieBox::Commands::Restore;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -68,7 +69,8 @@ sub run {
         }
     }
 
-    my $backup             = newFromArchive IndieBox::Backup( $in );
+    my $backupManager      = new IndieBox::BackupManagers::ZipFileBackupManager();
+    my $backup             = $backupManager->newFromArchive( $in );
     my $sitesInBackup      = $backup->sites();
     my $appConfigsInBackup = $backup->appConfigs();
     my $sites              = IndieBox::Host::sites();
@@ -166,14 +168,22 @@ sub run {
         my $siteInBackup = $sitesInBackup->{$siteId};
 
         $site->undeploy();
-        $siteInBackup->restoreSite( $backup, $site );
+        $siteInBackup->deploy();
+
+        $backup->restoreSite( $siteInBackup );
     }
 
     debug( 'Restoring AppConfigurations' );
 
+    my %restoredSites = ();
     foreach my $appConfigId ( @appConfigIds ) {
         my $site = $sitesOfAppConfigs->{$appConfigId};
-        $site->restoreAppConfiguration( $backup, $site->siteId, $site->appConfig( $appConfigId ));
+        $backup->restoreAppConfiguration( $site, $site->appConfig( $appConfigId ));
+
+        $restoredSites{$site->siteId} = $site;
+    }
+    foreach my $site ( values %restoredSites ) {
+        IndieBox::Host::siteDeployed( $site );
     }
 
     debug( 'Resuming sites' );

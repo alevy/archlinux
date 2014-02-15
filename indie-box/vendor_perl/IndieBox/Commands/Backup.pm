@@ -25,6 +25,7 @@ package IndieBox::Commands::Backup;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -107,7 +108,8 @@ sub run {
 
     debug( 'Creating and exporting backup' );
 
-    my $backup = new IndieBox::Backup( \@siteIds, \@appConfigIds, $out );
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
+    my $backup        = $backupManager->backup( \@siteIds, \@appConfigIds, $out );
 
     debug( 'Resuming sites' );
 

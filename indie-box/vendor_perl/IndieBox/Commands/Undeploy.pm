@@ -26,6 +26,7 @@ package IndieBox::Commands::Undeploy;
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
 use IndieBox::AdminUtils;
+use IndieBox::BackupManagers::ZipFileBackupManager;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -70,14 +71,16 @@ sub run {
 
     debug( 'Backing up and undeploying' );
 
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
+
     my $adminBackups = {};
     foreach my $oldSite ( values %$oldSites ) {
-        my $backup  = $oldSite->backup();
+        my $backup  = $backupManager->adminBackupSite( $oldSite );
         $oldSite->undeploy();
         $adminBackups->{$oldSite->siteId} = $backup;
     }
-    
-    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+
+    $backupManager->purgeAdminBackups();
     
     return 1;
 }

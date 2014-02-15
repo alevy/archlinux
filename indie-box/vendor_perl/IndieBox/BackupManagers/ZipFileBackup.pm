@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
-# Backup functionality.
+# A Backup implemented as a ZIP file.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 use strict;
 use warnings;
 
-package IndieBox::Backup;
+package IndieBox::BackupManagers::ZipFileBackup;
 
 use Archive::Zip qw( :ERROR_CODES :CONSTANTS );
 use IndieBox::AppConfiguration;
@@ -51,7 +51,7 @@ sub new {
     my $appConfigIds = shift;
     my $outFile      = shift;
 
-    trace( 'Backup::new' );
+    trace( 'ZipFileBackup::new' );
 
     my $mySites       = IndieBox::Host::sites();
     my $sites         = {};
@@ -180,7 +180,7 @@ sub new {
         unlink $current || error( 'Could not unlink', $current );
     }
 
-    return IndieBox::Backup->newFromArchive( $outFile );
+    return IndieBox::BackupManagers::ZipFileBackup->newFromArchive( $outFile );
 }
 
 ##
@@ -191,7 +191,7 @@ sub newFromArchive {
     my $self    = shift;
     my $archive = shift;
 
-    trace( 'Backup::newFromArchive' );
+    trace( 'ZipFileBackup::newFromArchive' );
 
     unless( ref( $self )) {
         $self = fields::new( $self );
@@ -266,6 +266,23 @@ sub fileName {
     my $self = shift;
 
     return $self->{file};
+}
+
+##
+# Restore a site from a backup
+# $site: the Site to restore
+# $backup: the Backup from where to restore
+sub restoreSite {
+    my $self    = shift;
+    my $site    = shift;
+
+    debug( 'ZipFileBackup->restoreSite', $site->siteId );
+
+    foreach my $appConfig ( @{$site->appConfigs} ) {
+        $self->restoreAppConfiguration( $site, $appConfig );
+    }
+
+    1;
 }
 
 ##

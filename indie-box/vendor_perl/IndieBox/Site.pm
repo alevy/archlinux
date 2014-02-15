@@ -25,7 +25,6 @@ package IndieBox::Site;
 
 use IndieBox::Apache2;
 use IndieBox::AppConfiguration;
-use IndieBox::Backup;
 use IndieBox::Logging;
 use IndieBox::Utils;
 use JSON;
@@ -403,72 +402,6 @@ sub disable {
     IndieBox::Apache2::setupPlaceholderSite( $self, 'nosuchsite' );
 
     $triggers->{'httpd-reload'} = 1;
-}
-
-##
-# Back up this site.
-# $filename: optional filename to back up to
-# return: the Backup object
-sub backup {
-    my $self     = shift;
-    my $filename = shift;
-
-    debug( 'Site', $self->{json}->{siteid}, '->backup' );
-
-    unless( $filename ) {
-        $filename = $self->{config}->getResolve( 'site.backupfile' );
-    }
-
-    my $backup = new IndieBox::Backup( [ $self->siteId ], undef, $filename );
-    return $backup;
-}
-
-##
-# Restore this entire Site.
-# $backup: the Backup object from which to restore the Site
-# $oldSite: the Site before the restore, or undef if none
-sub restoreSite {
-    my $self    = shift;
-    my $backup  = shift;
-    my $oldSite = shift;
-
-    debug( 'Site', $self->{json}->{siteid}, '->restoreSite' );
-
-    my $siteDocumentDir = $self->config->getResolve( 'site.apache2.sitedocumentdir' );
-    IndieBox::Utils::mkdir( $siteDocumentDir, 0755 );
-
-    IndieBox::Apache2::setupSite( $self );
-
-    foreach my $appConfig ( @{$self->appConfigs} ) {
-        $appConfig->deploy();
-    }
-    foreach my $appConfig ( @{$self->appConfigs} ) {
-        $backup->restoreAppConfiguration( $oldSite->siteId, $appConfig );
-    }
-
-    IndieBox::Host::siteDeployed( $self );
-
-    1;
-}
-
-##
-# Restore a single AppConfiguration to this Site.
-# $backup: the Backup object from which to restore the AppConfiguration
-# $oldSite: the Site before the restore, or undef if none
-# $appConfigId: the appconfigid of the AppConfiguration to restore
-sub restoreAppConfiguration {
-    my $self        = shift;
-    my $backup      = shift;
-    my $oldSite     = shift;
-    my $appConfigId = shift;
-
-    debug( 'Site', $self->{json}->{siteid}, '->restoreAppConfiguration' );
-
-    my $appConfig = $oldSite->appConfig( $appConfigId );
-    $appConfig->deploy();
-    $backup->restoreAppConfiguration( $self, $oldSite->siteId, $appConfig );
-
-    IndieBox::Host::siteDeployed( $self );
 }
 
 ##

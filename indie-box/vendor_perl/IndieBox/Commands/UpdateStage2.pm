@@ -26,6 +26,7 @@ package IndieBox::Commands::UpdateStage2;
 
 use Cwd;
 use Getopt::Long qw( GetOptionsFromArray );
+use IndieBox::Commands::Update;
 use IndieBox::Host;
 use IndieBox::Logging;
 use IndieBox::Utils;
@@ -36,44 +37,52 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
-    my $quiet = 0;
-    my $parseOk = GetOptionsFromArray(
-            \@args,
-            'quiet' => \$quiet );
-
-    if( !$parseOk || @args ) {
-        fatal( 'Invalid command-line arguments' );
+    if( @args ) {
+        error( 'Invalid command-line arguments' ); # but continuing, we want the sites back
     }
 
-    my $oldSites = IndieBox::Host::sites();
-    foreach my $oldSite ( values %$oldSites ) {
-        $oldSite->checkUndeployable();
-        $oldSite->checkDeployable(); # FIXME: this should check against the new version of the code
-                                     # to do that right, we'll have to implement some kind of package rollback
-                                     # this is the best we can do so far
+    my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
+
+    debug( 'Recovering configuration' );
+    
+    my @candidateFiles = <$IndieBox::Commands::Update::updateStatusDir/*>;
+
+    my $statusFile = undef;
+    my $bestTs     = undef;
+    foreach my $candidate ( @candidateFiles ) {
+        if( $candidate =~ m!^\Q$IndieBox::Commands::Update::updateStatusDir/$IndieBox::Commands::Update::updateStatusPrefix\E(.*)\Q$IndieBox::Commands::Update::updateStatusSuffix\E$! ) {
+            my $ts = $1;
+            if( !$bestTs || $ts gt $bestTs ) {
+                $bestTs     = $ts;
+                $statusFile = $candidate;
+            }
+        }
     }
-
-    debug( 'Suspending sites' );
-
-    my $suspendTriggers = {};
-    foreach my $site ( values %$oldSites ) {
-        $site->suspend( $suspendTriggers ); # replace with "upgrade in progress page"
+    unless( $statusFile ) {
+        fatal( 'Cannot restore, no status file found in', $IndieBox::Commands::Update::updateStatusDir );
     }
-    IndieBox::Host::executeTriggers( $suspendTriggers );
-
-    debug( 'Backing up and undeploying' );
-
+    
+    my $statusJson = IndieBox::Utils::readJsonFromFile( $statusFile );
+    
+    my $oldSites     = {};
     my $adminBackups = {};
-    foreach my $site ( values %$oldSites ) {
-        $adminBackups->{$site->siteId} = $site->backup();
-        $site->undeploy();
+    while( my( $siteId, $frag ) = each %{$statusJson->{sites}} ) {
+        my $backupFile = $frag->{backupfile};
+        my $backup     = $backupManager->newFromArchive( $backupFile );
+        
+        my $site = $backup->{sites}->{$siteId};
+        $oldSites->{$siteId} = $site;
+        $adminBackups->{$siteId} = $backup;
     }
 
-    debug( 'Updating code' );
+    debug( 'Redeploying sites' );
 
-    IndieBox::Host::updateCode( $quiet );
     foreach my $site ( values %$oldSites ) {
-        $site->restoreSite( $adminBackups->{$site->siteId}, $site );
+        $site->deploy();
+        
+        $adminBackups->{$site->siteId}->restoreSite( $site );
+
+        IndieBox::Host::siteDeployed( $site );
     }
 
     debug( 'Resuming sites' );
@@ -91,14 +100,14 @@ sub run {
             $appConfig->runUpgrader();
         }
     }
+    
+    IndieBox::Utils::deleteFile( $statusFile );
 
-    IndieBox::AdminUtils::purgeBackups( values %$adminBackups );
+    $backupManager->purgeAdminBackups();
 
     debug( 'Purging cache' );
-
-    IndieBox::Host::purgeCache( $quiet );
     
-    return 1;
+    IndieBox::Host::purgeCache();
 }
 
 ##
