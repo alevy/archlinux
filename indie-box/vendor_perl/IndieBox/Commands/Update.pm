@@ -50,10 +50,12 @@ our $updateStatusSuffix = '.status';
 sub run {
     my @args = @_;
 
-    my $quiet = 0;
+    my $quiet   = 0;
+    my $verbose = 0;
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'quiet' => \$quiet );
+            'quiet'   => \$quiet,
+            'verbose' => \$verbose );
 
     if( !$parseOk || @args ) {
         fatal( 'Invalid command-line arguments' );
@@ -80,6 +82,9 @@ sub run {
     }
 
     debug( 'Suspending sites' );
+    if( $verbose ) {
+        print( "Suspending sites\n" );
+    }
 
     my $suspendTriggers = {};
     foreach my $site ( values %$oldSites ) {
@@ -98,7 +103,10 @@ sub run {
     }
 
     debug( 'Preserving current configuration' );
-    
+    if( $verbose ) {
+        print( "Preserving current configuration\n" );
+    }
+
     my $statusJson = {};
     while( my( $siteId, $backup ) = each %$adminBackups ) {
         $statusJson->{sites}->{$siteId} = { 'backupfile' => $backup->fileName };
@@ -107,14 +115,24 @@ sub run {
     IndieBox::Utils::writeJsonToFile( $statusFile, $statusJson, '0600' );
 
     debug( 'Updating code' );
+    if( $verbose ) {
+        print( "Updating code\n" );
+    }
 
     IndieBox::Host::updateCode( $quiet );
 
     # Will look into the know spot and restore from there
     
-    debug( 'Handing over to stage-2' );
+    debug( 'Handing over to update-stage2' );
+    if( $verbose ) {
+        print( "Handing over to update-stage2\n" );
+    }
 
-    exec( "indie-box-admin update-stage2" ) || fatal( "Failed to run indie-box-admin update-stage-2" );
+    if( $verbose ) {
+        exec( "indie-box-admin update-stage2 --verbose" ) || fatal( "Failed to run indie-box-admin update-stage2" );
+    } else {
+        exec( "indie-box-admin update-stage2" ) || fatal( "Failed to run indie-box-admin update-stage2" );
+    }
 }
 
 ##

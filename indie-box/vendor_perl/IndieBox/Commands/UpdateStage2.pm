@@ -37,13 +37,21 @@ use IndieBox::Utils;
 sub run {
     my @args = @_;
 
-    if( @args ) {
-        error( 'Invalid command-line arguments' ); # but continuing, we want the sites back
+    my $verbose = 0;
+    my $parseOk = GetOptionsFromArray(
+            \@args,
+            'verbose' => \$verbose );
+
+    if( !$parseOk || @args ) {
+        error( 'Invalid command-line arguments, but attempting to restore anyway' );
     }
 
     my $backupManager = new IndieBox::BackupManagers::ZipFileBackupManager();
 
-    debug( 'Recovering configuration' );
+    debug( 'Restoring configuration' );
+    if( $verbose ) {
+        print( "Restoring configuration\n" );
+    }
     
     my @candidateFiles = <$IndieBox::Commands::Update::updateStatusDir/*>;
 
@@ -76,6 +84,9 @@ sub run {
     }
 
     debug( 'Redeploying sites' );
+    if( $verbose ) {
+        print( "Redeploying sites\n" );
+    }
 
     foreach my $site ( values %$oldSites ) {
         $site->deploy();
@@ -107,7 +118,7 @@ sub run {
 
     debug( 'Purging cache' );
     
-    IndieBox::Host::purgeCache();
+    IndieBox::Host::purgeCache( 1 );
 }
 
 ##
