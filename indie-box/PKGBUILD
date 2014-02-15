@@ -1,8 +1,8 @@
 # Maintainer: Indie Box Project http://indieboxproject.org/
 
 pkgname=indie-box
-pkgver=0.22
-pkgrel=2
+pkgver=0.23
+pkgrel=1
 pkgdesc="Application management tools"
 arch=('any')
 url="http://indieboxproject.org/"
