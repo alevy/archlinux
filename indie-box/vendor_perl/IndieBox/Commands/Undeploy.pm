@@ -24,6 +24,7 @@ use warnings;
 package IndieBox::Commands::Undeploy;
 
 use Cwd;
+use File::Basename;
 use Getopt::Long qw( GetOptionsFromArray );
 use IndieBox::AdminUtils;
 use IndieBox::BackupManagers::ZipFileBackupManager;
@@ -38,16 +39,34 @@ sub run {
     my @args = @_;
 
     my @siteIds = ();
+    my $file    = undef;
 
     my $parseOk = GetOptionsFromArray(
             \@args,
-            'siteid=s' => \@siteIds );
+            'siteid=s' => \@siteIds,
+            'file=s'   => \$file );
 
-    if( !$parseOk || @args || !@siteIds ) {
+    if( !$parseOk || @args || ( !@siteIds && !$file ) || ( @siteIds && $file )) {
         fatal( 'Invalid command-line arguments' );
     }
     
     debug( 'Looking for site(s)' );
+
+    if( $file ) {
+        # if $file is given, construct @siteIds from there
+        my $json = readJsonFromFile( $file );
+        $json = IndieBox::Utils::insertSlurpedFiles( $json, dirname( $file ) );
+
+        if( ref( $json ) eq 'HASH' && %$json ) {
+            @siteIds = ( $json->{siteid} );
+        } elsif( ref( $json ) eq 'ARRAY' ) {
+            if( !@$json ) {
+                fatal( 'No site given' );
+            } else {
+                @siteIds = map { $_->{siteid} || fatal( 'No siteid found in JSON file' ) } @$json;
+            }
+        }
+    }
 
     my $sites    = IndieBox::Host::sites();
     my $oldSites = {};
@@ -94,6 +113,12 @@ sub synopsisHelp {
     --siteid <siteid> [--siteid <siteid>]...
 SSS
     Undeploy one or more previously deployed website(s).
+HHH
+        <<SSS => <<HHH
+    --file <site.json>
+SSS
+    Undeploy one or more previously deployed website(s) whose site JSON
+    file is given. This is a convenience invocation.
 HHH
     };
 }
