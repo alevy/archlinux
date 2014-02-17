@@ -62,6 +62,7 @@ div.app > p {
 div.footer {
     border-top: 1px solid #808080;
     font-size: small;
+    clear: both;
 }
 div.footer p {
     margin: 0;

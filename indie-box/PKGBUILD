@@ -31,21 +31,15 @@ package() {
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/BackupManagers
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Commands
+    mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Databases
     mkdir -p $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor
     for f in $startdir/vendor_perl/IndieBox/*.pm; do
         install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/
     done
-    for f in $startdir/vendor_perl/IndieBox/AppConfigurationItems/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/AppConfigurationItems/
-    done
-    for f in $startdir/vendor_perl/IndieBox/BackupManagers/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/BackupManagers/
-    done
-    for f in $startdir/vendor_perl/IndieBox/Commands/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/Commands/
-    done
-    for f in $startdir/vendor_perl/IndieBox/TemplateProcessor/*.pm; do
-        install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/TemplateProcessor/
+    for d in AppConfigurationItems BackupManagers Commands Databases TemplateProcessor; do
+        for f in $startdir/vendor_perl/IndieBox/$d/*.pm; do
+            install -m755 $f $pkgdir/usr/lib/perl5/vendor_perl/IndieBox/$d/
+        done
     done
 
     mkdir -p $pkgdir/usr/share/indie-box/cgi-bin

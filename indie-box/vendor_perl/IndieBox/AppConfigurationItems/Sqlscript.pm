@@ -2,7 +2,7 @@
 #
 # An AppConfiguration item that is a SQL script to be run for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# FIXME: This currently only works with MySQL
+
 use strict;
 use warnings;
 
@@ -26,6 +28,7 @@ package IndieBox::AppConfigurationItems::Sqlscript;
 use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
 use fields;
 
+use IndieBox::Databases::MySqlDriver;
 use IndieBox::Logging;
 use IndieBox::Utils qw( saveFile slurpFile );
 
@@ -112,10 +115,11 @@ sub runPostDeployScript {
 
         my $sql = $templateProcessor->process( $content, $config, $sourceOrTemplate );
 
-        my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
+        my( $rootUser, $rootPass ) = IndieBox::Databases::MySqlDriver::findRootUserPass();
 
         my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-                = IndieBox::ResourceManager::getMySqlDatabase(
+                = IndieBox::ResourceManager::getDatabase(
+                        'mysql',
                         $self->{appConfig}->appConfigId,
                         $self->{installable}->packageName,
                         $name );

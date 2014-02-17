@@ -127,7 +127,7 @@ sub siteUndeployed {
 # takes place: provision database before setting up the web server.
 # return: the applicable role names
 sub applicableRoleNames {
-    return [ 'mysql', 'apache2' ];
+    return [ 'mysql', 'mongo', 'apache2' ];
 }
 
 ##

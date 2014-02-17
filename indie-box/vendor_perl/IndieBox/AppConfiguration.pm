@@ -2,7 +2,7 @@
 #
 # Represents an AppConfiguration on a Site for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ use IndieBox::Host;
 use IndieBox::AppConfigurationItems::Directory;
 use IndieBox::AppConfigurationItems::DirectoryTree;
 use IndieBox::AppConfigurationItems::File;
-use IndieBox::AppConfigurationItems::MysqlDatabase;
+use IndieBox::AppConfigurationItems::GenericDatabase;
 use IndieBox::AppConfigurationItems::Perlscript;
 use IndieBox::AppConfigurationItems::Sqlscript;
 use IndieBox::AppConfigurationItems::Symlink;
@@ -268,8 +268,8 @@ sub _deployOrCheck {
             if( 'apache2' eq $roleName ) {
                 my $apache2modules = $installableRoleJson->{apache2modules};
                 if( $self->site->hasSsl ) {
-					push @$apache2modules, 'ssl';
-				}
+                    push @$apache2modules, 'ssl';
+                }
                 if( $doIt && $apache2modules ) {
                     IndieBox::Apache2::activateApacheModules( @$apache2modules );
                 }
@@ -488,11 +488,17 @@ sub instantiateAppConfigurationItem {
         $ret = IndieBox::AppConfigurationItems::Perlscript->new( $json, $self, $installable );
     } elsif( 'sqlscript' eq $type ) {
         $ret = IndieBox::AppConfigurationItems::Sqlscript->new( $json, $self, $installable );
-    } elsif( 'mysql-database' eq $type ) {
-        $ret = IndieBox::AppConfigurationItems::MysqlDatabase->new( $json, $self, $installable );
     } else {
-        error( 'Unknown AppConfigurationItem type:', $type );
-        $ret = undef;
+        my @dbTypes = keys %{ IndieBox::Databases::findDatabases() };
+        foreach my $dbType ( @dbTypes ) {
+            if( "$dbType-database" eq $type ) {
+                $ret = IndieBox::AppConfigurationItems::GenericDatabase->new( $dbType, $json, $self, $installable );
+                last;
+            }
+        }
+        unless( $ret ) {
+            error( 'Unknown AppConfigurationItem type:', $type );
+        }
     }
     return $ret;
 }

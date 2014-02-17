@@ -390,44 +390,48 @@ sub checkManifest {
                     }
                 }
 
-            } elsif( $roleName eq 'mysql' ) {
-                my %databaseNames = ();
-                if( $roleJson->{appconfigitems} ) {
-                    unless( ref( $roleJson->{appconfigitems} ) eq 'ARRAY' ) {
-                        myFatal( $packageName, "roles section: role $roleName: not an array" );
-                    }
-                    my $appConfigIndex = 0;
-                    foreach my $appConfigItem ( @{$roleJson->{appconfigitems}} ) {
-                        if( ref( $appConfigItem->{type} )) {
-                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
-                        }
-                        if( $appConfigItem->{type} ne 'mysql-database' ) {
-                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type: " . $appConfigItem->{type} );
-                        }
-                        if( ref( $appConfigItem->{name} )) {
-                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
-                        }
-                        unless( $appConfigItem->{name} =~ m/^[a-z][_a-z0-9]*$/ ) {
-                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid symbolic database name: " . $appConfigItem->{name} );
-                        }
-                        if( $databaseNames{$appConfigItem->{name}} ) {
-                            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has non-unique symbolic database name" );
-                            $databaseNames{$appConfigItem->{name}} = 1;
-                        }
-                        _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
-
-                        if( $appConfigItem->{privileges} ) {
-                            if( ref( $appConfigItem->{privileges} )) {
-                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
-                            }
-                        }
-
-                        ++$appConfigIndex;
-                    }
-                }
-
             } else {
-                myFatal( $packageName, "roles section: unknown role $roleName" );
+                my $dbTypes = IndieBox::Databases::findDatabases();
+                
+                if( $dbTypes->{$roleName} ) {
+                    my %databaseNames = ();
+                    if( $roleJson->{appconfigitems} ) {
+                        unless( ref( $roleJson->{appconfigitems} ) eq 'ARRAY' ) {
+                            myFatal( $packageName, "roles section: role $roleName: not an array" );
+                        }
+                        my $appConfigIndex = 0;
+                        foreach my $appConfigItem ( @{$roleJson->{appconfigitems}} ) {
+                            if( ref( $appConfigItem->{type} )) {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
+                            }
+                            if( $appConfigItem->{type} ne 'mysql-database' ) {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type: " . $appConfigItem->{type} );
+                            }
+                            if( ref( $appConfigItem->{name} )) {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'name' must be string" );
+                            }
+                            unless( $appConfigItem->{name} =~ m/^[a-z][_a-z0-9]*$/ ) {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has invalid symbolic database name: " . $appConfigItem->{name} );
+                            }
+                            if( $databaseNames{$appConfigItem->{name}} ) {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has non-unique symbolic database name" );
+                                $databaseNames{$appConfigItem->{name}} = 1;
+                            }
+                            _checkRetention( $packageName, $appConfigItem, $roleName, $appConfigIndex, $retentionBuckets );
+
+                            if( $appConfigItem->{privileges} ) {
+                                if( ref( $appConfigItem->{privileges} )) {
+                                    myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
+                                }
+                            }
+
+                            ++$appConfigIndex;
+                        }
+                    }
+
+                } else {
+                    myFatal( $packageName, "roles section: unknown role $roleName" );
+                }
             }
 
             foreach my $postInstallCategory ( 'installers', 'uninstallers', 'upgraders' ) {
@@ -534,12 +538,12 @@ sub checkManifest {
                 if( $custPointJson->{type} =~ m/^(string|password|image)$/ ) {
                     if( ref( $custPointJson->{default}->{value} )) {
                         myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be string" );
-					}
+                    }
                 } else {
-					# $custPointJson->{type} =~ m/^boolean$/
+                    # $custPointJson->{type} =~ m/^boolean$/
                     unless( ref( $custPointJson->{default}->{value} ) =~ m/^JSON.*[Bb]oolean$/ ) {
                         myFatal( $packageName, "customizationpoints section: customizationpoint $custPointName: default: field 'value' must be boolean" );
-					}
+                    }
                 }
                 if( $custPointJson->{default}->{encoding} ) {
                     if( ref( $custPointJson->{default}->{encoding} )) {
@@ -564,33 +568,33 @@ sub checkManifest {
 # $appConfigIndex: index if the currently examined AppConfigItem in its role section
 # $retentionBuckets: hash of retentionbuckets specified so far
 sub _checkRetention {
-	my $packageName      = shift;
-	my $appConfigItem    = shift;
-	my $roleName         = shift;
-	my $appConfigIndex   = shift;
-	my $retentionBuckets = shift;
-	
-	if( $appConfigItem->{retentionpolicy} ) {
-		if( ref( $appConfigItem->{retentionpolicy} )) {
-			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
-		}
-		if( $appConfigItem->{retentionpolicy} ne 'keep' ) {
-			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
-		}
-		unless( $appConfigItem->{retentionbucket} ) {
-			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
-		}
-		if( ref( $appConfigItem->{retentionbucket} )) {
-			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
-		}
-		if( $retentionBuckets->{$appConfigItem->{retentionbucket}} ) {
-			myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
-		}
-		$retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
-		
-	} elsif( $appConfigItem->{retentionbucket} ) {
-		myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
-	}
+    my $packageName      = shift;
+    my $appConfigItem    = shift;
+    my $roleName         = shift;
+    my $appConfigIndex   = shift;
+    my $retentionBuckets = shift;
+    
+    if( $appConfigItem->{retentionpolicy} ) {
+        if( ref( $appConfigItem->{retentionpolicy} )) {
+            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionpolicy' must be string" );
+        }
+        if( $appConfigItem->{retentionpolicy} ne 'keep' ) {
+            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown value for field 'retentionpolicy': " . $appConfigItem->{retentionpolicy} );
+        }
+        unless( $appConfigItem->{retentionbucket} ) {
+            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionpolicy', also specify 'retentionbucket'" );
+        }
+        if( ref( $appConfigItem->{retentionbucket} )) {
+            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be string" );
+        }
+        if( $retentionBuckets->{$appConfigItem->{retentionbucket}} ) {
+            myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'retentionbucket' must be unique: " . $appConfigItem->{retentionbucket} );
+        }
+        $retentionBuckets->{$appConfigItem->{retentionbucket}} = 1;
+        
+    } elsif( $appConfigItem->{retentionbucket} ) {
+        myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: if specifying 'retentionbucket', also specify 'retentionpolicy'" );
+    }
 }
 
 ##

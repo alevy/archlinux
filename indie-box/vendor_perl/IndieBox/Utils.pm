@@ -356,7 +356,6 @@ sub mkdir {
 # $newfile: the symlink to be created
 # $uid: owner username
 # $gid: group username
-
 sub symlink {
     my $oldfile = shift;
     my $newfile = shift;

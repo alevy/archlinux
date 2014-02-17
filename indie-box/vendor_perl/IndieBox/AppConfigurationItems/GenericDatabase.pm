@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
-# An AppConfiguration item that is a MySQL Database for Indie Box Project
+# An AppConfiguration item that is any kind of Database for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,10 +21,10 @@
 use strict;
 use warnings;
 
-package IndieBox::AppConfigurationItems::MysqlDatabase;
+package IndieBox::AppConfigurationItems::GenericDatabase;
 
-use base qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
-use fields;
+use base   qw( IndieBox::AppConfigurationItems::AppConfigurationItem );
+use fields qw( dbType );
 
 use IndieBox::Logging;
 use IndieBox::ResourceManager;
@@ -32,12 +32,14 @@ use IndieBox::Utils qw( saveFile slurpFile );
 
 ##
 # Constructor
+# $dbType: short name of the database type
 # $json: the JSON fragment from the manifest JSON
 # $appConfig: the AppConfiguration object that this item belongs to
 # $installable: the Installable to which this item belongs to
 # return: the created File object
 sub new {
     my $self        = shift;
+    my $dbType      = shift;
     my $json        = shift;
     my $appConfig   = shift;
     my $installable = shift;
@@ -46,6 +48,8 @@ sub new {
         $self = fields::new( $self );
     }
     $self->SUPER::new( $json, $appConfig, $installable );
+    
+    $self->{dbType} = $dbType;
 
     return $self;
 }
@@ -63,10 +67,12 @@ sub installOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $name = $self->{json}->{name};
+    my $name   = $self->{json}->{name};
+    my $dbType = $self->{dbType};
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = IndieBox::ResourceManager::getMySqlDatabase(
+            = IndieBox::ResourceManager::getDatabase(
+                    $dbType,
                     $self->{appConfig}->appConfigId,
                     $self->{installable}->packageName,
                     $name );
@@ -75,7 +81,8 @@ sub installOrCheck {
 
         if( $doIt ) {
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-                    = IndieBox::ResourceManager::provisionLocalMySqlDatabase(
+                    = IndieBox::ResourceManager::provisionLocalDatabase(
+                            $dbType,
                             $self->{appConfig}->appConfigId,
                             $self->{installable}->packageName,
                             $name,
@@ -83,15 +90,15 @@ sub installOrCheck {
         } else {
             # put it some placeholder values, so the variables resolve
             ( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-                    = ( 'placeholderDbName', 'placeholderDbHost', '3306', 'placeholderUserLid', 'placeholderUserLidCredential', 'simple-password' );
+                    = ( 'placeholderDbName', 'placeholderDbHost', '9999', 'placeholderUserLid', 'placeholderUserLidCredential', 'simple-password' );
         }
     }
     # now insert those values into the config object
-    $config->put( "appconfig.mysql.dbname.$name",           $dbName );
-    $config->put( "appconfig.mysql.dbhost.$name",           $dbHost );
-    $config->put( "appconfig.mysql.dbport.$name",           $dbPort );
-    $config->put( "appconfig.mysql.dbuser.$name",           $dbUserLid );
-    $config->put( "appconfig.mysql.dbusercredential.$name", $dbUserLidCredential );
+    $config->put( "appconfig.$dbType.dbname.$name",           $dbName );
+    $config->put( "appconfig.$dbType.dbhost.$name",           $dbHost );
+    $config->put( "appconfig.$dbType.dbport.$name",           $dbPort );
+    $config->put( "appconfig.$dbType.dbuser.$name",           $dbUserLid );
+    $config->put( "appconfig.$dbType.dbusercredential.$name", $dbUserLidCredential );
 }
 
 ##
@@ -107,10 +114,12 @@ sub uninstallOrCheck {
     my $defaultToDir   = shift;
     my $config         = shift;
 
-    my $name = $self->{json}->{name};
+    my $name   = $self->{json}->{name};
+    my $dbType = $self->{dbType};
 
     if( $doIt ) {
-        IndieBox::ResourceManager::unprovisionLocalMySqlDatabase(
+        IndieBox::ResourceManager::unprovisionLocalDatabase(
+                $dbType,
                 $self->{appConfig}->appConfigId,
                 $self->{installable}->packageName,
                 $name );
@@ -134,11 +143,13 @@ sub backup {
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
+    my $dbType = $self->{dbType};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $tmp = File::Temp->new( UNLINK => 0, DIR => $tmpDir );
 
-    IndieBox::ResourceManager::exportLocalMySqlDatabase(
+    IndieBox::ResourceManager::exportLocalDatabase(
+            $dbType,
             $self->{appConfig}->appConfigId,
             $self->{installable}->packageName,
             $name,
@@ -164,6 +175,7 @@ sub restore {
 
     my $name   = $self->{json}->{name};
     my $bucket = $self->{json}->{retentionbucket};
+    my $dbType = $self->{dbType};
     my $tmpDir = $config->getResolve( 'host.tmpdir', '/tmp' );
 
     my $member = $zip->memberNamed( "$contextPathInZip/$bucket" );
@@ -172,7 +184,8 @@ sub restore {
 
         $zip->extractMember( $member, $tmp->filename );
 
-        IndieBox::ResourceManager::importLocalMySqlDatabase(
+        IndieBox::ResourceManager::importLocalDatabase(
+                $dbType,
                 $self->{appConfig}->appConfigId,
                 $self->{installable}->packageName,
                 $name,

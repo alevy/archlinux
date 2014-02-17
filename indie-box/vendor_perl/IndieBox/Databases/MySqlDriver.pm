@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 #
-# MySQL/MariaDB database abstraction for the Indie Box Project
+# MySQL/MariaDB database driver for the Indie Box Project.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,13 +21,18 @@
 use strict;
 use warnings;
 
-package IndieBox::MySql;
+package IndieBox::Databases::MySqlDriver;
 
 use DBI;
 use IndieBox::Logging;
 use IndieBox::Utils;
+use fields qw( dbHost dbPort );
 
 my $rootConfiguration = '/etc/mysql/root-defaults.cnf';
+
+## Note that this driver has both 'static' and 'instance' methods
+
+## ---- STATIC METHODS ---- ##
 
 ##
 # Ensure that mysqld is running
@@ -198,6 +203,120 @@ sub findRootUserPass {
         error( 'Cannot find root credentials to access MySQL database. Perhaps you need to run as root?' );
         return undef;
     }
+}
+
+## ---- INSTANCE METHODS ---- ##
+
+##
+# Constructor
+# $dbHost: the host to connect to
+# $dbPort: the port to connect to
+# return: instance of MySqlDriver
+sub new {
+    my $self   = shift;
+    my $dbHost = shift;
+    my $dbPort = shift;
+
+    unless( ref $self ) {
+        $self = fields::new( $self );
+    }
+    $self->{dbHost} = $dbHost;
+    $self->{dbPort} = $dbPort;
+
+    return $self;
+}
+
+##
+# Obtain the default port.
+# return: default port
+sub defaultPort {
+    my $self = shift;
+    
+    return 3306;
+}
+
+##
+# Provision a local database
+# $dbName: name of the database to provision
+# $dbUserLid: identifier of the database user that is allowed to access it
+# $dbUserLidCredential: credential for the database user
+# $dbUserLidCredType: credential type
+# $privileges: string containing required database privileges, like "create, insert"
+sub provisionLocalDatabase {
+    my $self                = shift;
+    my $dbName              = shift;
+    my $dbUserLid           = shift;
+    my $dbUserLidCredential = shift;
+    my $dbUserLidCredType   = shift;
+    my $privileges          = shift;
+
+    my $dbh = dbConnectAsRoot( undef );
+
+    my $sth = sqlPrepareExecute( $dbh, <<SQL );
+CREATE DATABASE `$dbName` CHARACTER SET = 'utf8';
+SQL
+    $sth->finish();
+
+    $sth = sqlPrepareExecute( $dbh, <<SQL );
+GRANT $privileges
+   ON $dbName.*
+   TO '$dbUserLid'\@'localhost'
+   IDENTIFIED BY '$dbUserLidCredential';
+SQL
+    $sth->finish();
+
+    $sth = sqlPrepareExecute( $dbh, <<SQL );
+FLUSH PRIVILEGES;
+SQL
+    $sth->finish();
+    $dbh->disconnect();
+}
+
+##
+# Unprovision a local database
+# $dbName: name of the database to unprovision
+sub unprovisionLocalDatabase {
+    my $self                = shift;
+    my $dbName              = shift;
+
+    my $dbh = dbConnectAsRoot( undef );
+
+    my $sth = sqlPrepareExecute( $dbh, <<SQL );
+DROP DATABASE `$dbName`;
+SQL
+    $sth->finish();
+}
+
+##
+# Export the data at a local database
+# $dbName: name of the database to unprovision
+# $fileName: name of the file to create with the exported data
+sub exportLocalDatabase {
+    my $self     = shift;
+    my $dbName   = shift;
+    my $fileName = shift;
+
+    my( $rootUser, $rootPass ) = findRootUserPass();
+    unless( $rootUser ) {
+        error( 'Cannot find MySQL root user credentials' );
+        return 0;
+    }
+
+    IndieBox::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" );
+}
+
+##
+# Import data into a local database, overwriting its previous content
+# $dbName: name of the database to unprovision
+# $fileName: name of the file to create with the exported data
+sub importLocalDatabase {
+    my $self     = shift;
+    my $dbName   = shift;
+    my $fileName = shift;
+    
+    my( $rootUser, $rootPass ) = findRootUserPass();
+
+    IndieBox::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" );
 }
 
 1;

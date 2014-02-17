@@ -23,6 +23,7 @@
 #   appConfigurationId:  identifier of the AppConfiguration that the database is allocated to
 #   installableId:       of the one or more Installables at this AppConfiguration, identify which
 #   itemName:            the symbolic name of the database as per the manifest of the Installable
+#   dbType:              type of database, e.g. mysql or mongo
 #   dbName:              actual provisioned database name
 #   dbHost:              database host, usually 'localhost'
 #   dbPort:              database port, usually 3306
@@ -36,8 +37,10 @@ use warnings;
 
 package IndieBox::ResourceManager;
 
+use IndieBox::Databases;
+use IndieBox::Databases::MySqlDriver;
+# Modules supporting other databases are loaded on demand
 use IndieBox::Logging;
-use IndieBox::MySql;
 use IndieBox::Utils;
 
 my $indieBoxDbName   = 'indie-box';
@@ -47,21 +50,21 @@ my $dbNamesTableName = 'databases';
 # Initialize this ResourceManager if needed. This involves creating the administrative tables
 # if run for the first time.
 sub initializeIfNeeded {
-    my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
+    my( $rootUser, $rootPass ) = IndieBox::Databases::MySqlDriver::findRootUserPass();
 
     unless( $rootUser ) {
         error( 'Cannot find MySQL root user credentials' );
         return 0;
     }
 
-    my $dbh = IndieBox::MySql::dbConnect( undef, $rootUser, $rootPass );
+    my $dbh = IndieBox::Databases::MySqlDriver::dbConnect( undef, $rootUser, $rootPass );
 
     # We proceed even in case of errors
-    IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
+    IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL );
 CREATE DATABASE IF NOT EXISTS `$indieBoxDbName` CHARACTER SET = 'utf8'
 SQL
 
-    IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
+    IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL );
 CREATE TABLE IF NOT EXISTS `$indieBoxDbName`.`$dbNamesTableName` (
     appConfigurationId       VARCHAR(64),
     installableId            VARCHAR(64),
@@ -76,24 +79,44 @@ CREATE TABLE IF NOT EXISTS `$indieBoxDbName`.`$dbNamesTableName` (
 );
 SQL
 
+    # For now, upgrade already deployed hosts. But eat errors if they occur
+    my $oldErrorMethod = $dbh->{HandleError};
+    $dbh->{HandleError} = undef;
+
+    IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL );
+ALTER TABLE `$indieBoxDbName`.`$dbNamesTableName`
+ADD COLUMN 
+    dbType                   VARCHAR(16)
+AFTER
+    itemName
+;
+SQL
+    $dbh->{HandleError} = $oldErrorMethod;
+
+    IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL );
+UPDATE `$indieBoxDbName`.`$dbNamesTableName`
+SET dbType = 'mysql' WHERE dbType = '' OR dbType IS NULL;
+SQL
 }
 
 ##
-# Find an already-provisioned MySQL database for a given id of an AppConfiguration, the
-# id of an Installable at that AppConfiguration, and the symbolic database name per manifest.
+# Find an already-provisioned database of a certain type for a given id of an AppConfiguration,
+# the id of an Installable at that AppConfiguration, and the symbolic database name per manifest.
+# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $name: the symbolic database name per application manifest
 # return: tuple of dbName, dbHost, dbPort, dbUser, dbPassword, dbCredentialType, or undef
-sub getMySqlDatabase {
+sub getDatabase {
+    my $dbType        = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
 
-    trace( 'getMySqlDatabase', $appConfigId, $installableId, $itemName );
+    trace( 'getDatabase', $dbType, $appConfigId, $installableId, $itemName );
 
-    my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
-    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
+    my $dbh = IndieBox::Databases::MySqlDriver::dbConnectAsRoot( $indieBoxDbName );
+    my $sth = IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType );
 SELECT dbName,
        dbHost,
        dbPort,
@@ -103,6 +126,7 @@ FROM   `$dbNamesTableName`
 WHERE  appConfigurationId = ?
   AND  installableId = ?
   AND  itemName = ?
+  AND  dbType = ?
 SQL
 
     my $dbName;
@@ -135,19 +159,27 @@ SQL
 }
 
 ##
-# Provision a local MySQL database.
+# Provision a local database.
+# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $privileges: string containing required database privileges, like "create, insert"
 # return: hash of dbName, dbHost, dbUser, dbPassword, or undef
-sub provisionLocalMySqlDatabase {
+sub provisionLocalDatabase {
+    my $dbType        = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
     my $privileges    = shift;
 
-    trace( 'provisionLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $privileges );
+    trace( 'provisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $privileges );
+
+    my $dbDriver = IndieBox::Databases::obtainDbDriver( $dbType, 'localhost' );
+    unless( $dbDriver ) {
+        IndieBox::Logging::error( 'Unknown database type', $dbType );
+        return;
+    }
 
     my $dbName              = IndieBox::Utils::randomIdentifier( 16 ); # unlikely to collide
     my $dbHost              = 'localhost';
@@ -156,12 +188,13 @@ sub provisionLocalMySqlDatabase {
     my $dbUserLidCredential = IndieBox::Utils::randomPassword( 16 );
     my $dbUserLidCredType   = 'simple-password';
 
-    my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
-    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
+    my $dbh = IndieBox::Databases::MySqlDriver::dbConnectAsRoot( $indieBoxDbName );
+    my $sth = IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType, $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 INSERT INTO `$dbNamesTableName`(
     appConfigurationId,
     installableId,
     itemName,
+    dbType,
     dbName,
     dbHost,
     dbPort,
@@ -177,47 +210,33 @@ VALUES (
     ?,
     ?,
     ?,
+    ?,
     ? )
-SQL
-    $sth->finish();
-
-    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-CREATE DATABASE `$dbName` CHARACTER SET = 'utf8';
-SQL
-    $sth->finish();
-
-    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-GRANT $privileges
-   ON $dbName.*
-   TO '$dbUserLid'\@'localhost'
-   IDENTIFIED BY '$dbUserLidCredential';
-SQL
-    $sth->finish();
-
-    $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-FLUSH PRIVILEGES;
 SQL
     $sth->finish();
     $dbh->disconnect();
 
+    $dbDriver->provisionLocalDatabase( $dbName, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType, $privileges );
+    
     return( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType );
 }
 
 ##
-# Unprovision a local MySQL database
+# Unprovision a local database.
+# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
-sub unprovisionLocalMySqlDatabase {
+sub unprovisionLocalDatabase {
+    my $dbType        = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
 
-    trace( 'unprovisionLocalMySqlDatabase', $appConfigId, $installableId, $itemName );
+    trace( 'unprovisionLocalDatabase', $dbType, $appConfigId, $installableId, $itemName );
 
-    my $dbh = IndieBox::MySql::dbConnectAsRoot( $indieBoxDbName );
-
-    my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
+    my $dbh = IndieBox::Databases::MySqlDriver::dbConnectAsRoot( $indieBoxDbName );
+    my $sth = IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType );
 SELECT dbName,
        dbHost,
        dbPort
@@ -225,6 +244,7 @@ FROM   `$dbNamesTableName`
 WHERE  appConfigurationId = ?
   AND  installableId = ?
   AND  itemName = ?
+  AND  dbType = ?
 SQL
 
     my $dbName;
@@ -236,72 +256,90 @@ SQL
             error( 'More than one found, not good:', $dbName );
             last;
         }
-        $dbName              = $ref->{'dbName'};
-        $dbHost              = $ref->{'dbHost'};
-        $dbPort              = $ref->{'dbPort'};
+        $dbName = $ref->{'dbName'};
+        $dbHost = $ref->{'dbHost'};
+        $dbPort = $ref->{'dbPort'};
     }
     $sth->finish();
 
+    my $dbDriver = undef;
     if( $dbName ) {
-        my $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName );
+        $dbDriver = IndieBox::Databases::obtainDbDriver( $dbType, $dbHost, $dbPort );
+        if( $dbDriver ) {
+            $sth = IndieBox::Databases::MySqlDriver::sqlPrepareExecute( $dbh, <<SQL, $appConfigId, $installableId, $itemName, $dbType );
 DELETE FROM `$dbNamesTableName`
 WHERE  appConfigurationId = ?
   AND  installableId = ?
   AND  itemName = ?
+  AND  dbType = ?
 SQL
-        $sth->finish();
+            $sth->finish();
+            
+        } else {
+            IndieBox::Logging::error( 'Unknown database type', $dbType );
+        }
+    }
+    $dbh->disconnect();
+    
+    if( $dbName && $dbDriver ) {
+        $dbDriver->unprovisionLocalDatabase( $dbName );
+    }
+}
 
-        $sth = IndieBox::MySql::sqlPrepareExecute( $dbh, <<SQL );
-DROP DATABASE `$dbName`;
-SQL
-        $sth->finish();
+##
+# Export the content of a local database.
+# $dbType: database type
+# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
+# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
+# $itemName: the symbolic database name per application manifest
+# $fileName: the file to write to
+sub exportLocalDatabase {
+    my $dbType        = shift;
+    my $appConfigId   = shift;
+    my $installableId = shift;
+    my $itemName      = shift;
+    my $fileName      = shift;
+
+    trace( 'exportLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
+
+    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
+            = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
+
+    my $dbDriver = IndieBox::Databases::obtainDbDriver( $dbType, $dbHost, $dbPort );
+    unless( $dbDriver ) {
+        IndieBox::Logging::error( 'Unknown database type', $dbType );
+        return;
     }
 
-    $dbh->disconnect();
+    $dbDriver->exportLocalDatabase( $dbName, $fileName );
 }
 
 ##
-# Export the content of a local MySQL database
+# Replace the content of a local database.
+# $dbType: database type
 # $appConfigId: the id of the AppConfiguration for which this database has been provisioned
 # $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
 # $itemName: the symbolic database name per application manifest
 # $fileName: the file to write to
-sub exportLocalMySqlDatabase {
+sub importLocalDatabase {
+    my $dbType        = shift;
     my $appConfigId   = shift;
     my $installableId = shift;
     my $itemName      = shift;
     my $fileName      = shift;
 
-    trace( 'exportLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $fileName );
+    trace( 'importLocalDatabase', $dbType, $appConfigId, $installableId, $itemName, $fileName );
 
     my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = getMySqlDatabase( $appConfigId, $installableId, $itemName );
+            = getDatabase( $dbType, $appConfigId, $installableId, $itemName );
 
-    my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
+    my $dbDriver = IndieBox::Databases::obtainDbDriver( $dbType, $dbHost, $dbPort );
+    unless( $dbDriver ) {
+        IndieBox::Logging::error( 'Unknown database type', $dbType );
+        return;
+    }
 
-    IndieBox::Utils::myexec( "mysqldump -u $rootUser -p$rootPass $dbName > '$fileName'" );
-}
-
-##
-# Replace the content of a local MySQL database
-# $appConfigId: the id of the AppConfiguration for which this database has been provisioned
-# $installableId: the id of the Installable at the AppConfiguration for which this database has been provisioned
-# $itemName: the symbolic database name per application manifest
-# $fileName: the file to write to
-sub importLocalMySqlDatabase {
-    my $appConfigId   = shift;
-    my $installableId = shift;
-    my $itemName      = shift;
-    my $fileName      = shift;
-
-    trace( 'importLocalMySqlDatabase', $appConfigId, $installableId, $itemName, $fileName );
-
-    my( $dbName, $dbHost, $dbPort, $dbUserLid, $dbUserLidCredential, $dbUserLidCredType )
-            = getMySqlDatabase( $appConfigId, $installableId, $itemName );
-
-    my( $rootUser, $rootPass ) = IndieBox::MySql::findRootUserPass();
-
-    IndieBox::Utils::myexec( "mysql -u $rootUser -p$rootPass $dbName < '$fileName'" );
+    $dbDriver->importLocalDatabase( $dbName, $fileName );
 }
 
 1;
