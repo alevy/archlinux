@@ -96,7 +96,7 @@ sub dbConnect {
     $connectString .= "host=$host;";
     $connectString .= "port=$port;";
 
-    trace( 'dbConnect as user', $user, 'with', $connectString );
+    trace( 'MySqlDriver::dbConnect as user', $user, 'with', $connectString );
 
     my $dbh = DBI->connect( "DBI:mysql:${connectString}",
                             $user,
@@ -119,7 +119,7 @@ sub dbConnectAsRoot {
     my $database = shift;
 
     my( $rootUser, $rootPass ) = findRootUserPass();
-   return dbConnect( $database, $rootUser, $rootPass );
+    return dbConnect( $database, $rootUser, $rootPass );
 }
 
 ##

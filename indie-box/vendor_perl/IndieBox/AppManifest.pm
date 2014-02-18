@@ -404,7 +404,7 @@ sub checkManifest {
                             if( ref( $appConfigItem->{type} )) {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'type' must be string" );
                             }
-                            if( $appConfigItem->{type} ne 'mysql-database' ) {
+                            if( $appConfigItem->{type} ne "$roleName-database" ) {
                                 myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex] has unknown type: " . $appConfigItem->{type} );
                             }
                             if( ref( $appConfigItem->{name} )) {
@@ -423,6 +423,8 @@ sub checkManifest {
                                 if( ref( $appConfigItem->{privileges} )) {
                                     myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be string" );
                                 }
+                            } else {
+                                myFatal( $packageName, "roles section: role $roleName: appconfigitem[$appConfigIndex]: field 'privileges' must be given" );
                             }
 
                             ++$appConfigIndex;

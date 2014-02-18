@@ -183,7 +183,7 @@ sub provisionLocalDatabase {
 
     my $dbName              = IndieBox::Utils::randomIdentifier( 16 ); # unlikely to collide
     my $dbHost              = 'localhost';
-    my $dbPort              = 3306;
+    my $dbPort              = $dbDriver->defaultPort();
     my $dbUserLid           = IndieBox::Utils::randomPassword( 16 );
     my $dbUserLidCredential = IndieBox::Utils::randomPassword( 16 );
     my $dbUserLidCredType   = 'simple-password';

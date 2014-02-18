@@ -127,7 +127,9 @@ sub siteUndeployed {
 # takes place: provision database before setting up the web server.
 # return: the applicable role names
 sub applicableRoleNames {
-    return [ 'mysql', 'mongo', 'apache2' ];
+    my $databases = IndieBox::Databases::findDatabases();
+    my @ret = ( keys %$databases, 'apache2' );
+    return \@ret;
 }
 
 ##
@@ -196,8 +198,10 @@ sub installPackages {
         @packageList = keys %$packages;
     } elsif( ref( $packages ) eq 'ARRAY' ) {
         @packageList = @$packages;
-    } else {
+    } elsif( ref( $packages )) {
         fatal( 'Unexpected type:', $packages );
+    } else {
+        @packageList = ( $packages );
     }
 
     # only install what isn't installed yet
