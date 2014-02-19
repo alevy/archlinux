@@ -223,7 +223,13 @@ sub exportLocalDatabase {
 
     my( $rootUser, $rootPass ) = findRootUserPass();
 
-    IndieBox::Utils::myexec( "mongodump -u '$rootUser' -p '$rootPass' -d '$dbName' -o '$fileName'" );
+    IndieBox::Utils::myexec( 
+            "mongodump"
+            . " -u '$rootUser'"
+            . " -p '$rootPass'"
+            . " -d '$dbName'"
+            . " --authenticationDatabase admin"
+            . " -o '$fileName'" );
 }
 
 ##
@@ -237,7 +243,13 @@ sub importLocalDatabase {
     
     my( $rootUser, $rootPass ) = findRootUserPass();
 
-    IndieBox::Utils::myexec( "mongorestore -u '$rootUser' -p '$rootPass' -d '$dbName' --drop '$fileName'" );
+    IndieBox::Utils::myexec(
+            "mongorestore"
+            . " -u '$rootUser'"
+            . " -p '$rootPass'"
+            . " -d '$dbName'"
+            . " --authenticationDatabase admin"
+            . " --drop '$fileName'" );
 }
 
 1;
