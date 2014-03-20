@@ -53,7 +53,7 @@ sub run {
         print( "Restoring configuration\n" );
     }
     
-    my @candidateFiles = <$IndieBox::Commands::Update::updateStatusDir/*>;
+    my @candidateFiles = <"$IndieBox::Commands::Update::updateStatusDir/*">;
 
     my $statusFile = undef;
     my $bestTs     = undef;

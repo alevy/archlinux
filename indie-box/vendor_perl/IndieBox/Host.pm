@@ -69,7 +69,7 @@ sub config {
 # return: hash of siteId to Site
 sub sites {
     my %ret = ();
-    foreach my $f ( <$SITES_DIR/*.json> ) {
+    foreach my $f ( <"$SITES_DIR/*.json"> ) {
         my $siteJson = readJsonFromFile( $f );
         my $site     = new IndieBox::Site( $siteJson );
         $ret{$site->siteId()} = $site;
