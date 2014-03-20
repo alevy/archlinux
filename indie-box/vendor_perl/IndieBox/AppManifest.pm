@@ -3,7 +3,7 @@
 # App manifest checking routines. This is factored out to not clutter the main
 # functionality.
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -164,7 +164,7 @@ sub checkManifest {
                         if( ref( $module )) {
                             myFatal( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] must be string" );
                         }
-                        unless( $module =~ m!^[-a-z0-9]+$! ) {
+                        unless( $module =~ m!^[-_a-z0-9]+$! ) {
                             myFatal( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] invalid: $module" );
                         }
                         ++$modulesIndex;
