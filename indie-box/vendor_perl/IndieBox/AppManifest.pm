@@ -164,7 +164,7 @@ sub checkManifest {
                         if( ref( $module )) {
                             myFatal( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] must be string" );
                         }
-                        unless( $module =~ m!^[_-a-z0-9]+$! ) {
+                        unless( $module =~ m!^[-_a-z0-9]+$! ) {
                             myFatal( $packageName, "roles section: role $roleName: apache2modules[$modulesIndex] invalid: $module" );
                         }
                         ++$modulesIndex;
