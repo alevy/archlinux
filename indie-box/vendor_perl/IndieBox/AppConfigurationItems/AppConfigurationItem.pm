@@ -217,7 +217,7 @@ sub _addRecursive {
     } elsif( -d $fileName ) {
         $zip->addDirectory( "$fileName/", "$zipName/" );
 
-        my @children = grep { !/^\.{1,2}$/ } <$fileName/*>;
+        my @children = grep { !/^\.{1,2}$/ } <"$fileName/*">;
         foreach my $child ( @children ) {
             my $relative = $child;
             $relative = substr( $relative, length( $fileName ) + 1 );

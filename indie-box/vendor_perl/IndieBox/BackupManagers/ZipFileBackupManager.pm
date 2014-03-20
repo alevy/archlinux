@@ -139,7 +139,7 @@ sub _purgeBackupsIn {
     trace( '_purgeBackupsIn', $dir, $seconds, $suffix );
 
     my $cutoff = time() - $seconds;
-    my @files = <$dir*$suffix>;
+    my @files = <"$dir*$suffix">;
     foreach my $file ( @files ) {
         my $backup = IndieBox::BackupManagers::ZipFileBackup->newFromArchive( $file );
         if( $backup->startTime() < $cutoff ) {
