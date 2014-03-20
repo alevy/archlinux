@@ -43,7 +43,7 @@ my $phpModulesConfDir = '/etc/php/conf.d';
 
 my $logFile  = '/var/log/httpd/error_log';
 
-my @minimumApacheModules = qw( alias authz_host cgi deflate dir env mime log_config setenvif ); # always need those
+my @minimumApacheModules = qw( alias authz_core authz_host cgi deflate dir env log_config mime mpm_prefork setenvif unixd ); # always need those
 
 ##
 # Ensure that Apache is running.
