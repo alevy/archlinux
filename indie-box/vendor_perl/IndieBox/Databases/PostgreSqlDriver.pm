@@ -132,10 +132,7 @@ sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
 
-    executeCmdAsRoot( <<CMD );
-use $dbName
-db.dropDatabase()
-CMD
+    executeCmdAsAdmin( "dropdb '$dbName'" );
 }
 
 ##
