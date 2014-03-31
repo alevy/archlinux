@@ -34,6 +34,8 @@ use IndieBox::ResourceManager;
 sub post_install {
     my $version = shift;
 
+    IndieBox::Host::ensurePacmanConfig();
+
     IndieBox::Host::ensureEssentialServicesRunning();
 
     IndieBox::Databases::MySqlDriver::ensureRunning();
@@ -51,6 +53,8 @@ sub post_install {
 sub post_upgrade {
     my $newVersion = shift;
     my $oldVersion = shift;
+
+    IndieBox::Host::ensurePacmanConfig();
 
     IndieBox::Host::ensureEssentialServicesRunning();
 
