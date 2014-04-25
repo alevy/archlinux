@@ -110,8 +110,9 @@ sub run {
     my $oldSites = IndieBox::Host::sites();
     my @newSites = values %$newSitesHash;
 
-    # make sure AppConfigIds and SiteIds are unique, and that all Sites are deployable
-    my $haveIdAlready = {};
+    # make sure AppConfigIds, SiteIds and hostnames are unique, and that all Sites are deployable
+    my $haveIdAlready   = {};
+    my $haveHostAlready = {};
     
     foreach my $newSite ( @newSites ) {
         my $newSiteId = $newSite->siteId;
@@ -119,7 +120,13 @@ sub run {
             fatal( 'More than one site or appconfig with id', $newSiteId );
         }
         $haveIdAlready->{$newSiteId} = $newSite;
-        
+
+        my $newSiteHostName = $newSite->hostName;
+        if( $haveHostAlready->{$newSiteHostName} ) {
+            fatal( 'More than one site with hostname', $newSiteHostName );
+        }
+        $haveHostAlready->{$newSiteHostName} = $newSite;
+
         foreach my $newAppConfig ( @{$newSite->appConfigs} ) {
             my $newAppConfigId = $newAppConfig->appConfigId;
             if( $haveIdAlready->{$newAppConfigId} ) {
