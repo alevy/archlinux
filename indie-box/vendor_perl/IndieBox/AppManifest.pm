@@ -148,7 +148,7 @@ sub checkManifest {
                         if( ref( $depends )) {
                             myFatal( $packageName, "roles section: role $roleName: depends[$dependsIndex] must be string" );
                         }
-                        unless( $depends =~ m!^[-a-z0-9]+$! ) {
+                        unless( $depends =~ m!^[-_a-z0-9]+$! ) {
                             myFatal( $packageName, "roles section: role $roleName: depends[$dependsIndex] invalid: $depends" );
                         }
                         ++$dependsIndex;

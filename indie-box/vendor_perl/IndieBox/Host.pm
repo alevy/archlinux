@@ -248,6 +248,7 @@ sub purgeCache {
 ##
 # Install the named packages.
 # $packages: List of packages
+# return: number of actually installed packages
 sub installPackages {
     my $packages = shift;
 
@@ -273,6 +274,7 @@ sub installPackages {
             fatal( 'Failed to install package(s). Pacman says:', $err );
         }
     }
+    return 0 + @filteredPackageList;
 }
 
 1;
