@@ -44,27 +44,27 @@ sub ensureRunning {
 
     debug( 'Installing postgresql' );
     
-    IndieBox::Host::installPackages( 'postgresql' );
+    if( IndieBox::Host::installPackages( 'postgresql' )) {
+        unless( -d $dataDir ) {
+            # not initialized yet
+            
+            executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D \"$dataDir\"" );
 
-    unless( -d $dataDir ) {
-		# not initialized yet
-		
-		executeCmdAsAdmin( "initdb --locale en_US.UTF-8 -E UTF8 -D '$dataDir'" );
+        }
+        
+        IndieBox::Utils::myexec( 'systemctl start postgresql' );
+        IndieBox::Utils::myexec( 'systemctl enable postgresql' );
 
+        sleep( 3 ); # Needed, otherwise might not be able to connect
     }
-    
-	IndieBox::Utils::myexec( 'systemctl start postgresql' );
-	IndieBox::Utils::myexec( 'systemctl enable postgresql' );
-
-    sleep( 3 ); # Needed, otherwise might not be able to connect
-
+     
     $running = 1;
     1;
 }
 
 ##
 # Execute a command as administrator
-# $cmd: command
+# $cmd: command, must not contain single quotes
 # $stdin: content to pipe into stdin, if any
 sub executeCmdAsAdmin {
     my $cmd   = shift;
@@ -74,6 +74,29 @@ sub executeCmdAsAdmin {
 
     IndieBox::Utils::myexec( "su - postgres -c '$cmd'", $stdin );
 }
+
+##
+# Execute a command as administrator
+# $cmd: command, must not contain single quotes
+# $stdinFile: name of the file piped to stdin
+# $stdoutFile: name of the file piped into from stdout
+sub executeCmdPipeAsAdmin {
+    my $cmd        = shift;
+    my $stdinFile  = shift;
+    my $stdoutFile = shift;
+    
+    ensureRunning();
+
+    my $fullCommand = "su - postgres -c '$cmd'";
+    if( $stdinFile ) {
+        $fullCommand .= " < $stdinFile";
+    }
+    if( $stdoutFile ) {
+        $fullCommand .= " > $stdoutFile";
+    }
+    IndieBox::Utils::myexec( $fullCommand );
+}
+
 
 ## ---- INSTANCE METHODS ---- ##
 
@@ -120,9 +143,9 @@ sub provisionLocalDatabase {
     my $dbUserLidCredType   = shift;
     my $privileges          = shift;
 
-    executeCmdAsAdmin( "createdb \"$dbName\"" );
+    executeCmdAsAdmin( "createdb -E UNICODE \"$dbName\"" );
     executeCmdAsAdmin( "createuser \"$dbUserLid\"" );
-    executeCmdAsAdmin( "psql", "grant $privileges on database \"$dbName\" to \"$dbUserLid\"" );
+    executeCmdAsAdmin( "psql -v HISTFILE=/dev/null", "grant $privileges on database \"$dbName\" to \"$dbUserLid\"" );
 }
 
 ##
@@ -132,7 +155,7 @@ sub unprovisionLocalDatabase {
     my $self                = shift;
     my $dbName              = shift;
 
-    executeCmdAsAdmin( "dropdb '$dbName'" );
+    executeCmdAsAdmin( "dropdb \"$dbName\"" );
 }
 
 ##
@@ -144,7 +167,7 @@ sub exportLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
-    executeCmdAsAdmin( "pg_dump '$dbName' > '$fileName'" );
+    executeCmdPipeAsAdmin( "pg_dump \"$dbName\"", undef, $fileName );
 }
 
 ##
@@ -156,7 +179,7 @@ sub importLocalDatabase {
     my $dbName   = shift;
     my $fileName = shift;
 
-    executeCmdAsAdmin( "psql '$dbName' < '$fileName'" );
+    executeCmdPipeAsAdmin( "psql -v HISTFILE=/dev/null \"$dbName\"", $fileName, undef );
 }
 
 1;
