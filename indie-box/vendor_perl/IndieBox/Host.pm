@@ -36,6 +36,64 @@ my $hostConf       = undef;
 my $now            = time();
 
 ##
+# Ensure that pacman is configured correctly.
+sub ensurePacmanConfig {
+    trace( 'Host::ensurePacmanConfig' );
+
+    # packages that must not be automatically upgraded
+    # per https://wiki.archlinux.org/index.php/PostgreSQL
+    my %ignorePkg = ( 'postgresql' => 1, 'postgresql-libs' => 1 );
+    
+    my $confFile    = '/etc/pacman.conf';
+    my $confContent = IndieBox::Utils::slurpFile( $confFile );
+
+    if( $confContent =~ m!^(\s*IgnorePkg\s*=(.*))$!gm ) {
+        # We have a line that's not commented out
+        my $lineAlready      = $1;
+        my $ignorePkgAlready = $2;
+        my $to               = pos( $confContent ); # http://www.perlmonks.org/?node_id=642690
+        my $from             = $to - length( $lineAlready );
+
+        $ignorePkgAlready =~ s!^\s+!!;
+        $ignorePkgAlready =~ s!\s+$!!;
+        foreach my $found ( split /\s+/, $ignorePkgAlready ) {
+            $ignorePkg{$found} += 1;
+        }
+        my $confLine = 'IgnorePkg = ' . join( ' ', sort keys %ignorePkg );
+
+        $confContent = substr( $confContent, 0, $from ) . $confLine . substr( $confContent, $to );
+
+    } elsif( $confContent =~ m!^(\s*#\s*IgnorePkg.*)$!gm ) {
+        # We only have a line that's commented out
+        my $lineAlready = $1;
+        my $to          = pos( $confContent ); # http://www.perlmonks.org/?node_id=642690
+        my $from        = $to - length( $lineAlready );
+        
+        my $confLine = 'IgnorePkg = ' . join( ' ', sort keys %ignorePkg );
+
+        $confContent = substr( $confContent, 0, $from ) . $confLine . substr( $confContent, $to );
+
+    } elsif( $confContent =~ m!^\[options\].*$!gm ) {
+        # No line, but found the options section
+        my $lineAlready = $1;
+        my $to          = pos( $confContent ); # http://www.perlmonks.org/?node_id=642690
+        
+        my $confLine = 'IgnorePkg = ' . join( ' ', sort keys %ignorePkg );
+
+        $confContent = substr( $confContent, 0, $to ) . "\n" . $confLine . substr( $confContent, $to );
+        
+    } else {
+        # Did not even find the options section
+
+        IndieBox::Logging::fatal( 'Cannot find [options] section in', $confFile );
+    }
+    
+    IndieBox::Utils::saveFile( $confFile, $confContent, 0644 );
+    
+    1;
+}
+
+##
 # Ensure that all essential services run on this Host.
 sub ensureEssentialServicesRunning {
     trace( 'Host::ensureEssentialServicesRunning' );
@@ -190,6 +248,7 @@ sub purgeCache {
 ##
 # Install the named packages.
 # $packages: List of packages
+# return: number of actually installed packages
 sub installPackages {
     my $packages = shift;
 
@@ -215,6 +274,7 @@ sub installPackages {
             fatal( 'Failed to install package(s). Pacman says:', $err );
         }
     }
+    return 0 + @filteredPackageList;
 }
 
 1;

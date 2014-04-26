@@ -2,7 +2,7 @@
 #
 # Superclass of all installable items e.g. Apps for Indie Box Project
 #
-# Copyright (C) 2013 Indie Box Project http://indieboxproject.org/
+# Copyright (C) 2013-2014 Indie Box Project http://indieboxproject.org/
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -80,6 +80,15 @@ sub name {
     return $self->{json}->{info}->{name};
 }
 
+##
+# Determine the tagline
+# return: the tagline
+sub tagline {
+    my $self = shift;
+
+    return $self->{json}->{info}->{tagline};
+}
+    
 ##
 # Obtain this Installable's JSON
 # return: JSON

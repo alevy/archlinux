@@ -31,6 +31,7 @@ my $site   = IndieBox::Host::findSiteById( $siteId );
 my $q      = new CGI;
 
 if( $site ) {
+    my $hostName = $site->hostName;
     print $q->header( -type => 'text/html' );
     print <<HTML;
 <html>
@@ -41,9 +42,9 @@ if( $site ) {
  </head>
  <body>
   <div class="page">
-   <div class="logo"><a href="http://indieboxproject.org/"><img src="/_common/images/logo-163x116.png" /></a></div>
+   <div class="logo"><a href="http://indieboxproject.org/"><img src="/_common/images/indie-box-logo-horizontal-142x41.png" /></a></div>
    <div class="content">
-    <h1>Apps at this site</h1>
+    <h1>$hostName</h1>
 HTML
 
     my $appConfigs = $site->appConfigs;
@@ -51,21 +52,38 @@ HTML
         print <<HTML;
     <div class="apps">
 HTML
-        @$appConfigs = sort { $a->context cmp $b->context } @$appConfigs; # consistent ordering
+        @$appConfigs    = sort { $a->context cmp $b->context } @$appConfigs; # consistent ordering
+        my %apps        = (); # show contexts for duplicate apps
+        my $showContext = 0;
         foreach my $appConfig ( @$appConfigs ) {
             my $appId   = $appConfig->app->packageName();
-            my $appName = $appConfig->app->name();
-            my $context = $appConfig->context;
+            if( ++$apps{$appId} > 1 ) {
+                $showContext = 1;
+            }
+        }
+
+        foreach my $appConfig ( @$appConfigs ) {
+            my $appId       = $appConfig->app->packageName();
+            my $appName    = $appConfig->app->name();
+            my $appTagline = $appConfig->app->tagline();
+            my $context    = $appConfig->context;
 
             if( defined( $context )) {
                 print <<HTML;
-     <a class="appconfig" href="$context/">
+     <a class="appconfig" href="$context/" title="$appTagline">
 HTML
             }
             print <<HTML;
      <div class="app">
-      <div style="background-image: url(/_appicons/$appId/72x72.png)"></div>
-      <p>$appName</p>
+      <div class="icon" style="background-image: url(/_appicons/$appId/72x72.png)"></div>
+      <p class="name">$appName</p>
+HTML
+            if( $showContext ) {
+            print <<HTML;
+      <p class="context">$context</p>
+HTML
+            }
+            print <<HTML;
      </div>
 HTML
             if( defined( $context )) {
